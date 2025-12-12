@@ -3,7 +3,7 @@ uvicorn==0.34.0
 pandas==2.2.3
 openpyxl==3.1.5
 langchain==0.3.13
-langchain-experimental==0.4.0
+langchain-experimental==0.3.3
 langchain-google-genai==2.0.8
 google-generativeai==0.8.3
 python-multipart==0.0.20

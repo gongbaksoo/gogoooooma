@@ -6,13 +6,21 @@ export async function POST(req: NextRequest) {
     try {
         const backendUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/upload/`;
 
+        console.log('[Upload Route] Request received');
+        console.log('[Upload Route] Backend URL:', backendUrl);
+        console.log('[Upload Route] Environment:', process.env.NEXT_PUBLIC_API_URL);
+
         // Get the content type header (crucial for multipart boundaries)
         const contentType = req.headers.get("content-type");
+        console.log('[Upload Route] Content-Type:', contentType);
 
         // Check if body is available
         if (!req.body) {
+            console.error('[Upload Route] No body in request');
             return NextResponse.json({ detail: "No file uploaded" }, { status: 400 });
         }
+
+        console.log('[Upload Route] Sending request to backend...');
 
         // Stream the request body directly to the backend
         // 'duplex: "half"' is required for streaming bodies in Node.js fetch

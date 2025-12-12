@@ -4,7 +4,7 @@ export const runtime = 'nodejs'; // Use Node.js runtime for stream handling
 
 export async function POST(req: NextRequest) {
     try {
-        const backendUrl = "http://127.0.0.1:8000/upload/";
+        const backendUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/upload/`;
 
         // Get the content type header (crucial for multipart boundaries)
         const contentType = req.headers.get("content-type");

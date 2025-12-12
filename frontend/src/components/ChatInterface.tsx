@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Loader2, AlertCircle, Settings, CheckCircle2 } from "lucide-react";
+import { Send, Bot, User, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
-import api, { getApiKeyStatus, saveApiKey } from "@/lib/api";
+import api from "@/lib/api";
 
 interface Message {
     role: "user" | "bot";
@@ -21,9 +21,6 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
     ]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [isServerKeySet, setIsServerKeySet] = useState(false);
-    const [showAdminModal, setShowAdminModal] = useState(false);
-    const [adminKeyInput, setAdminKeyInput] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -34,41 +31,14 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
         scrollToBottom();
     }, [messages]);
 
-    // Check server key status on mount
-    useEffect(() => {
-        checkKeyStatus();
-    }, []);
+    // API key is set in Railway environment variables
+    // No need to check status on frontend
 
-    const checkKeyStatus = async () => {
-        try {
-            const status = await getApiKeyStatus();
-            setIsServerKeySet(status.is_set);
-        } catch (e) {
-            console.error("Failed to check key status", e);
-        }
-    };
-
-    const handleAdminSaveKey = async () => {
-        if (!adminKeyInput.trim()) return;
-        try {
-            await saveApiKey(adminKeyInput);
-            await checkKeyStatus();
-            setShowAdminModal(false);
-            setAdminKeyInput("");
-            alert("API Key가 저장되었습니다!");
-        } catch (e: any) {
-            alert("저장 실패: " + e.message);
-        }
-    };
+    // Admin key management removed - API key is set in Railway environment
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim() || isLoading) return;
-
-        if (!isServerKeySet) {
-            alert("먼저 관리자 설정에서 API Key를 등록해주세요.");
-            return;
-        }
 
         const userMessage = input;
         setInput("");
@@ -105,26 +75,6 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
                 <div className="flex items-center gap-2">
                     <Bot className="w-5 h-5 text-blue-600" />
                     <h3 className="font-semibold text-gray-700">AI 분석 챗봇</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                    {isServerKeySet ? (
-                        <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200">
-                            <CheckCircle2 className="w-3 h-3" />
-                            <span>AI 준비완료</span>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-200">
-                            <AlertCircle className="w-3 h-3" />
-                            <span>키 미설정</span>
-                        </div>
-                    )}
-                    <button
-                        onClick={() => setShowAdminModal(true)}
-                        className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-200 transition"
-                        title="관리자 설정"
-                    >
-                        <Settings className="w-4 h-4" />
-                    </button>
                 </div>
             </div>
 
@@ -193,32 +143,19 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
 
             {/* Input Area */}
             <div className="p-4 bg-white border-t">
-                {!isServerKeySet && (
-                    <div className="mb-4 text-center p-3 bg-yellow-50 text-yellow-800 text-sm rounded-lg border border-yellow-200 flex flex-col items-center gap-2">
-                        <p className="font-medium flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4" />
-                            AI 설정이 필요합니다.
-                        </p>
-                        <button
-                            onClick={() => setShowAdminModal(true)}
-                            className="text-xs bg-yellow-100 hover:bg-yellow-200 px-3 py-1.5 rounded-md transition font-semibold"
-                        >
-                            관리자 설정 열기
-                        </button>
-                    </div>
-                )}
+                {/* API key warning removed - key is set in Railway environment */}
                 <form onSubmit={handleSubmit} className="flex gap-2">
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder={isServerKeySet ? "데이터에 대해 무엇이든 물어보세요..." : "관리자 설정이 완료되어야 채팅이 가능합니다."}
-                        disabled={isLoading || !isServerKeySet}
+                        placeholder="데이터에 대해 무엇이든 물어보세요..."
+                        disabled={isLoading}
                         className="flex-1 px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
                     />
                     <button
                         type="submit"
-                        disabled={isLoading || !input.trim() || !isServerKeySet}
+                        disabled={isLoading || !input.trim()}
                         className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-sm"
                     >
                         <Send className="w-5 h-5" />
@@ -226,52 +163,7 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
                 </form>
             </div>
 
-            {/* Admin Modal */}
-            {showAdminModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold flex items-center gap-2">
-                                <Settings className="w-5 h-5" />
-                                관리자 설정
-                            </h3>
-                            <button onClick={() => setShowAdminModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label>
-                                <input
-                                    type="password"
-                                    className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
-                                    placeholder="sk-..."
-                                    value={adminKeyInput}
-                                    onChange={(e) => setAdminKeyInput(e.target.value)}
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    * 이 키는 서버에 안전하게 저장되며, 일반 사용자에게는 보이지 않습니다.<br />
-                                    * 입력 후 [저장]을 누르면 즉시 적용됩니다.
-                                </p>
-                            </div>
-
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button
-                                    onClick={() => setShowAdminModal(false)}
-                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                                >
-                                    취소
-                                </button>
-                                <button
-                                    onClick={handleAdminSaveKey}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                                >
-                                    저장 및 적용
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Admin modal removed - API key is managed in Railway environment */}
         </div>
     );
 }

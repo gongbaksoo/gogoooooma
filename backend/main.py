@@ -93,6 +93,12 @@ def save_ai_instructions(instructions: list):
         raise HTTPException(status_code=500, detail=f"AI 지침 저장 실패: {str(e)}")
 
 def load_server_api_key():
+    # First, try to load from environment variable (for Railway deployment)
+    env_key = os.getenv("GOOGLE_API_KEY")
+    if env_key:
+        return env_key
+    
+    # Fall back to config file (for local development)
     if os.path.exists(CONFIG_FILE):
         try:
             import json

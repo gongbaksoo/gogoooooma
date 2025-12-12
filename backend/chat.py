@@ -87,33 +87,38 @@ def process_chat_query(file_path: str, query: str, api_key: str, history: list =
         with open("chat_debug.log", "a", encoding="utf-8") as f:
             f.write(f"Cleaned columns: {list(df.columns)}\n")
         
-        # Discover available models dynamically
-        available_models = genai.list_models()
+        # Select model with error handling
+        selected_model = "gemini-1.5-flash"  # Default fallback
         
-        # Filter for models that support generateContent
-        chat_models = [
-            m for m in available_models 
-            if 'generateContent' in m.supported_generation_methods
-        ]
-        
-        # Prioritize models by preference
-        preferred_order = ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash-latest', 'gemini-1.5-flash']
-        
-        selected_model = None
-        for pref in preferred_order:
-            for model in chat_models:
-                if pref in model.name:
-                    selected_model = model.name.replace("models/", "")
+        try:
+            # Discover available models dynamically
+            available_models = genai.list_models()
+            
+            # Filter for models that support generateContent
+            chat_models = [
+                m for m in available_models 
+                if hasattr(m, 'supported_generation_methods') and 'generateContent' in m.supported_generation_methods
+            ]
+            
+            # Prioritize models by preference
+            preferred_order = ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash-latest', 'gemini-1.5-flash']
+            
+            for pref in preferred_order:
+                for model in chat_models:
+                    if hasattr(model, 'name') and pref in model.name:
+                        selected_model = model.name.replace("models/", "")
+                        break
+                if selected_model != "gemini-1.5-flash":  # Found a preferred model
                     break
-            if selected_model:
-                break
+            
+            # Fallback to first available chat model
+            if selected_model == "gemini-1.5-flash" and chat_models:
+                if hasattr(chat_models[0], 'name'):
+                    selected_model = chat_models[0].name.replace("models/", "")
         
-        # Fallback to first available chat model
-        if not selected_model and chat_models:
-            selected_model = chat_models[0].name.replace("models/", "")
-        
-        if not selected_model:
-            raise Exception("No suitable Gemini model found")
+        except Exception as e:
+            with open("chat_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"Model selection error: {str(e)}, using fallback\n")
         
         with open("chat_debug.log", "a", encoding="utf-8") as f:
             f.write(f"Selected model: {selected_model}\n")

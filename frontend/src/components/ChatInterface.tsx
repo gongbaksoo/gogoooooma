@@ -31,6 +31,11 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
         scrollToBottom();
     }, [messages]);
 
+    // API key is set in Railway environment variables
+    // No need to check status on frontend
+
+    // Admin key management removed - API key is set in Railway environment
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim() || isLoading) return;
@@ -44,8 +49,8 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
             const response = await api.post("/chat/", {
                 filename,
                 query: userMessage,
-                api_key: "server_managed",
-                history: messages,
+                api_key: "server_managed", // Signal backend to use stored key
+                history: messages, // Send conversation history for context
             });
 
             const botResponse = response.data.response;
@@ -64,66 +69,72 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
     };
 
     return (
-        <div className="flex flex-col h-[700px]">
+        <div className="flex flex-col h-[600px] border rounded-xl overflow-hidden bg-white shadow-sm">
             {/* Header */}
-            <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <Bot className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-gray-900">AI 분석 챗봇</h3>
-                        <p className="text-sm text-gray-600">데이터에 대해 무엇이든 물어보세요</p>
-                    </div>
+            <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Bot className="w-5 h-5 text-blue-600" />
+                    <h3 className="font-semibold text-gray-700">AI 분석 챗봇</h3>
                 </div>
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
-                {messages.map((msg, idx) => (
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
+                {messages.map((message, index) => (
                     <div
-                        key={idx}
+                        key={index}
                         className={cn(
-                            "flex gap-4",
-                            msg.role === "user" ? "justify-end" : "justify-start"
+                            "flex w-full items-start gap-2",
+                            message.role === "user" ? "justify-end" : "justify-start"
                         )}
                     >
-                        {msg.role === "bot" && (
-                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                                <Bot className="w-4 h-4 text-blue-600" />
+                        {message.role === "bot" && (
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
+                                <Bot className="w-5 h-5 text-blue-600" />
                             </div>
                         )}
                         <div
                             className={cn(
-                                "max-w-[70%] rounded-2xl px-6 py-4",
-                                msg.role === "user"
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-white border border-gray-200 text-gray-900"
+                                "max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-sm",
+                                message.role === "user"
+                                    ? "bg-blue-600 text-white rounded-tr-none"
+                                    : "bg-white text-gray-800 border border-gray-100 rounded-tl-none"
                             )}
                         >
-                            <ReactMarkdown
-                                className={cn(
-                                    "prose prose-sm max-w-none",
-                                    msg.role === "user" ? "prose-invert" : ""
-                                )}
-                            >
-                                {msg.content}
-                            </ReactMarkdown>
+                            <div className="prose prose-sm max-w-none break-words dark:prose-invert">
+                                <ReactMarkdown
+                                    components={{
+                                        // Style tables in markdown
+                                        table: ({ node, ...props }) => (
+                                            <table className="border-collapse border border-gray-300" {...props} />
+                                        ),
+                                        th: ({ node, ...props }) => (
+                                            <th className="border border-gray-300 px-4 py-2 bg-gray-100" {...props} />
+                                        ),
+                                        td: ({ node, ...props }) => (
+                                            <td className="border border-gray-300 px-4 py-2" {...props} />
+                                        ),
+                                    }}
+                                >
+                                    {message.content}
+                                </ReactMarkdown>
+                            </div>
                         </div>
-                        {msg.role === "user" && (
-                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                                <User className="w-4 h-4 text-gray-600" />
+                        {message.role === "user" && (
+                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-1">
+                                <User className="w-5 h-5 text-gray-600" />
                             </div>
                         )}
                     </div>
                 ))}
                 {isLoading && (
-                    <div className="flex gap-4 justify-start">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                            <Bot className="w-4 h-4 text-blue-600" />
+                    <div className="flex items-start gap-2">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
+                            <Bot className="w-5 h-5 text-blue-600" />
                         </div>
-                        <div className="bg-white border border-gray-200 rounded-2xl px-6 py-4">
-                            <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                        <div className="bg-white px-4 py-3 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm flex items-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                            <span className="text-sm text-gray-500">분석 중입니다...</span>
                         </div>
                     </div>
                 )}
@@ -131,25 +142,28 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
             </div>
 
             {/* Input Area */}
-            <div className="p-6 bg-white border-t border-gray-200">
-                <form onSubmit={handleSubmit} className="flex gap-3">
+            <div className="p-4 bg-white border-t">
+                {/* API key warning removed - key is set in Railway environment */}
+                <form onSubmit={handleSubmit} className="flex gap-2">
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="데이터에 대해 무엇이든 물어보세요..."
                         disabled={isLoading}
-                        className="flex-1 px-6 py-4 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 text-base"
+                        className="flex-1 px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
                     />
                     <button
                         type="submit"
                         disabled={isLoading || !input.trim()}
-                        className="px-8 py-4 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-sm font-medium"
+                        className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-sm"
                     >
-                        전송
+                        <Send className="w-5 h-5" />
                     </button>
                 </form>
             </div>
+
+            {/* Admin modal removed - API key is managed in Railway environment */}
         </div>
     );
 }

@@ -38,7 +38,7 @@ export default function FileSelector({ selectedFile, onFileSelect }: FileSelecto
     }, []);
 
     const handleDelete = async (filename: string, e: React.MouseEvent) => {
-        e.stopPropagation();
+        e.stopPropagation(); // Prevent file selection when clicking delete
 
         if (!confirm(`"${filename}" 파일을 삭제하시겠습니까?`)) return;
 
@@ -46,6 +46,7 @@ export default function FileSelector({ selectedFile, onFileSelect }: FileSelecto
             await deleteFile(filename);
             await loadFiles();
 
+            // If deleted file was selected, clear selection
             if (selectedFile === filename) {
                 onFileSelect("");
             }
@@ -71,60 +72,60 @@ export default function FileSelector({ selectedFile, onFileSelect }: FileSelecto
     };
 
     return (
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-900">저장된 파일</h3>
-                    <p className="text-sm text-gray-600 mt-1">{fileCount}/50 파일</p>
-                </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <File className="w-5 h-5" />
+                    저장된 파일 ({fileCount}/50)
+                </h3>
                 <button
                     onClick={loadFiles}
                     disabled={isLoading}
-                    className="p-2 text-gray-400 hover:text-gray-900 transition"
+                    className="p-2 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition"
                     title="새로고침"
                 >
-                    <RefreshCw className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`} />
+                    <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
                 </button>
             </div>
 
             {files.length === 0 ? (
-                <div className="text-center py-16 text-gray-500">
-                    업로드된 파일이 없습니다
+                <div className="text-center py-8 text-gray-400">
+                    업로드된 파일이 없습니다.
                 </div>
             ) : (
-                <div className="divide-y divide-gray-200 max-h-[500px] overflow-y-auto">
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {files.map((file) => (
                         <div
                             key={file.filename}
                             onClick={() => onFileSelect(file.filename)}
                             className={`
-                                p-6 cursor-pointer transition
+                                p-3 rounded-lg border cursor-pointer transition
                                 ${selectedFile === file.filename
-                                    ? "bg-blue-50"
-                                    : "hover:bg-gray-50"
+                                    ? "bg-blue-50 border-blue-300 ring-2 ring-blue-200"
+                                    : "bg-gray-50 border-gray-200 hover:bg-gray-100"
                                 }
                             `}
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-3 mb-2">
+                                    <div className="flex items-center gap-2">
                                         {selectedFile === file.filename && (
-                                            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                            <span className="text-blue-600 font-bold">✓</span>
                                         )}
-                                        <p className="font-medium text-gray-900 truncate">
+                                        <p className="font-medium text-sm truncate">
                                             {file.filename}
                                         </p>
                                     </div>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-xs text-gray-500 mt-1">
                                         {formatFileSize(file.size)} · {formatDate(file.modified)}
                                     </p>
                                 </div>
                                 <button
                                     onClick={(e) => handleDelete(file.filename, e)}
-                                    className="ml-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                                    className="ml-2 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition"
                                     title="삭제"
                                 >
-                                    <Trash2 className="w-5 h-5" />
+                                    <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>

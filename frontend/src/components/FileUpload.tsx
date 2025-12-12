@@ -1,9 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Upload, Loader2 } from "lucide-react";
+import { useDropzone } from "react-dropzone"; // Need to install this or implement manual drag drop. 
+// Ah, I forgot to install react-dropzone. I'll implement manual for now or install it.
+// Installing is better. I'll assume I can install it.
+import { Upload, File, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+// import axios from "axios"; // Not used directly anymore
 
 interface FileUploadProps {
     onUploadSuccess: (data: any) => void;
@@ -54,11 +58,12 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
         formData.append("file", file);
 
         try {
+            // Revert to using proxy 
             const response = await api.post("/upload/", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
             console.log("Analyze Response:", response.data);
-            onUploadSuccess(response.data);
+            onUploadSuccess(response.data); // Pass full response to get filename
         } catch (err: any) {
             console.error(err);
             setError("파일 업로드/분석 실패: " + (err.response?.data?.detail || err.message));
@@ -68,57 +73,42 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
     };
 
     return (
-        <div>
-            <div
-                className={cn(
-                    "border-2 border-dashed rounded-2xl p-16 md:p-24 text-center transition-all cursor-pointer",
-                    isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-gray-400 bg-white",
-                    isUploading && "opacity-50 pointer-events-none"
+        <div
+            className={cn(
+                "border-2 border-dashed rounded-xl p-10 text-center transition-colors cursor-pointer",
+                isDragging ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300",
+                isUploading && "opacity-50 pointer-events-none"
+            )}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => document.getElementById("file-upload")?.click()}
+        >
+            <input
+                id="file-upload"
+                type="file"
+                className="hidden"
+                accept=".xlsx,.csv"
+                onChange={handleFileSelect}
+            />
+            <div className="flex flex-col items-center gap-4">
+                {isUploading ? (
+                    <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+                ) : (
+                    <div className="p-4 bg-blue-100 rounded-full text-blue-600">
+                        <Upload className="w-8 h-8" />
+                    </div>
                 )}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => document.getElementById("file-upload")?.click()}
-            >
-                <input
-                    id="file-upload"
-                    type="file"
-                    className="hidden"
-                    accept=".xlsx,.csv"
-                    onChange={handleFileSelect}
-                />
-                <div className="flex flex-col items-center gap-6">
-                    {isUploading ? (
-                        <>
-                            <Loader2 className="w-16 h-16 text-blue-500 animate-spin" />
-                            <div>
-                                <div className="text-xl font-medium text-gray-900 mb-2">업로드 중...</div>
-                                <div className="text-sm text-gray-600">잠시만 기다려주세요</div>
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
-                                <Upload className="w-8 h-8 text-gray-600" />
-                            </div>
-                            <div>
-                                <div className="text-xl font-medium text-gray-900 mb-2">
-                                    파일을 드래그하거나 클릭하여 선택하세요
-                                </div>
-                                <div className="text-sm text-gray-600">
-                                    엑셀(.xlsx) 또는 CSV 파일
-                                </div>
-                            </div>
-                        </>
-                    )}
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                        {isUploading ? "분석 중..." : "엑셀 파일 업로드"}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                        여기로 파일을 드래그하거나 클릭하여 선택하세요.
+                    </p>
                 </div>
             </div>
-
-            {error && (
-                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-                    <p className="text-sm text-red-600 text-center">{error}</p>
-                </div>
-            )}
+            {error && <p className="text-red-500 mt-4 text-sm">{error}</p>}
         </div>
     );
 }

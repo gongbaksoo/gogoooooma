@@ -12,7 +12,12 @@ app = FastAPI(title="Sales Analysis API")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for now (dev mode)
+    allow_origins=[
+        "http://localhost:3000",
+        "https://sales-analysis-site.vercel.app",
+        "https://api.gongbaksoo.com",
+        "*"  # Allow all for development
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

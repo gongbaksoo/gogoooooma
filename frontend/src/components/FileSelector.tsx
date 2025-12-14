@@ -76,7 +76,7 @@ export default function FileSelector({ selectedFile, onFileSelect }: FileSelecto
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                     <File className="w-5 h-5" />
-                    저장된 파일 ({fileCount}/50)
+                    저장된 파일 ({fileCount}/5)
                 </h3>
                 <button
                     onClick={loadFiles}

@@ -26,6 +26,9 @@ app.add_middleware(
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+CHAT_HISTORY_DIR = "chat_history"
+os.makedirs(CHAT_HISTORY_DIR, exist_ok=True)
+
 @app.get("/")
 def read_root():
     return {"message": "매출 분석 API가 실행 중입니다."}
@@ -366,3 +369,93 @@ def get_logs():
             logs[log_file] = "No log file found."
             
     return logs
+
+# Chat History Models and Endpoints
+class ChatHistoryItem(BaseModel):
+    id: str
+    filename: str
+    title: str
+    messages: list
+    created_at: float
+    updated_at: float
+
+@app.post("/chat/save")
+def save_chat_history(history: ChatHistoryItem):
+    """Save chat conversation"""
+    import json
+    import time
+    
+    filepath = os.path.join(CHAT_HISTORY_DIR, f"{history.id}.json")
+    
+    # Update timestamp
+    history.updated_at = time.time()
+    
+    try:
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(history.dict(), f, ensure_ascii=False, indent=2)
+        return {"message": "Chat saved", "id": history.id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save chat: {str(e)}")
+
+@app.get("/chat/list")
+def list_chat_history():
+    """Get list of saved chats"""
+    import json
+    
+    chats = []
+    try:
+        for filename in os.listdir(CHAT_HISTORY_DIR):
+            if filename.endswith('.json') and not filename.startswith('.'):
+                filepath = os.path.join(CHAT_HISTORY_DIR, filename)
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        chats.append({
+                            "id": data["id"],
+                            "filename": data["filename"],
+                            "title": data["title"],
+                            "created_at": data["created_at"],
+                            "updated_at": data["updated_at"],
+                            "message_count": len(data["messages"])
+                        })
+                except Exception as e:
+                    print(f"Error loading chat {filename}: {e}")
+                    continue
+        
+        # Sort by updated time (newest first)
+        chats.sort(key=lambda x: x["updated_at"], reverse=True)
+        
+        # Return 10 most recent
+        return {"chats": chats[:10], "count": len(chats)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list chats: {str(e)}")
+
+@app.get("/chat/{chat_id}")
+def get_chat_history(chat_id: str):
+    """Get specific chat conversation"""
+    import json
+    
+    filepath = os.path.join(CHAT_HISTORY_DIR, f"{chat_id}.json")
+    
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load chat: {str(e)}")
+
+@app.delete("/chat/{chat_id}")
+def delete_chat_history(chat_id: str):
+    """Delete chat conversation"""
+    filepath = os.path.join(CHAT_HISTORY_DIR, f"{chat_id}.json")
+    
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    try:
+        os.remove(filepath)
+        return {"message": "Chat deleted", "id": chat_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete chat: {str(e)}")

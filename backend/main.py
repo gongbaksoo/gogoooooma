@@ -160,7 +160,7 @@ def chat_endpoint(request: ChatRequest):
         print(error_msg)
         raise HTTPException(status_code=500, detail=f"AI 응답 생성 실패: {str(e)}")
 
-def cleanup_old_files(max_files: int = 50):
+def cleanup_old_files(max_files: int = 5):
     """Remove oldest files if count exceeds max_files"""
     files = []
     for filename in os.listdir(UPLOAD_DIR):
@@ -196,7 +196,7 @@ def list_files():
     
     # Sort by modification time (newest first)
     files.sort(key=lambda x: x["modified"], reverse=True)
-    return {"files": files, "count": len(files), "max": 50}
+    return {"files": files, "count": len(files), "max": 5}
 
 @app.delete("/files/{filename}")
 def delete_file(filename: str):

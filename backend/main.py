@@ -186,7 +186,8 @@ def list_files():
     files = []
     for filename in os.listdir(UPLOAD_DIR):
         filepath = os.path.join(UPLOAD_DIR, filename)
-        if os.path.isfile(filepath):
+        # Skip hidden files (starting with .)
+        if os.path.isfile(filepath) and not filename.startswith('.'):
             stat = os.stat(filepath)
             files.append({
                 "filename": filename,

@@ -6,6 +6,7 @@ import FileUpload from "@/components/FileUpload";
 import { getLogs } from "@/lib/api";
 import ChatInterface from "@/components/ChatInterface";
 import FileSelector from "@/components/FileSelector";
+import ChatHistoryList from "@/components/ChatHistoryList";
 import SchemaAliasManager from "@/components/SchemaAliasManager";
 import AIInstructionsManager from "@/components/AIInstructionsManager";
 import SalesChart from "@/components/SalesChart";
@@ -99,6 +100,7 @@ export default function CustomDashboard() {
                                 selectedFile={selectedFile}
                                 onFileSelect={(file) => setSelectedFile(file)}
                             />
+                            <ChatHistoryList />
                         </div>
                     </div>
                     <div>

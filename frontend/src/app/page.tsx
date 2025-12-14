@@ -6,6 +6,7 @@ import FileUpload from "@/components/FileUpload";
 import { getLogs } from "@/lib/api";
 import ChatInterface from "@/components/ChatInterface";
 import FileSelector from "@/components/FileSelector";
+import ChatHistoryList from "@/components/ChatHistoryList";
 import { ArrowRight } from "lucide-react";
 
 export default function Home() {
@@ -103,6 +104,7 @@ export default function Home() {
                     </div>
 
                     <FileSelector selectedFile={selectedFile} onFileSelect={setSelectedFile} />
+                    <ChatHistoryList />
                 </div>
 
                 {selectedFile && (

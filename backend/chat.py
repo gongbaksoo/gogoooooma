@@ -20,6 +20,56 @@ def load_ai_instructions():
             return []
     return []
 
+def preprocess_product_query(df, query: str):
+    """
+    상품 관련 질문을 전처리하여 데이터를 미리 필터링
+    Returns: (filtered_df, modified_query, product_found)
+    """
+    import pandas as pd
+    
+    # 상품명 키워드 추출 (간단한 패턴 매칭)
+    # 일반적인 상품 관련 키워드들
+    product_keywords = []
+    
+    # 품목 구분에서 고유값 가져오기
+    if '품목 구분' in df.columns:
+        unique_products = df['품목 구분'].dropna().unique()
+        
+        # 쿼리에서 상품명 찾기 (띄어쓰기 무시)
+        query_no_space = query.replace(' ', '').lower()
+        
+        for product in unique_products:
+            if product == '대상 X':
+                continue
+            product_no_space = str(product).replace(' ', '').lower()
+            if product_no_space in query_no_space:
+                product_keywords.append(product)
+                break
+        
+        # 품목 구분에서 못 찾았으면 품목 구분_2에서 찾기
+        if not product_keywords and '품목 구분_2' in df.columns:
+            unique_products_2 = df['품목 구분_2'].dropna().unique()
+            for product in unique_products_2:
+                if product == '대상 X':
+                    continue
+                product_no_space = str(product).replace(' ', '').lower()
+                if product_no_space in query_no_space:
+                    product_keywords.append(product)
+                    # 품목 구분_2로 필터링
+                    filtered_df = df[df['품목 구분_2'] == product].copy()
+                    modified_query = f"이미 '{product}' 상품으로 필터링된 데이터입니다. {query}"
+                    return filtered_df, modified_query, True
+    
+    # 품목 구분으로 필터링
+    if product_keywords:
+        product = product_keywords[0]
+        filtered_df = df[df['품목 구분'] == product].copy()
+        modified_query = f"이미 '{product}' 상품으로 필터링된 데이터입니다. {query}"
+        return filtered_df, modified_query, True
+    
+    # 상품을 찾지 못한 경우 원본 반환
+    return df, query, False
+
 def process_chat_query(file_path: str, query: str, api_key: str, history: list = None):
     """
     LangChain Pandas DataFrame Agent를 사용하여 자연어 쿼리 처리
@@ -80,6 +130,17 @@ def process_chat_query(file_path: str, query: str, api_key: str, history: list =
         
         # Load data
         df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
+        
+        # 상품 검색 전처리
+        original_df = df.copy()
+        df, modified_query, product_found = preprocess_product_query(df, query)
+        
+        if product_found:
+            # 상품이 발견되면 수정된 쿼리 사용
+            full_query = f"{full_context}\n\n[현재 질문]\n{modified_query}"
+            with open("chat_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"상품 전처리 성공: 필터링된 데이터 행 수 = {len(df)}\n")
+                f.write(f"수정된 질문: {modified_query}\n")
         
         # Clean column names (remove tabs, extra spaces)
         df.columns = df.columns.str.replace('\t', '').str.strip()

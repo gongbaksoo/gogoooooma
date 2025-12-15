@@ -28,45 +28,61 @@ def preprocess_product_query(df, query: str):
     """
     import pandas as pd
     
-    # 상품명 키워드 추출 (간단한 패턴 매칭)
-    # 일반적인 상품 관련 키워드들
+    # 상품명 키워드 추출
     product_keywords = []
+    query_no_space = query.replace(' ', '').lower()
     
-    # 품목 구분에서 고유값 가져오기
+    # 먼저 품목 구분_2에서 정확히 일치하는 것 찾기 (더 구체적인 분류)
+    if '품목 구분_2' in df.columns:
+        unique_products_2 = df['품목 구분_2'].dropna().unique()
+        
+        # 정확히 일치하는 것 먼저 찾기
+        for product in unique_products_2:
+            if product == '대상 X':
+                continue
+            product_no_space = str(product).replace(' ', '').lower()
+            # 정확히 일치하는 경우
+            if product_no_space == query_no_space or str(product).lower() == query.lower():
+                filtered_df = df[df['품목 구분_2'] == product].copy()
+                modified_query = f"이미 '{product}' 상품으로 필터링된 데이터입니다. {query}"
+                return filtered_df, modified_query, True
+        
+        # 정확히 일치하지 않으면 포함 검색
+        for product in unique_products_2:
+            if product == '대상 X':
+                continue
+            product_no_space = str(product).replace(' ', '').lower()
+            # 쿼리가 상품명에 포함되거나, 상품명이 쿼리에 포함되는 경우
+            if product_no_space in query_no_space or query_no_space in product_no_space:
+                # 하지만 길이 차이가 너무 크면 제외 (오매칭 방지)
+                if abs(len(product_no_space) - len(query_no_space)) <= 3:
+                    filtered_df = df[df['품목 구분_2'] == product].copy()
+                    modified_query = f"이미 '{product}' 상품으로 필터링된 데이터입니다. {query}"
+                    return filtered_df, modified_query, True
+    
+    # 품목 구분에서 검색
     if '품목 구분' in df.columns:
         unique_products = df['품목 구분'].dropna().unique()
         
-        # 쿼리에서 상품명 찾기 (띄어쓰기 무시)
-        query_no_space = query.replace(' ', '').lower()
+        # 정확히 일치하는 것 먼저
+        for product in unique_products:
+            if product == '대상 X':
+                continue
+            product_no_space = str(product).replace(' ', '').lower()
+            if product_no_space == query_no_space or str(product).lower() == query.lower():
+                filtered_df = df[df['품목 구분'] == product].copy()
+                modified_query = f"이미 '{product}' 상품으로 필터링된 데이터입니다. {query}"
+                return filtered_df, modified_query, True
         
+        # 포함 검색
         for product in unique_products:
             if product == '대상 X':
                 continue
             product_no_space = str(product).replace(' ', '').lower()
             if product_no_space in query_no_space:
-                product_keywords.append(product)
-                break
-        
-        # 품목 구분에서 못 찾았으면 품목 구분_2에서 찾기
-        if not product_keywords and '품목 구분_2' in df.columns:
-            unique_products_2 = df['품목 구분_2'].dropna().unique()
-            for product in unique_products_2:
-                if product == '대상 X':
-                    continue
-                product_no_space = str(product).replace(' ', '').lower()
-                if product_no_space in query_no_space:
-                    product_keywords.append(product)
-                    # 품목 구분_2로 필터링
-                    filtered_df = df[df['품목 구분_2'] == product].copy()
-                    modified_query = f"이미 '{product}' 상품으로 필터링된 데이터입니다. {query}"
-                    return filtered_df, modified_query, True
-    
-    # 품목 구분으로 필터링
-    if product_keywords:
-        product = product_keywords[0]
-        filtered_df = df[df['품목 구분'] == product].copy()
-        modified_query = f"이미 '{product}' 상품으로 필터링된 데이터입니다. {query}"
-        return filtered_df, modified_query, True
+                filtered_df = df[df['품목 구분'] == product].copy()
+                modified_query = f"이미 '{product}' 상품으로 필터링된 데이터입니다. {query}"
+                return filtered_df, modified_query, True
     
     # 상품을 찾지 못한 경우 원본 반환
     return df, query, False

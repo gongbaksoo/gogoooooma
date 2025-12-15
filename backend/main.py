@@ -263,13 +263,28 @@ def upload_file(file: UploadFile = File(...)):
         with open(temp_path, "wb") as f:
             f.write(file_data)
         
-        # 데이터 분석 실행
-        result = analyze_sales_data(temp_path)
+        # Quick validation - just check if file can be read
+        try:
+            import pandas as pd
+            df = pd.read_excel(temp_path) if temp_path.endswith('.xlsx') else pd.read_csv(temp_path)
+            row_count = len(df)
+            col_count = len(df.columns)
+        except Exception as e:
+            os.remove(temp_path)
+            raise HTTPException(status_code=400, detail=f"파일 형식 오류: {str(e)}")
         
         # Clean up temp file
         os.remove(temp_path)
         
-        return result
+        # Return simple success response
+        return {
+            "filename": file.filename,
+            "data": {
+                "total_rows": row_count,
+                "columns": list(df.columns)[:10],  # First 10 columns only
+                "message": "파일 업로드 성공"
+            }
+        }
     except HTTPException:
         raise
     except Exception as e:

@@ -21,6 +21,7 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
     ]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [chatId] = useState(() => `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -30,6 +31,33 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    const saveChatHistory = async (currentMessages: Message[]) => {
+        try {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+            // Generate title from first user message
+            const firstUserMessage = currentMessages.find(m => m.role === "user");
+            const title = firstUserMessage
+                ? firstUserMessage.content.substring(0, 50) + (firstUserMessage.content.length > 50 ? "..." : "")
+                : "새 대화";
+
+            await fetch(`${API_URL}/chat/save`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: chatId,
+                    filename: filename,
+                    title: title,
+                    messages: currentMessages,
+                    created_at: Date.now() / 1000,
+                    updated_at: Date.now() / 1000
+                })
+            });
+        } catch (error) {
+            console.error("Failed to save chat:", error);
+        }
+    };
 
     // API key is set in Railway environment variables
     // No need to check status on frontend
@@ -54,7 +82,14 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
             });
 
             const botResponse = response.data.response;
-            setMessages((prev) => [...prev, { role: "bot", content: botResponse }]);
+            setMessages((prev) => {
+                const updatedMessages: Message[] = [...prev, { role: "bot" as const, content: botResponse }];
+
+                // Auto-save after AI response
+                saveChatHistory(updatedMessages);
+
+                return updatedMessages;
+            });
         } catch (error: any) {
             console.error("Chat error:", error);
             const errorMessage =

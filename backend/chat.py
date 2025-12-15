@@ -224,12 +224,13 @@ def process_chat_query(file_path: str, query: str, api_key: str, history: list =
         with open("chat_debug.log", "a", encoding="utf-8") as f:
             f.write(f"Selected model: {selected_model}\n")
         
-        # Create LLM
+        # Create LLM with streaming disabled to avoid finish_reason errors
         llm = ChatGoogleGenerativeAI(
             model=selected_model,
             google_api_key=api_key,
             temperature=0,
-            convert_system_message_to_human=True
+            convert_system_message_to_human=True,
+            streaming=False  # Disable streaming to avoid finish_reason.name error
         )
         
         # Create agent with detailed prefix

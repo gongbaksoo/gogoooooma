@@ -144,8 +144,11 @@ def process_chat_query(file_path: str, query: str, api_key: str, history: list =
             else:
                 raise Exception(f"파일을 찾을 수 없습니다: {file_path}")
         
+        # Extract just the filename (remove any path components)
+        filename_only = os.path.basename(file_path)
+        
         # Write to temp file
-        temp_path = f"/tmp/{file_path}"
+        temp_path = f"/tmp/{filename_only}"
         with open(temp_path, "wb") as f:
             f.write(file_data)
         

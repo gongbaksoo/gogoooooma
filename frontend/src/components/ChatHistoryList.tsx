@@ -199,8 +199,8 @@ export default function ChatHistoryList({ onChatSelect }: ChatHistoryListProps) 
                                     )}
                                     <div
                                         className={`max-w-[70%] rounded-lg p-4 ${message.role === "user"
-                                                ? "bg-blue-600 text-white"
-                                                : "bg-gray-100 text-gray-900"
+                                            ? "bg-blue-600 text-white"
+                                            : "bg-gray-100 text-gray-900"
                                             }`}
                                     >
                                         <p className="whitespace-pre-wrap break-words">{message.content}</p>
@@ -229,4 +229,3 @@ export default function ChatHistoryList({ onChatSelect }: ChatHistoryListProps) 
         </div>
     );
 }
-```

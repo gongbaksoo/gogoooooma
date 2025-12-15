@@ -23,10 +23,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-UPLOAD_DIR = "uploads"
+# Use absolute path for Railway Volume
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-CHAT_HISTORY_DIR = "chat_history"
+CHAT_HISTORY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chat_history")
 os.makedirs(CHAT_HISTORY_DIR, exist_ok=True)
 
 @app.get("/")

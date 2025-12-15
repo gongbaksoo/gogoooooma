@@ -129,11 +129,20 @@ def process_chat_query(file_path: str, query: str, api_key: str, history: list =
         # API 키 설정
         genai.configure(api_key=api_key)
         
-        # Load data from database
+        # Load data from database first
         file_data = get_file_from_db(file_path)
         
         if file_data is None:
-            raise Exception(f"파일을 데이터베이스에서 찾을 수 없습니다: {file_path}")
+            # Fallback to disk storage
+            import os
+            upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+            disk_path = os.path.join(upload_dir, file_path)
+            
+            if os.path.exists(disk_path):
+                with open(disk_path, "rb") as f:
+                    file_data = f.read()
+            else:
+                raise Exception(f"파일을 찾을 수 없습니다: {file_path}")
         
         # Write to temp file
         temp_path = f"/tmp/{file_path}"

@@ -201,9 +201,26 @@ def cleanup_old_files(max_files: int = 5):
 
 @app.get("/files/")
 def list_files():
-    """게시된 파일 목록 가져오기 (Database)"""
+    """게시된 파일 목록 가져오기 (Database with disk fallback)"""
+    # Try database first
     files = list_files_in_db()
     count = get_file_count()
+    
+    if count == 0:
+        # Fallback to disk storage
+        files = []
+        for filename in os.listdir(UPLOAD_DIR):
+            filepath = os.path.join(UPLOAD_DIR, filename)
+            if os.path.isfile(filepath) and not filename.startswith('.'):
+                stat = os.stat(filepath)
+                files.append({
+                    "filename": filename,
+                    "size": stat.st_size,
+                    "modified": stat.st_mtime
+                })
+        files.sort(key=lambda x: x["modified"], reverse=True)
+        count = len(files)
+    
     return {"files": files, "count": count, "max": 5}
 
 @app.delete("/files/{filename}")
@@ -227,14 +244,19 @@ def upload_file(file: UploadFile = File(...)):
         # Read file data
         file_data = file.file.read()
         
-        # Save to database
-        success = save_file_to_db(file.filename, file_data)
+        # Try to save to database first
+        db_success = save_file_to_db(file.filename, file_data)
         
-        if not success:
-            raise HTTPException(status_code=500, detail="파일 저장 실패")
-        
-        # Cleanup old files (keep only 5 most recent)
-        cleanup_old_files_in_db(max_files=5)
+        if db_success:
+            logging.info("File saved to database")
+            cleanup_old_files_in_db(max_files=5)
+        else:
+            # Fallback to disk storage if database unavailable
+            logging.warning("Database unavailable, falling back to disk storage")
+            file_path = os.path.join(UPLOAD_DIR, file.filename)
+            with open(file_path, "wb") as f:
+                f.write(file_data)
+            cleanup_old_files()
         
         # Write to temp file for analysis
         temp_path = f"/tmp/{file.filename}"

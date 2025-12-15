@@ -3,9 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import shutil
+import logging
 from analysis import analyze_sales_data
 from chat import process_chat_query
 from dashboard import get_monthly_sales_by_channel
+from database import (
+    init_db, save_file_to_db, get_file_from_db, 
+    list_files_in_db, delete_file_from_db, 
+    cleanup_old_files_in_db, get_file_count
+)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Sales Analysis API")
 
@@ -29,6 +38,12 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 CHAT_HISTORY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chat_history")
 os.makedirs(CHAT_HISTORY_DIR, exist_ok=True)
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on startup"""
+    init_db()
+    logging.info("Application started, database initialized")
 
 @app.get("/")
 def read_root():
@@ -186,60 +201,60 @@ def cleanup_old_files(max_files: int = 5):
 
 @app.get("/files/")
 def list_files():
-    """Get list of uploaded files"""
-    files = []
-    for filename in os.listdir(UPLOAD_DIR):
-        filepath = os.path.join(UPLOAD_DIR, filename)
-        # Skip hidden files (starting with .)
-        if os.path.isfile(filepath) and not filename.startswith('.'):
-            stat = os.stat(filepath)
-            files.append({
-                "filename": filename,
-                "size": stat.st_size,
-                "modified": stat.st_mtime
-            })
-    
-    # Sort by modification time (newest first)
-    files.sort(key=lambda x: x["modified"], reverse=True)
-    return {"files": files, "count": len(files), "max": 5}
+    """게시된 파일 목록 가져오기 (Database)"""
+    files = list_files_in_db()
+    count = get_file_count()
+    return {"files": files, "count": count, "max": 5}
 
 @app.delete("/files/{filename}")
 def delete_file(filename: str):
-    """Delete a specific file"""
-    filepath = os.path.join(UPLOAD_DIR, filename)
+    """특정 파일 삭제 (Database)"""
+    success = delete_file_from_db(filename)
     
-    if not os.path.exists(filepath):
+    if not success:
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
     
-    try:
-        os.remove(filepath)
-        return {"message": f"{filename} 삭제 완료"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"삭제 실패: {str(e)}")
+    return {"message": f"{filename} 삭제 완료"}
 
 @app.post("/upload/")
 def upload_file(file: UploadFile = File(...)):
-    print(f"Entering upload_file with {file.filename}")
+    logging.info(f"Uploading file: {file.filename}")
+    
     if not file.filename.endswith(('.xlsx', '.csv')):
         raise HTTPException(status_code=400, detail="오직 .xlsx 또는 .csv 파일만 허용됩니다.")
     
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
     try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            
-        # Check file count and cleanup if needed
-        cleanup_old_files()
-
+        # Read file data
+        file_data = file.file.read()
+        
+        # Save to database
+        success = save_file_to_db(file.filename, file_data)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="파일 저장 실패")
+        
+        # Cleanup old files (keep only 5 most recent)
+        cleanup_old_files_in_db(max_files=5)
+        
+        # Write to temp file for analysis
+        temp_path = f"/tmp/{file.filename}"
+        with open(temp_path, "wb") as f:
+            f.write(file_data)
+        
         # 데이터 분석 실행
-        result = analyze_sales_data(file_path)
-            
+        result = analyze_sales_data(temp_path)
+        
+        # Clean up temp file
+        os.remove(temp_path)
+        
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
+        logging.error(f"Upload failed: {e}")
         import traceback
-        with open("error.log", "w") as f:
-            f.write(traceback.format_exc())
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"파일 처리 중 오류 발생: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"파일 처리 실패: {str(e)}")
         
     from fastapi.encoders import jsonable_encoder
     import json

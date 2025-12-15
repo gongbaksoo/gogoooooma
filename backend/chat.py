@@ -7,6 +7,7 @@ import json
 from datetime import datetime
 import traceback
 import re
+from database import get_file_from_db
 
 def load_ai_instructions():
     """AI 지침 로드"""
@@ -128,8 +129,19 @@ def process_chat_query(file_path: str, query: str, api_key: str, history: list =
         # API 키 설정
         genai.configure(api_key=api_key)
         
-        # Load data
-        df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
+        # Load data from database
+        file_data = get_file_from_db(file_path)
+        
+        if file_data is None:
+            raise Exception(f"파일을 데이터베이스에서 찾을 수 없습니다: {file_path}")
+        
+        # Write to temp file
+        temp_path = f"/tmp/{file_path}"
+        with open(temp_path, "wb") as f:
+            f.write(file_data)
+        
+        # Load data from temp file
+        df = pd.read_excel(temp_path) if temp_path.endswith('.xlsx') else pd.read_csv(temp_path)
         
         # 상품 검색 전처리
         original_df = df.copy()
@@ -137,10 +149,10 @@ def process_chat_query(file_path: str, query: str, api_key: str, history: list =
         
         if product_found:
             # 상품이 발견되면 수정된 쿼리 사용
-            full_query = f"{full_context}\n\n[현재 질문]\n{modified_query}"
+            full_query = f"{full_context}\\n\\n[현재 질문]\\n{modified_query}"
             with open("chat_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"상품 전처리 성공: 필터링된 데이터 행 수 = {len(df)}\n")
-                f.write(f"수정된 질문: {modified_query}\n")
+                f.write(f"상품 전처리 성공: 필터링된 데이터 행 수 = {len(df)}\\n")
+                f.write(f"수정된 질문: {modified_query}\\n")
         
         # Clean column names (remove tabs, extra spaces)
         df.columns = df.columns.str.replace('\t', '').str.strip()

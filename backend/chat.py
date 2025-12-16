@@ -188,12 +188,6 @@ def process_chat_query(file_path: str, query: str, api_key: str, history: list =
         
         with open("chat_debug.log", "a", encoding="utf-8") as f:
             f.write(f"Cleaned columns: {list(df.columns)}\n")
-        
-        # Select model with error handling
-        selected_model = "gemini-1.5-flash"  # Default fallback
-        
-        try:
-            # Discover available models dynamically
             available_models = genai.list_models()
             
             # Filter for models that support generateContent

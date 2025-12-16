@@ -8,6 +8,7 @@ from datetime import datetime
 import traceback
 import re
 from database import get_file_from_db
+from direct_gemini import process_query_direct
 
 def load_ai_instructions():
     """AI 지침 로드"""
@@ -295,12 +296,26 @@ Example BAD final answers (DO NOT DO THIS):
         # Run query with full context
         try:
             result = agent.invoke(full_query)
+        except AttributeError as attr_error:
+            # Handle finish_reason error by falling back to direct Gemini API
+            if "'int' object has no attribute 'name'" in str(attr_error):
+                with open("chat_debug.log", "a", encoding="utf-8") as f:
+                    f.write(f"Finish reason error detected, using direct Gemini API fallback\\n")
+                
+                # Use direct Gemini API instead
+                try:
+                    direct_result = process_query_direct(df, query, api_key, history)
+                    return direct_result
+                except Exception as direct_error:
+                    raise ValueError(f"Direct Gemini API 실행 오류: {str(direct_error)}")
+            else:
+                raise ValueError(f"AI 에이전트 실행 오류: {str(attr_error)}")
         except Exception as agent_error:
             # If agent fails with parsing error, try to extract useful info
             error_str = str(agent_error)
             
             with open("chat_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"Agent error: {error_str}\n")
+                f.write(f"Agent error: {error_str}\\n")
             
             # Check if it's a parsing error with actual output
             if "Could not parse LLM output" in error_str:
@@ -308,7 +323,7 @@ Example BAD final answers (DO NOT DO THIS):
                 # Look for patterns like: mybi_sales = ... print(...)
                 if "print(format(int(" in error_str:
                     # Extract the calculation result if visible
-                    match = re.search(r'print\(format\(int\([^)]+\),\s*","\)\)', error_str)
+                    match = re.search(r'print\\(format\\(int\\([^)]+\\),\\s*\",\"\\)\\)', error_str)
                     if match:
                         # Fallback: return a helpful message
                         return "데이터 처리 중 오류가 발생했습니다. 다시 시도해주세요."

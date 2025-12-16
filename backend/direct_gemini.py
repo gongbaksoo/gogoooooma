@@ -22,6 +22,7 @@ def load_ai_instructions():
 def process_query_direct(df: pd.DataFrame, query: str, api_key: str, history: list = None) -> str:
     """
     Direct Gemini API를 사용한 쿼리 처리 (LangChain 우회)
+    Gemini가 Python 코드를 생성하고, 우리가 실행하여 정확한 결과 반환
     """
     if history is None:
         history = []
@@ -58,16 +59,17 @@ def process_query_direct(df: pd.DataFrame, query: str, api_key: str, history: li
             content = msg.get("content", "")
             history_text += f"{role}: {content}\\n"
     
-    # 프롬프트 구성
+    # 프롬프트 구성 - Python 코드 생성 요청
     prompt = f"""
 당신은 pandas DataFrame 데이터 분석 전문가입니다.
+주어진 질문에 답하기 위한 Python 코드를 생성하세요.
 
 [현재 시간]
 {current_datetime_str}
 현재 연도: {current_year}년
 현재 월: {current_month}월
 
-[AI 지침 - 반드시 준수]
+[AI 지침]
 {instructions_text}
 
 [데이터 정보]
@@ -79,22 +81,53 @@ def process_query_direct(df: pd.DataFrame, query: str, api_key: str, history: li
 [사용자 질문]
 {query}
 
-위 데이터를 분석하여 질문에 답변하세요.
-답변은 반드시 숫자나 간단한 문장으로만 제공하세요.
-코드나 설명을 포함하지 마세요.
+위 질문에 답하기 위한 Python 코드를 작성하세요.
+DataFrame 변수명은 'df'를 사용하세요.
 
-분석 단계:
-1. 질문에서 필요한 정보 파악 (기간, 상품, 계산 유형)
-2. 이전 대화에서 맥락 파악 (기간이나 유형이 생략되었다면)
-3. 필요한 필터링 조건 결정
-4. 계산 수행
-5. 결과를 간단한 문장으로 답변
+코드 작성 규칙:
+1. 결과를 'result' 변수에 저장하세요
+2. 금액은 천 단위 구분 기호를 사용하여 포맷하세요
+3. 최종 답변은 간단한 문장으로 작성하세요
+4. 코드만 작성하고, 설명은 포함하지 마세요
 
-답변:
+예시:
+```python
+# 전월(2511) 매출 계산
+result = df[df['월구분'] == 2511]['판매액'].sum()
+answer = f"전월 매출은 {{result:,.0f}}원입니다"
+```
+
+Python 코드:
 """
     
     # Gemini API 호출
     model = genai.GenerativeModel('gemini-2.0-flash-exp')
     response = model.generate_content(prompt)
     
-    return response.text.strip()
+    # 코드 추출
+    code = response.text.strip()
+    
+    # 코드 블록에서 실제 코드만 추출
+    if "```python" in code:
+        code = code.split("```python")[1].split("```")[0].strip()
+    elif "```" in code:
+        code = code.split("```")[1].split("```")[0].strip()
+    
+    # 코드 실행
+    try:
+        # 안전한 실행 환경 설정
+        local_vars = {'df': df, 'pd': pd}
+        exec(code, {}, local_vars)
+        
+        # 결과 추출
+        if 'answer' in local_vars:
+            return local_vars['answer']
+        elif 'result' in local_vars:
+            result = local_vars['result']
+            return f"{result:,.0f}원" if isinstance(result, (int, float)) else str(result)
+        else:
+            return "결과를 찾을 수 없습니다."
+    except Exception as e:
+        # 코드 실행 실패 시 에러 메시지 반환
+        return f"계산 중 오류 발생: {str(e)}"
+

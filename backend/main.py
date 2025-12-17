@@ -403,6 +403,38 @@ def get_dashboard_product_group_sales(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
 
+@app.get("/api/dashboard/options")
+def get_dashboard_options(filename: str):
+    """
+    품목그룹 > 품목 구분 > 품목 구분_2 계층 구조 옵션 반환
+    """
+    try:
+        from dashboard import get_hierarchical_options
+        result = get_hierarchical_options(filename)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"옵션 데이터 처리 실패: {str(e)}")
+
+@app.get("/api/dashboard/hierarchical-sales")
+def get_dashboard_hierarchical_sales(filename: str, group: str = None, category: str = None, sub_category: str = None):
+    """
+    조건에 따른 월별 매출 데이터 반환
+    """
+    try:
+        from dashboard import get_filtered_monthly_sales
+        result = get_filtered_monthly_sales(filename, group, category, sub_category)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
+
 @app.delete("/custom/aliases/{column}")
 def delete_column_aliases(column: str):
     """특정 컬럼의 모든 별칭 삭제"""

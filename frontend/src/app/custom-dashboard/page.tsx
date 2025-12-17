@@ -11,6 +11,8 @@ import SchemaAliasManager from "@/components/SchemaAliasManager";
 import AIInstructionsManager from "@/components/AIInstructionsManager";
 import SalesChart from "@/components/SalesChart";
 import ProductGroupChart from "@/components/ProductGroupChart";
+import ProductGroupChart from "@/components/ProductGroupChart";
+import DetailedSalesChart from "@/components/DetailedSalesChart";
 import { ArrowLeft, Settings, BookOpen } from "lucide-react";
 
 export default function CustomDashboard() {
@@ -95,6 +97,11 @@ export default function CustomDashboard() {
                 {/* Product Group Chart - 품목그룹별 */}
                 <div className="mb-8">
                     <ProductGroupChart filename={selectedFile || filename} />
+                </div>
+
+                {/* Detailed Sales Chart - 3단계 필터 */}
+                <div className="mb-8">
+                    <DetailedSalesChart filename={selectedFile || filename} />
                 </div>
 
                 {/* Chat Interface */}

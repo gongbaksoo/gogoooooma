@@ -95,3 +95,85 @@ def get_monthly_sales_by_product_group(filename: str):
             result["groups"][group] = pivot_df[group].tolist()
     
     return result
+
+def get_hierarchical_options(filename: str):
+    """
+    품목그룹 > 품목 구분 > 품목 구분_2 계층 구조 옵션 반환
+    """
+    file_path = os.path.join("uploads", filename)
+    
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {filename}")
+    
+    df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
+    df.columns = df.columns.str.replace('\\t', '').str.strip()
+    
+    required_cols = ['품목그룹1', '품목 구분', '품목 구분_2']
+    for col in required_cols:
+        if col not in df.columns:
+            raise ValueError(f"Required column '{col}' not found in data")
+
+    options = {}
+    
+    # NaN 값 처리 및 중복 제거
+    df_clean = df[required_cols].fillna('Unknown')
+    
+    for _, row in df_clean.drop_duplicates().iterrows():
+        group = row['품목그룹1']
+        category = row['품목 구분']
+        sub_category = row['품목 구분_2']
+        
+        if group not in options:
+            options[group] = {}
+            
+        if category not in options[group]:
+            options[group][category] = []
+            
+        if sub_category not in options[group][category]:
+            options[group][category].append(sub_category)
+            
+    return options
+
+def get_filtered_monthly_sales(filename: str, group: str = None, category: str = None, sub_category: str = None):
+    """
+    조건에 따른 월별 매출 데이터 반환
+    """
+    file_path = os.path.join("uploads", filename)
+    
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {filename}")
+    
+    df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
+    df.columns = df.columns.str.replace('\\t', '').str.strip()
+    
+    # 1. 월별 전체 데이터를 먼저 구해서 모든 월 리스트 확보
+    all_months = sorted(df['월구분'].unique())
+    
+    # 2. 필터링
+    df_filtered = df.copy()
+    
+    current_label = "전체"
+    
+    if group and group != 'all':
+        df_filtered = df_filtered[df_filtered['품목그룹1'] == group]
+        current_label = group
+        
+    if category and category != 'all':
+        df_filtered = df_filtered[df_filtered['품목 구분'] == category]
+        current_label = f"{group} > {category}"
+        
+    if sub_category and sub_category != 'all':
+        df_filtered = df_filtered[df_filtered['품목 구분_2'] == sub_category]
+        current_label = sub_category
+        
+    # 3. 월별 매출 집계
+    monthly_sales = df_filtered.groupby('월구분')['판매액'].sum().reindex(all_months, fill_value=0)
+    
+    # 4. 결과 포맷팅
+    result = {
+        "months": [str(int(month)) for month in all_months],
+        "sales": monthly_sales.values.tolist(),
+        "label": current_label
+    }
+    
+    return result

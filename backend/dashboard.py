@@ -108,8 +108,26 @@ def calculate_days_list(df, months):
             month_df = df[df['월구분'] == month_val_for_filter]
             
             if not month_df.empty:
-                max_day = month_df['일구분'].max()
-                logs.append(f"Month {m_str}: Max day {max_day} (Type: {type(max_day)})")
+                # ----------------------------------------------------------------
+                # FIX: Filter for rows with Sales > 0 to ignore future placeholder dates
+                # Many excel files pre-fill days 1-31 with 0 sales.
+                # max('일구분') would be 31. We want max day WITH SALES.
+                # ----------------------------------------------------------------
+                
+                # Ensure '판매액' is numeric
+                month_df_valid = month_df[pd.to_numeric(month_df['판매액'], errors='coerce').fillna(0) > 0]
+                
+                if not month_df_valid.empty:
+                    max_day = month_df_valid['일구분'].max()
+                    logs.append(f"Month {m_str}: Max day with sales>0 is {max_day}")
+                else:
+                    # If NO sales > 0 found (e.g. all 0), fall back to raw max or calendar?
+                    # If raw max is 9, use 9. If raw max is 31, use ?
+                    # If total sales is 0, divisor doesn't matter much (result 0).
+                    # Use raw max but log it.
+                    max_day = month_df['일구분'].max()
+                    logs.append(f"Month {m_str}: No sales > 0. Using raw max {max_day}")
+
                 if max_day > 0:
                     days_list.append(int(max_day))
                 else:

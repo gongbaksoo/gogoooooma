@@ -14,6 +14,7 @@ interface ChartData {
     이커머스: number;
     오프라인: number;
     총매출: number;
+    days?: number;
 }
 
 type ViewMode = 'sales' | 'growth' | 'daily';
@@ -127,7 +128,8 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                 month: formatMonth(month),
                 이커머스: ecommerceVal,
                 오프라인: offlineVal,
-                총매출: totalVal // ChartData 인터페이스에 맞춰 '총매출' 사용 (기존에 정의됨)
+                총매출: totalVal, // ChartData 인터페이스에 맞춰 '총매출' 사용 (기존에 정의됨)
+                days: days
             };
         });
 
@@ -170,11 +172,13 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
 
     const chartData = getChartData();
     const yAxisFormatter = viewMode === 'growth' ? formatPercent : formatMillions;
-    const tooltipFormatter = (value: number) => {
+    const tooltipFormatter = (value: number, name: string, props: any) => {
         if (viewMode === 'growth') {
             return [formatPercent(value), ''];
         } else {
-            return [formatCurrency(value) + (viewMode === 'daily' ? '' : '원'), ''];
+            const days = props.payload.days;
+            const suffix = viewMode === 'daily' ? ` (기준: ${days}일)` : '';
+            return [formatCurrency(value) + (viewMode === 'daily' ? '' : '원'), name + suffix];
         }
     };
 

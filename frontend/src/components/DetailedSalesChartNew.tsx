@@ -13,6 +13,7 @@ interface ChartData {
     month: string;
     value: number;
     growth?: number;
+    days?: number;
 }
 
 type ViewMode = 'sales' | 'growth';
@@ -175,7 +176,8 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                 const days = daysList[index] || 30;
                 return {
                     ...item,
-                    value: item.value / days
+                    value: item.value / days,
+                    days: days
                 };
             });
         }
@@ -299,9 +301,12 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                 label={{ value: yAxisLabel, angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#666' } }}
                             />
                             <Tooltip
-                                formatter={(value: number) => {
+                                formatter={(value: number, name: string, props: any) => {
                                     if (viewMode === 'sales') return [formatMillions(value), '매출액'];
-                                    if (viewMode === 'daily') return [formatMillions(value), '일평균 매출'];
+                                    if (viewMode === 'daily') {
+                                        const days = props.payload.days;
+                                        return [formatMillions(value), `일평균 매출 (기준: ${days}일)`];
+                                    }
                                     return [value.toFixed(1) + '%', '증감율'];
                                 }}
                                 contentStyle={{

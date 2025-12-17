@@ -137,7 +137,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
         if (viewMode === 'daily') {
             return data.map((item, index) => {
                 const days = daysList[index] || 30;
-                const dailyData: ChartData = { month: item.month };
+                const dailyData: ChartData = { month: item.month, days: days };
 
                 Object.keys(item).forEach(key => {
                     if (key !== 'month' && typeof item[key] === 'number') {
@@ -217,9 +217,15 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
     }
 
     const chartData = getChartData();
-    const tooltipFormatter = viewMode === 'growth'
-        ? (value: number) => [value.toFixed(1) + '%', '']
-        : (value: number) => [formatCurrency(value) + (viewMode === 'daily' ? '' : '원'), ''];
+    const tooltipFormatter = (value: number, name: string, props: any) => {
+        if (viewMode === 'growth') {
+            return [value.toFixed(1) + '%', ''];
+        } else {
+            const days = props.payload.days;
+            const suffix = viewMode === 'daily' ? ` (기준: ${days}일)` : '';
+            return [formatCurrency(value) + (viewMode === 'daily' ? '' : '원'), (name || '') + suffix];
+        }
+    };
     const chartTitle = viewMode === 'sales'
         ? '📦 품목그룹별 월별 매출 추이'
         : viewMode === 'daily'

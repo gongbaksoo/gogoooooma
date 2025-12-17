@@ -68,11 +68,14 @@ def calculate_days_list(df, months):
     """
     각 월별 나눌 일수 리스트 반환 (with debug logs)
     """
-    logs = []
     logs.append(f"Columns found: {df.columns.tolist()}")
     
-    if '일구분' not in df.columns:
-        logs.append("'일구분' column MISSING. Fallback to calendar days.")
+    # Flexible column search for 'Day'
+    day_col_candidates = ['일구분', '일자', '일', 'Day', 'day', 'Date', 'date']
+    day_col = next((col for col in day_col_candidates if col in df.columns), None)
+    
+    if not day_col:
+        logs.append(f"Day column NOT found. Candidates checked: {day_col_candidates}. Fallback to calendar days.")
         days_list = []
         for m_str in months:
             year = 2024
@@ -86,6 +89,8 @@ def calculate_days_list(df, months):
                 month = int(m_str)
             days_list.append(get_days_in_month(year, month))
         return days_list, logs
+        
+    logs.append(f"Using '{day_col}' as day column.")
 
     days_list = []
     for m_str in months:
@@ -111,21 +116,19 @@ def calculate_days_list(df, months):
                 # ----------------------------------------------------------------
                 # FIX: Filter for rows with Sales > 0 to ignore future placeholder dates
                 # Many excel files pre-fill days 1-31 with 0 sales.
-                # max('일구분') would be 31. We want max day WITH SALES.
+                # max('day_col') would be 31. We want max day WITH SALES.
                 # ----------------------------------------------------------------
                 
                 # Ensure '판매액' is numeric
                 month_df_valid = month_df[pd.to_numeric(month_df['판매액'], errors='coerce').fillna(0) > 0]
                 
                 if not month_df_valid.empty:
-                    max_day = month_df_valid['일구분'].max()
+                    max_day = month_df_valid[day_col].max()
                     logs.append(f"Month {m_str}: Max day with sales>0 is {max_day}")
                 else:
                     # If NO sales > 0 found (e.g. all 0), fall back to raw max or calendar?
-                    # If raw max is 9, use 9. If raw max is 31, use ?
-                    # If total sales is 0, divisor doesn't matter much (result 0).
                     # Use raw max but log it.
-                    max_day = month_df['일구분'].max()
+                    max_day = month_df[day_col].max()
                     logs.append(f"Month {m_str}: No sales > 0. Using raw max {max_day}")
 
                 if max_day > 0:

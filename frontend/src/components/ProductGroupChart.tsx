@@ -107,7 +107,8 @@ const ProductGroupChart: React.FC<ProductGroupChartProps> = ({ filename }) => {
         return value.toLocaleString();
     };
 
-    const formatMillions = (value: number): string => {
+    const formatMillions = (value: any): string => {
+        if (typeof value !== 'number') return String(value);
         if (value >= 100000000) {
             return `${(value / 100000000).toFixed(1)}억`;
         } else if (value >= 10000) {
@@ -116,7 +117,8 @@ const ProductGroupChart: React.FC<ProductGroupChartProps> = ({ filename }) => {
         return value.toLocaleString();
     };
 
-    const formatPercent = (value: number): string => {
+    const formatPercent = (value: any): string => {
+        if (typeof value !== 'number') return String(value);
         return `${value.toFixed(1)}%`;
     };
 
@@ -289,6 +291,11 @@ const ProductGroupChart: React.FC<ProductGroupChartProps> = ({ filename }) => {
                                 strokeWidth={2}
                                 dot={{ fill: COLORS[index % COLORS.length], r: 3 }}
                                 activeDot={{ r: 5 }}
+                                label={{
+                                    position: 'top',
+                                    formatter: viewMode === 'sales' ? formatMillions : (val: any) => typeof val === 'number' ? val.toFixed(1) + '%' : String(val),
+                                    style: { fontSize: '10px', fill: COLORS[index % COLORS.length], fontWeight: 'bold' }
+                                }}
                             />
                         )
                     ))}

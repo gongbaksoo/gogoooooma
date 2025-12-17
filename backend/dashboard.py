@@ -68,6 +68,7 @@ def calculate_days_list(df, months):
     """
     각 월별 나눌 일수 리스트 반환 (with debug logs)
     """
+    logs = []
     logs.append(f"Columns found: {df.columns.tolist()}")
     
     # Flexible column search for 'Day'

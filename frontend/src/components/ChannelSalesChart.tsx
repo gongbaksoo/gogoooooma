@@ -25,7 +25,8 @@ interface OptionsTree {
 
 const ChannelSalesChart: React.FC<ChannelSalesChartProps> = ({ filename }) => {
     const [data, setData] = useState<ChartData[]>([]);
-    const [viewMode, setViewMode] = useState<ViewMode>('sales');
+    const [daysList, setDaysList] = useState<number[]>([]);
+    const [viewMode, setViewMode] = useState<ViewMode | 'daily'>('sales');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -87,6 +88,8 @@ const ChannelSalesChart: React.FC<ChannelSalesChartProps> = ({ filename }) => {
 
                 const months = response.data.months;
                 const sales = response.data.sales;
+                const days = response.data.days_list || [];
+                setDaysList(days);
 
                 setCurrentLabel(response.data.label);
 
@@ -164,17 +167,35 @@ const ChannelSalesChart: React.FC<ChannelSalesChartProps> = ({ filename }) => {
         ? options[selectedPart][selectedChannel]
         : [];
 
-    const displayData = data.slice(viewMode === 'growth' ? 1 : 0);
+    const getDisplayData = () => {
+        if (viewMode === 'sales') return data;
+        if (viewMode === 'growth') return data.slice(1);
+        if (viewMode === 'daily') {
+            return data.map((item, index) => {
+                const days = daysList[index] || 30;
+                return {
+                    ...item,
+                    value: item.value / days
+                };
+            });
+        }
+        return data;
+    };
+
+    const displayData = getDisplayData();
+
     const chartTitle = viewMode === 'sales'
         ? `🏢 ${currentLabel} 월별 매출 추이`
-        : `📈 ${currentLabel} 월별 증감율 (전월 대비)`;
-    const yAxisLabel = viewMode === 'sales' ? '매출액' : '증감율 (%)';
+        : viewMode === 'daily'
+            ? `🏢 ${currentLabel} 월별 일평균 매출`
+            : `📈 ${currentLabel} 월별 증감율 (전월 대비)`;
+    const yAxisLabel = viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : '증감율 (%)';
 
     // YAxis formatter selection
-    const yAxisFormatter = viewMode === 'sales' ? formatMillions : formatPercent;
+    const yAxisFormatter = viewMode === 'growth' ? formatPercent : formatMillions;
 
     // Label formatter selection
-    const labelFormatter = viewMode === 'sales' ? formatMillions : (val: any) => typeof val === 'number' ? val.toFixed(1) + '%' : String(val);
+    const labelFormatter = viewMode === 'growth' ? (val: any) => typeof val === 'number' ? val.toFixed(1) + '%' : String(val) : formatMillions;
 
     return (
         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
@@ -190,6 +211,18 @@ const ChannelSalesChart: React.FC<ChannelSalesChartProps> = ({ filename }) => {
                                 }`}
                         >
                             매출액
+                        </button>
+                        <button
+                            onClick={() => {
+                                console.log('Switched to daily view');
+                                setViewMode('daily');
+                            }}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'daily'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                        >
+                            일평균 (New)
                         </button>
                         <button
                             onClick={() => setViewMode('growth')}
@@ -272,6 +305,7 @@ const ChannelSalesChart: React.FC<ChannelSalesChartProps> = ({ filename }) => {
                             <Tooltip
                                 formatter={(value: number) => {
                                     if (viewMode === 'sales') return [formatMillions(value), '매출액'];
+                                    if (viewMode === 'daily') return [formatMillions(value), '일평균 매출'];
                                     return [value.toFixed(1) + '%', '증감율'];
                                 }}
                                 contentStyle={{
@@ -284,7 +318,7 @@ const ChannelSalesChart: React.FC<ChannelSalesChartProps> = ({ filename }) => {
                             <Legend wrapperStyle={{ paddingTop: '20px' }} />
                             <Line
                                 type="monotone"
-                                dataKey={viewMode === 'sales' ? "value" : "growth"}
+                                dataKey={viewMode === 'growth' ? "growth" : "value"}
                                 name={currentLabel}
                                 stroke="#10b981"
                                 strokeWidth={3}

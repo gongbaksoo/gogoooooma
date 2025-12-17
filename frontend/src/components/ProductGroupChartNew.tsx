@@ -29,7 +29,7 @@ const COLORS = [
     '#84cc16', // lime
 ];
 
-const ProductGroupChart: React.FC<ProductGroupChartProps> = ({ filename }) => {
+const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) => {
     const [data, setData] = useState<ChartData[]>([]);
     const [groups, setGroups] = useState<string[]>([]);
     const [viewMode, setViewMode] = useState<ViewMode | 'daily'>('sales');
@@ -248,7 +248,7 @@ const ProductGroupChart: React.FC<ProductGroupChartProps> = ({ filename }) => {
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                     >
-                        일평균
+                        일평균 (New)
                     </button>
                     <button
                         onClick={() => setViewMode('growth')}
@@ -332,4 +332,4 @@ const ProductGroupChart: React.FC<ProductGroupChartProps> = ({ filename }) => {
     );
 };
 
-export default ProductGroupChart;
+export default ProductGroupChartNew;

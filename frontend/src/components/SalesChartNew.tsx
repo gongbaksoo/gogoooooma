@@ -19,7 +19,7 @@ interface ChartData {
 type ViewMode = 'sales' | 'growth' | 'daily';
 type ChannelFilter = 'all' | 'total' | 'ecommerce' | 'offline';
 
-const SalesChart: React.FC<SalesChartProps> = ({ filename }) => {
+const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
     const [data, setData] = useState<{
         months: string[];
         ecommerce: number[];
@@ -207,7 +207,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ filename }) => {
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                     >
-                        일평균
+                        일평균 (New)
                     </button>
                     <button
                         onClick={() => setViewMode('growth')}
@@ -309,4 +309,4 @@ const SalesChart: React.FC<SalesChartProps> = ({ filename }) => {
     );
 };
 
-export default SalesChart;
+export default SalesChartNew;

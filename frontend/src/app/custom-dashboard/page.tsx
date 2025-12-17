@@ -9,10 +9,10 @@ import FileSelector from "@/components/FileSelector";
 import ChatHistoryList from "@/components/ChatHistoryList";
 import SchemaAliasManager from "@/components/SchemaAliasManager";
 import AIInstructionsManager from "@/components/AIInstructionsManager";
-import SalesChart from "@/components/SalesChart";
-import ChannelSalesChart from "@/components/ChannelSalesChart";
-import ProductGroupChart from "@/components/ProductGroupChart";
-import DetailedSalesChart from "@/components/DetailedSalesChart";
+import SalesChartNew from "@/components/SalesChartNew";
+import ChannelSalesChartNew from "@/components/ChannelSalesChartNew";
+import ProductGroupChartNew from "@/components/ProductGroupChartNew";
+import DetailedSalesChartNew from "@/components/DetailedSalesChartNew";
 import { ArrowLeft, Settings, BookOpen } from "lucide-react";
 
 export default function CustomDashboard() {
@@ -91,22 +91,22 @@ export default function CustomDashboard() {
 
                 {/* Sales Chart - 채널별 */}
                 <div className="mb-8">
-                    <SalesChart filename={selectedFile || filename} />
+                    <SalesChartNew filename={selectedFile || filename} />
                 </div>
 
                 {/* Channel Sales Chart - 상세 채널별 (Part > Channel > Account) - NEW */}
                 <div className="mb-8">
-                    <ChannelSalesChart filename={selectedFile || filename} />
+                    <ChannelSalesChartNew filename={selectedFile || filename} />
                 </div>
 
                 {/* Product Group Chart - 품목그룹별 */}
                 <div className="mb-8">
-                    <ProductGroupChart filename={selectedFile || filename} />
+                    <ProductGroupChartNew filename={selectedFile || filename} />
                 </div>
 
                 {/* Detailed Sales Chart - 3단계 필터 */}
                 <div className="mb-8">
-                    <DetailedSalesChart filename={selectedFile || filename} />
+                    <DetailedSalesChartNew filename={selectedFile || filename} />
                 </div>
 
                 {/* Chat Interface */}

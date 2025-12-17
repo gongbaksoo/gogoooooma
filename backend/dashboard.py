@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import calendar
 
 def get_monthly_sales_by_channel(filename: str):
     """
@@ -15,6 +16,10 @@ def get_monthly_sales_by_channel(filename: str):
     
     # 컬럼명 클리닝
     df.columns = df.columns.str.replace('\t', '').str.strip()
+    
+    # Handle known typos
+    if '거래쳐명' in df.columns:
+        df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
     
     # 필요한 컬럼 확인
     required_cols = ['월구분', '파트구분', '판매액']
@@ -39,15 +44,96 @@ def get_monthly_sales_by_channel(filename: str):
     offline_values = pivot_df.get('오프라인', pd.Series([0] * len(pivot_df))).tolist()
     total_values = [e + o for e, o in zip(ecommerce_values, offline_values)]
     
+    months = [str(int(month)) for month in pivot_df.index.tolist()]
+    days_list = calculate_days_list(df, pivot_df.index.tolist())
+
     # 결과 포맷팅
     result = {
-        "months": [str(int(month)) for month in pivot_df.index.tolist()],
+        "months": months,
         "ecommerce": ecommerce_values,
         "offline": offline_values,
-        "total": total_values
+        "total": total_values,
+        "days_list": days_list
     }
     
     return result
+
+def get_days_in_month(year, month):
+    """해당 연/월의 총 일수 반환"""
+    return calendar.monthrange(year, month)[1]
+
+def calculate_days_list(df, months):
+    """
+    각 월별 나눌 일수 리스트 반환
+    - 과거 월: 달력상 총 일수
+    - 최신 월: 데이터 상의 최대 일자 (일구분 컬럼 활용)
+    """
+    if '일구분' not in df.columns:
+        # 일구분 없으면 그냥 달력 일수 반환 (Fallback)
+        days_list = []
+        for m_str in months:
+            year = 2024 # 기본값, 필요시 로직 개선
+            if len(str(m_str)) == 6: # YYYYMM
+                year = int(str(m_str)[:4])
+                month = int(str(m_str)[4:])
+            elif len(str(m_str)) == 4: # YYMM
+                year = 2000 + int(str(m_str)[:2])
+                month = int(str(m_str)[2:])
+            else:
+                month = int(m_str) # 단순 월 숫자만 있는 경우 등
+            
+            days_list.append(get_days_in_month(year, month))
+        return days_list
+
+    # 최신 월 파악 (문자열 기준 정렬)
+    sorted_months = sorted(df['월구분'].unique().astype(str))
+    if not sorted_months:
+        return []
+        
+    latest_month = sorted_months[-1] # 가장 큰 값이 최신 월 (예: '2512')
+    
+    days_list = []
+    for m_str in months:
+        # 월 파싱
+        m_str = str(m_str)
+        year = 2024 # Default year, adjust as needed
+        if len(m_str) == 4: # YYMM (예: 2501)
+            year = 2000 + int(m_str[:2])
+            month = int(m_str[2:])
+        elif len(m_str) == 5 or len(m_str) == 6: # YYYYMM
+            year = int(m_str[:-2])
+            month = int(m_str[-2:])
+        else:
+            # 포맷 불명확 시 
+            days_list.append(30)
+            continue
+
+        if m_str == str(latest_month):
+            # 최신 월인 경우: 해당 월 데이터 중 최대 일자 찾기
+            # 월구분이 숫자/문자 섞여있을 수 있으므로 주의
+            # 해당 월의 데이터만 필터링
+            # 주의: df['월구분'] 타입을 맞춰야 함
+            try:
+                # df['월구분']이 int일 수도 string일 수도 있음
+                latest_month_val = int(latest_month) if isinstance(df['월구분'].iloc[0], (int, float)) else latest_month
+                
+                # 해당 월 데이터
+                month_df = df[df['월구분'] == latest_month_val]
+                
+                if not month_df.empty:
+                    # 일구분 최대값 (가끔 일구분이 날짜 풀텍스트일 수도 있으나, 보통 '일' 숫자라고 가정)
+                    # 데이터 샘플상 '일구분'이 있다면 활용
+                    max_day = month_df['일구분'].max()
+                    days_list.append(int(max_day))
+                else:
+                    days_list.append(get_days_in_month(year, month))
+            except:
+                days_list.append(get_days_in_month(year, month))
+        else:
+            # 과거 월: 달력 기준
+            days_list.append(get_days_in_month(year, month))
+            
+    return days_list
 
 def get_monthly_sales_by_product_group(filename: str):
     """
@@ -64,6 +150,9 @@ def get_monthly_sales_by_product_group(filename: str):
     # 컬럼명 클리닝
     df.columns = df.columns.str.replace('\t', '').str.strip()
     
+    if '거래쳐명' in df.columns:
+        df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+        
     # 필요한 컬럼 확인
     required_cols = ['월구분', '품목그룹1', '판매액']
     for col in required_cols:
@@ -83,10 +172,12 @@ def get_monthly_sales_by_product_group(filename: str):
     group_totals = pivot_df.sum().sort_values(ascending=False)
     top_groups = group_totals.head(10).index.tolist()  # 상위 10개 품목그룹
     
-    # 결과 포맷팅
+    days_list = calculate_days_list(df, pivot_df.index.tolist())
+    
     result = {
         "months": [str(int(month)) for month in pivot_df.index.tolist()],
-        "groups": {}
+        "groups": {},
+        "days_list": days_list
     }
     
     # 각 품목그룹의 월별 데이터 추가
@@ -107,6 +198,9 @@ def get_hierarchical_options(filename: str):
     
     df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
     df.columns = df.columns.str.replace('\t', '').str.strip()
+    
+    if '거래쳐명' in df.columns:
+        df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
     
     required_cols = ['품목그룹1', '품목 구분', '품목 구분_2']
     for col in required_cols:
@@ -146,8 +240,12 @@ def get_filtered_monthly_sales(filename: str, group: str = None, category: str =
     df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
     df.columns = df.columns.str.replace('\t', '').str.strip()
     
+    if '거래쳐명' in df.columns:
+        df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+    
     # 1. 월별 전체 데이터를 먼저 구해서 모든 월 리스트 확보
     all_months = sorted(df['월구분'].unique())
+    days_list = calculate_days_list(df, all_months)
     
     # 2. 필터링
     df_filtered = df.copy()
@@ -173,7 +271,8 @@ def get_filtered_monthly_sales(filename: str, group: str = None, category: str =
     result = {
         "months": [str(int(month)) for month in all_months],
         "sales": monthly_sales.values.tolist(),
-        "label": current_label
+        "label": current_label,
+        "days_list": days_list
     }
     
     return result
@@ -191,7 +290,8 @@ def get_channel_layer_options(filename: str):
     df.columns = df.columns.str.replace('\t', '').str.strip()
     
     # Handle known typos
-    df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+    if '거래쳐명' in df.columns:
+        df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
     
     required_cols = ['파트구분', '채널구분', '거래처명']
     for col in required_cols:
@@ -232,9 +332,11 @@ def get_channel_layer_sales(filename: str, part: str = None, channel: str = None
     df.columns = df.columns.str.replace('\t', '').str.strip()
     
     # Handle known typos
-    df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+    if '거래쳐명' in df.columns:
+        df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
     
     all_months = sorted(df['월구분'].unique())
+    days_list = calculate_days_list(df, all_months)
     
     df_filtered = df.copy()
     current_label = "전체 채널"
@@ -256,7 +358,8 @@ def get_channel_layer_sales(filename: str, part: str = None, channel: str = None
     result = {
         "months": [str(int(month)) for month in all_months],
         "sales": monthly_sales.values.tolist(),
-        "label": current_label
+        "label": current_label,
+        "days_list": days_list
     }
     
     return result

@@ -5,7 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
 
-interface DetailedSalesChartProps {
+interface ChannelSalesChartProps {
     filename: string | null;
 }
 
@@ -18,12 +18,12 @@ interface ChartData {
 type ViewMode = 'sales' | 'growth';
 
 interface OptionsTree {
-    [group: string]: {
-        [category: string]: string[];
+    [part: string]: {
+        [channel: string]: string[];
     };
 }
 
-const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => {
+const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) => {
     const [data, setData] = useState<ChartData[]>([]);
     const [daysList, setDaysList] = useState<number[]>([]);
     const [viewMode, setViewMode] = useState<ViewMode | 'daily'>('sales');
@@ -32,10 +32,10 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
 
     // Filter states
     const [options, setOptions] = useState<OptionsTree>({});
-    const [selectedGroup, setSelectedGroup] = useState<string>('');
-    const [selectedCategory, setSelectedCategory] = useState<string>('');
-    const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
-    const [currentLabel, setCurrentLabel] = useState<string>('전체');
+    const [selectedPart, setSelectedPart] = useState<string>('');
+    const [selectedChannel, setSelectedChannel] = useState<string>('');
+    const [selectedAccount, setSelectedAccount] = useState<string>('');
+    const [currentLabel, setCurrentLabel] = useState<string>('전체 채널');
 
     // Load options on file change
     useEffect(() => {
@@ -46,18 +46,18 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
             }
 
             try {
-                const response = await axios.get(`${API_BASE_URL}/api/dashboard/options`, {
+                const response = await axios.get(`${API_BASE_URL}/api/dashboard/channel-options`, {
                     params: { filename }
                 });
                 setOptions(response.data);
 
-                // Set default to first group if available
-                const groups = Object.keys(response.data);
-                if (groups.length > 0) {
-                    setSelectedGroup(groups[0]);
+                // Set default to first part if available (e.g. 이커머스)
+                const parts = Object.keys(response.data);
+                if (parts.length > 0) {
+                    setSelectedPart(parts[0]);
                 }
             } catch (err) {
-                console.error('Failed to fetch options:', err);
+                console.error('Failed to fetch channel options:', err);
                 setError('옵션 데이터를 불러오는데 실패했습니다');
             }
         };
@@ -68,7 +68,7 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
     // Load sales data when filters change
     useEffect(() => {
         const fetchData = async () => {
-            if (!filename || !selectedGroup) {
+            if (!filename || !selectedPart) {
                 setData([]);
                 return;
             }
@@ -77,12 +77,12 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
             setError(null);
 
             try {
-                const response = await axios.get(`${API_BASE_URL}/api/dashboard/hierarchical-sales`, {
+                const response = await axios.get(`${API_BASE_URL}/api/dashboard/channel-sales`, {
                     params: {
                         filename,
-                        group: selectedGroup,
-                        category: selectedCategory || 'all',
-                        sub_category: selectedSubCategory || 'all'
+                        part: selectedPart,
+                        channel: selectedChannel || 'all',
+                        account: selectedAccount || 'all'
                     }
                 });
 
@@ -112,7 +112,7 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
 
                 setData(chartDataWithGrowth);
             } catch (err) {
-                console.error('Failed to fetch hierarchical sales data:', err);
+                console.error('Failed to fetch channel sales data:', err);
                 setError('데이터를 불러오는데 실패했습니다');
             } finally {
                 setLoading(false);
@@ -120,18 +120,18 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
         };
 
         fetchData();
-    }, [filename, selectedGroup, selectedCategory, selectedSubCategory]);
+    }, [filename, selectedPart, selectedChannel, selectedAccount]);
 
     // Reset child filters when parent changes
-    const handleGroupChange = (group: string) => {
-        setSelectedGroup(group);
-        setSelectedCategory('');
-        setSelectedSubCategory('');
+    const handlePartChange = (part: string) => {
+        setSelectedPart(part);
+        setSelectedChannel('');
+        setSelectedAccount('');
     };
 
-    const handleCategoryChange = (category: string) => {
-        setSelectedCategory(category);
-        setSelectedSubCategory('');
+    const handleChannelChange = (channel: string) => {
+        setSelectedChannel(channel);
+        setSelectedAccount('');
     };
 
     const formatMonth = (month: string): string => {
@@ -159,12 +159,12 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
     };
 
     if (!filename) {
-        return null; // Or placeholder
+        return null;
     }
 
-    const availableCategories = selectedGroup && options[selectedGroup] ? Object.keys(options[selectedGroup]) : [];
-    const availableSubCategories = selectedGroup && selectedCategory && options[selectedGroup][selectedCategory]
-        ? options[selectedGroup][selectedCategory]
+    const availableChannels = selectedPart && options[selectedPart] ? Object.keys(options[selectedPart]) : [];
+    const availableAccounts = selectedPart && selectedChannel && options[selectedPart][selectedChannel]
+        ? options[selectedPart][selectedChannel]
         : [];
 
     const getDisplayData = () => {
@@ -183,10 +183,11 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
     };
 
     const displayData = getDisplayData();
+
     const chartTitle = viewMode === 'sales'
-        ? `🔍 ${currentLabel} 월별 매출 추이`
+        ? `🏢 ${currentLabel} 월별 매출 추이`
         : viewMode === 'daily'
-            ? `🔍 ${currentLabel} 월별 일평균 매출`
+            ? `🏢 ${currentLabel} 월별 일평균 매출`
             : `📈 ${currentLabel} 월별 증감율 (전월 대비)`;
     const yAxisLabel = viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : '증감율 (%)';
 
@@ -200,7 +201,7 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
             <div className="flex flex-col gap-4 mb-6">
                 <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-gray-700">🔍 상세 품목 매출 분석</h3>
+                    <h3 className="text-lg font-bold text-gray-700">🏢 채널별 매출 상세 분석</h3>
                     <div className="flex gap-2">
                         <button
                             onClick={() => setViewMode('sales')}
@@ -212,13 +213,16 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
                             매출액
                         </button>
                         <button
-                            onClick={() => setViewMode('daily')}
+                            onClick={() => {
+                                console.log('Switched to daily view');
+                                setViewMode('daily');
+                            }}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'daily'
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
-                            일평균
+                            일평균 (New)
                         </button>
                         <button
                             onClick={() => setViewMode('growth')}
@@ -233,41 +237,41 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                    {/* 품목그룹 Select */}
+                    {/* 파트구분 Select */}
                     <select
-                        value={selectedGroup}
-                        onChange={(e) => handleGroupChange(e.target.value)}
+                        value={selectedPart}
+                        onChange={(e) => handlePartChange(e.target.value)}
                         className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]"
                     >
-                        <option value="" disabled>품목그룹 선택</option>
-                        {Object.keys(options).map((group) => (
-                            <option key={group} value={group}>{group}</option>
+                        <option value="" disabled>파트구분 선택</option>
+                        {Object.keys(options).map((part) => (
+                            <option key={part} value={part}>{part}</option>
                         ))}
                     </select>
 
-                    {/* 품목 구분 Select */}
+                    {/* 채널구분 Select */}
                     <select
-                        value={selectedCategory}
-                        onChange={(e) => handleCategoryChange(e.target.value)}
+                        value={selectedChannel}
+                        onChange={(e) => handleChannelChange(e.target.value)}
                         className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]"
-                        disabled={!selectedGroup}
+                        disabled={!selectedPart}
                     >
-                        <option value="">전체 (품목 구분)</option>
-                        {availableCategories.map((cat) => (
-                            <option key={cat} value={cat}>{cat}</option>
+                        <option value="">전체 (채널 구분)</option>
+                        {availableChannels.map((channel) => (
+                            <option key={channel} value={channel}>{channel}</option>
                         ))}
                     </select>
 
-                    {/* 품목 구분_2 Select */}
+                    {/* 거래처명 Select */}
                     <select
-                        value={selectedSubCategory}
-                        onChange={(e) => setSelectedSubCategory(e.target.value)}
+                        value={selectedAccount}
+                        onChange={(e) => setSelectedAccount(e.target.value)}
                         className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]"
-                        disabled={!selectedCategory}
+                        disabled={!selectedChannel}
                     >
-                        <option value="">전체 (세부 구분)</option>
-                        {availableSubCategories.map((sub) => (
-                            <option key={sub} value={sub}>{sub}</option>
+                        <option value="">전체 (거래처)</option>
+                        {availableAccounts.map((account) => (
+                            <option key={account} value={account}>{account}</option>
                         ))}
                     </select>
                 </div>
@@ -316,14 +320,14 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
                                 type="monotone"
                                 dataKey={viewMode === 'growth' ? "growth" : "value"}
                                 name={currentLabel}
-                                stroke="#8b5cf6"
+                                stroke="#10b981"
                                 strokeWidth={3}
-                                dot={{ fill: "#8b5cf6", r: 4 }}
+                                dot={{ fill: "#10b981", r: 4 }}
                                 activeDot={{ r: 6 }}
                                 label={{
                                     position: 'top',
                                     formatter: labelFormatter,
-                                    style: { fontSize: '10px', fill: '#8b5cf6', fontWeight: 'bold' }
+                                    style: { fontSize: '10px', fill: '#10b981', fontWeight: 'bold' }
                                 }}
                             />
                         </LineChart>
@@ -334,4 +338,4 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
     );
 };
 
-export default DetailedSalesChart;
+export default ChannelSalesChartNew;

@@ -23,7 +23,7 @@ interface OptionsTree {
     };
 }
 
-const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => {
+const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) => {
     const [data, setData] = useState<ChartData[]>([]);
     const [daysList, setDaysList] = useState<number[]>([]);
     const [viewMode, setViewMode] = useState<ViewMode | 'daily'>('sales');
@@ -218,7 +218,7 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
-                            일평균
+                            일평균 (New)
                         </button>
                         <button
                             onClick={() => setViewMode('growth')}
@@ -334,4 +334,4 @@ const DetailedSalesChart: React.FC<DetailedSalesChartProps> = ({ filename }) => 
     );
 };
 
-export default DetailedSalesChart;
+export default DetailedSalesChartNew;

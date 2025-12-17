@@ -69,12 +69,20 @@ const ProductGroupChart: React.FC<ProductGroupChartProps> = ({ filename }) => {
                         dataPoint[group] = groupsData[group][index];
                     });
 
+                    // Add combined data for 마이비+누비+쏭레브
+                    const combinedValue =
+                        (groupsData['마이비']?.[index] || 0) +
+                        (groupsData['누비']?.[index] || 0) +
+                        (groupsData['쏭레브']?.[index] || 0);
+                    dataPoint['마이비+누비+쏭레브'] = combinedValue;
+
                     return dataPoint;
                 });
 
                 setData(chartData);
-                setGroups(groupNames);
-                setSelectedGroups(groupNames); // 초기에는 모든 그룹 선택
+                // Add combined group to the list
+                setGroups([...groupNames, '마이비+누비+쏭레브']);
+                setSelectedGroups([...groupNames, '마이비+누비+쏭레브']); // 초기에는 모든 그룹 선택
             } catch (err) {
                 console.error('Failed to fetch product group sales data:', err);
                 setError('데이터를 불러오는데 실패했습니다');
@@ -227,6 +235,8 @@ const ProductGroupChart: React.FC<ProductGroupChartProps> = ({ filename }) => {
                         onChange={(e) => {
                             if (e.target.value === 'all') {
                                 toggleAllGroups();
+                            } else if (e.target.value === 'combined') {
+                                setSelectedGroups(['마이비+누비+쏭레브']);
                             } else {
                                 setSelectedGroups([e.target.value]);
                             }
@@ -234,7 +244,8 @@ const ProductGroupChart: React.FC<ProductGroupChartProps> = ({ filename }) => {
                         className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                         <option value="all">전체 ({groups.length}개)</option>
-                        {groups.map((group) => (
+                        <option value="combined">마이비+누비+쏭레브</option>
+                        {groups.filter(g => g !== '마이비+누비+쏭레브').map((group) => (
                             <option key={group} value={group}>{group}</option>
                         ))}
                     </select>

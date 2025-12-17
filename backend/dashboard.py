@@ -111,29 +111,26 @@ def calculate_days_list(df, months):
             days_list.append(30)
             continue
 
-        if m_str == str(latest_month):
-            # 최신 월인 경우: 해당 월 데이터 중 최대 일자 찾기
-            # 월구분이 숫자/문자 섞여있을 수 있으므로 주의
-            # 해당 월의 데이터만 필터링
-            # 주의: df['월구분'] 타입을 맞춰야 함
-            try:
-                # df['월구분']이 int일 수도 string일 수도 있음
-                latest_month_val = int(latest_month) if isinstance(df['월구분'].iloc[0], (int, float)) else latest_month
-                
-                # 해당 월 데이터
-                month_df = df[df['월구분'] == latest_month_val]
-                
-                if not month_df.empty:
-                    # 일구분 최대값 (가끔 일구분이 날짜 풀텍스트일 수도 있으나, 보통 '일' 숫자라고 가정)
-                    # 데이터 샘플상 '일구분'이 있다면 활용
-                    max_day = month_df['일구분'].max()
+        # Try to find max day for THIS month regardless of whether it's the "latest" or not
+        try:
+            # Type handling for filtering
+            first_val = df['월구분'].iloc[0]
+            # m_str might need to be converted to int if column is int
+            month_val_for_filter = int(m_str) if isinstance(first_val, (int, float)) else m_str
+            
+            month_df = df[df['월구분'] == month_val_for_filter]
+            
+            if not month_df.empty:
+                max_day = month_df['일구분'].max()
+                # If max_day is reasonably valid (e.g. > 0), use it. 
+                # Otherwise fallback to calendar (just in case of 0)
+                if max_day > 0:
                     days_list.append(int(max_day))
                 else:
                     days_list.append(get_days_in_month(year, month))
-            except:
+            else:
                 days_list.append(get_days_in_month(year, month))
-        else:
-            # 과거 월: 달력 기준
+        except:
             days_list.append(get_days_in_month(year, month))
             
     return days_list

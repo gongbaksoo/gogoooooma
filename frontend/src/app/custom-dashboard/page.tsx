@@ -11,7 +11,6 @@ import SchemaAliasManager from "@/components/SchemaAliasManager";
 import AIInstructionsManager from "@/components/AIInstructionsManager";
 import SalesChart from "@/components/SalesChart";
 import ProductGroupChart from "@/components/ProductGroupChart";
-import ProductGroupChart from "@/components/ProductGroupChart";
 import DetailedSalesChart from "@/components/DetailedSalesChart";
 import { ArrowLeft, Settings, BookOpen } from "lucide-react";
 

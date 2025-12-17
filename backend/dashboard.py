@@ -85,8 +85,11 @@ def calculate_days_list(df, months):
             days_list.append(get_days_in_month(year, month))
         return days_list
 
-    # 최신 월 파악 (문자열 기준 정렬)
-    sorted_months = sorted(df['월구분'].unique().astype(str))
+    # 최신 월 파악 (입력된 months 리스트 기준)
+    # months는 이미 정렬되어 있다고 가정하지만, 안전을 위해 다시 정렬 및 문자열 변환
+    valid_months = [str(m) for m in months if str(m).isdigit()]
+    sorted_months = sorted(valid_months)
+    
     if not sorted_months:
         return []
         

@@ -435,6 +435,62 @@ def get_dashboard_hierarchical_sales(filename: str, group: str = None, category:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
 
+@app.get("/api/dashboard/channel-options")
+def get_dashboard_channel_options(filename: str):
+    """
+    파트구분 > 채널구분 > 거래처명 계층 구조 옵션 반환
+    """
+    try:
+        from dashboard import get_channel_layer_options
+        result = get_channel_layer_options(filename)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"옵션 데이터 처리 실패: {str(e)}")
+
+@app.get("/api/dashboard/channel-sales")
+def get_dashboard_channel_sales(filename: str, part: str = None, channel: str = None, account: str = None):
+    """
+    조건(파트 > 채널 > 거래처)에 따른 월별 매출 데이터 반환
+    """
+    try:
+        from dashboard import get_channel_layer_sales
+        result = get_channel_layer_sales(filename, part, channel, account)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
+
+@app.get("/api/dashboard/channel-options")
+def get_dashboard_channel_options(filename: str):
+    """
+    파트구분 > 채널구분 > 거래처명 계층 구조 옵션 반환
+    """
+    try:
+        from dashboard import get_channel_layer_options
+        result = get_channel_layer_options(filename)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"옵션 데이터 처리 실패: {str(e)}")
+
+@app.get("/api/dashboard/channel-sales")
+def get_dashboard_channel_sales(filename: str, part: str = None, channel: str = None, account: str = None):
+    """
+    조건(파트 > 채널 > 거래처)에 따른 월별 매출 데이터 반환
+    """
+    try:
+        from dashboard import get_channel_layer_sales
+        result = get_channel_layer_sales(filename, part, channel, account)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
+
 @app.delete("/custom/aliases/{column}")
 def delete_column_aliases(column: str):
     """특정 컬럼의 모든 별칭 삭제"""

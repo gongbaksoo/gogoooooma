@@ -45,7 +45,8 @@ def get_monthly_sales_by_channel(filename: str):
     total_values = [e + o for e, o in zip(ecommerce_values, offline_values)]
     
     months = [str(int(month)) for month in pivot_df.index.tolist()]
-    days_list = calculate_days_list(df, pivot_df.index.tolist())
+    months = [str(int(month)) for month in pivot_df.index.tolist()]
+    days_list, debug_logs = calculate_days_list(df, pivot_df.index.tolist())
 
     # 결과 포맷팅
     result = {
@@ -53,7 +54,8 @@ def get_monthly_sales_by_channel(filename: str):
         "ecommerce": ecommerce_values,
         "offline": offline_values,
         "total": total_values,
-        "days_list": days_list
+        "days_list": days_list,
+        "debug_logs": debug_logs
     }
     
     return result
@@ -64,76 +66,62 @@ def get_days_in_month(year, month):
 
 def calculate_days_list(df, months):
     """
-    각 월별 나눌 일수 리스트 반환
-    - 과거 월: 달력상 총 일수
-    - 최신 월: 데이터 상의 최대 일자 (일구분 컬럼 활용)
+    각 월별 나눌 일수 리스트 반환 (with debug logs)
     """
+    logs = []
+    logs.append(f"Columns found: {df.columns.tolist()}")
+    
     if '일구분' not in df.columns:
-        # 일구분 없으면 그냥 달력 일수 반환 (Fallback)
+        logs.append("'일구분' column MISSING. Fallback to calendar days.")
         days_list = []
         for m_str in months:
-            year = 2024 # 기본값, 필요시 로직 개선
-            if len(str(m_str)) == 6: # YYYYMM
+            year = 2024
+            if len(str(m_str)) == 6:
                 year = int(str(m_str)[:4])
                 month = int(str(m_str)[4:])
-            elif len(str(m_str)) == 4: # YYMM
+            elif len(str(m_str)) == 4:
                 year = 2000 + int(str(m_str)[:2])
                 month = int(str(m_str)[2:])
             else:
-                month = int(m_str) # 단순 월 숫자만 있는 경우 등
-            
+                month = int(m_str)
             days_list.append(get_days_in_month(year, month))
-        return days_list
+        return days_list, logs
 
-    # 최신 월 파악 (입력된 months 리스트 기준)
-    # months는 이미 정렬되어 있다고 가정하지만, 안전을 위해 다시 정렬 및 문자열 변환
-    valid_months = [str(m) for m in months if str(m).isdigit()]
-    sorted_months = sorted(valid_months)
-    
-    if not sorted_months:
-        return []
-        
-    latest_month = sorted_months[-1] # 가장 큰 값이 최신 월 (예: '2512')
-    
     days_list = []
     for m_str in months:
-        # 월 파싱
         m_str = str(m_str)
-        year = 2024 # Default year, adjust as needed
-        if len(m_str) == 4: # YYMM (예: 2501)
+        year = 2024
+        if len(m_str) == 4:
             year = 2000 + int(m_str[:2])
             month = int(m_str[2:])
-        elif len(m_str) == 5 or len(m_str) == 6: # YYYYMM
+        elif len(m_str) == 5 or len(m_str) == 6:
             year = int(m_str[:-2])
             month = int(m_str[-2:])
         else:
-            # 포맷 불명확 시 
             days_list.append(30)
             continue
 
-        # Try to find max day for THIS month regardless of whether it's the "latest" or not
         try:
-            # Type handling for filtering
             first_val = df['월구분'].iloc[0]
-            # m_str might need to be converted to int if column is int
             month_val_for_filter = int(m_str) if isinstance(first_val, (int, float)) else m_str
             
             month_df = df[df['월구분'] == month_val_for_filter]
             
             if not month_df.empty:
                 max_day = month_df['일구분'].max()
-                # If max_day is reasonably valid (e.g. > 0), use it. 
-                # Otherwise fallback to calendar (just in case of 0)
+                logs.append(f"Month {m_str}: Max day {max_day} (Type: {type(max_day)})")
                 if max_day > 0:
                     days_list.append(int(max_day))
                 else:
                     days_list.append(get_days_in_month(year, month))
             else:
+                logs.append(f"Month {m_str}: No data found in DF. Fallback.")
                 days_list.append(get_days_in_month(year, month))
-        except:
+        except Exception as e:
+            logs.append(f"Month {m_str}: Error {str(e)}. Fallback.")
             days_list.append(get_days_in_month(year, month))
             
-    return days_list
+    return days_list, logs
 
 def get_monthly_sales_by_product_group(filename: str):
     """
@@ -172,12 +160,13 @@ def get_monthly_sales_by_product_group(filename: str):
     group_totals = pivot_df.sum().sort_values(ascending=False)
     top_groups = group_totals.head(10).index.tolist()  # 상위 10개 품목그룹
     
-    days_list = calculate_days_list(df, pivot_df.index.tolist())
+    days_list, debug_logs = calculate_days_list(df, pivot_df.index.tolist())
     
     result = {
         "months": [str(int(month)) for month in pivot_df.index.tolist()],
         "groups": {},
-        "days_list": days_list
+        "days_list": days_list,
+        "debug_logs": debug_logs
     }
     
     # 각 품목그룹의 월별 데이터 추가
@@ -245,7 +234,8 @@ def get_filtered_monthly_sales(filename: str, group: str = None, category: str =
     
     # 1. 월별 전체 데이터를 먼저 구해서 모든 월 리스트 확보
     all_months = sorted(df['월구분'].unique())
-    days_list = calculate_days_list(df, all_months)
+    all_months = sorted(df['월구분'].unique())
+    days_list, debug_logs = calculate_days_list(df, all_months)
     
     # 2. 필터링
     df_filtered = df.copy()
@@ -272,7 +262,8 @@ def get_filtered_monthly_sales(filename: str, group: str = None, category: str =
         "months": [str(int(month)) for month in all_months],
         "sales": monthly_sales.values.tolist(),
         "label": current_label,
-        "days_list": days_list
+        "days_list": days_list,
+        "debug_logs": debug_logs
     }
     
     return result
@@ -336,7 +327,8 @@ def get_channel_layer_sales(filename: str, part: str = None, channel: str = None
         df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
     
     all_months = sorted(df['월구분'].unique())
-    days_list = calculate_days_list(df, all_months)
+    all_months = sorted(df['월구분'].unique())
+    days_list, debug_logs = calculate_days_list(df, all_months)
     
     df_filtered = df.copy()
     current_label = "전체 채널"
@@ -359,7 +351,8 @@ def get_channel_layer_sales(filename: str, part: str = None, channel: str = None
         "months": [str(int(month)) for month in all_months],
         "sales": monthly_sales.values.tolist(),
         "label": current_label,
-        "days_list": days_list
+        "days_list": days_list,
+        "debug_logs": debug_logs
     }
     
     return result

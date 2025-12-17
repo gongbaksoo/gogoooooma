@@ -32,6 +32,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [daysList, setDaysList] = useState<number[]>([]);
+    const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -49,6 +50,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                 });
                 setData(response.data);
                 setDaysList(response.data.days_list || []);
+                setDebugLogs(response.data.debug_logs || []);
             } catch (err) {
                 console.error('Failed to fetch sales data:', err);
                 setError('데이터를 불러오는데 실패했습니다');
@@ -309,7 +311,25 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                     )}
                 </LineChart>
             </ResponsiveContainer>
-        </div>
+
+            {/* Debug Info Section */}
+            {
+                debugLogs.length > 0 && (
+                    <details className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs font-mono text-slate-600">
+                        <summary className="cursor-pointer font-bold mb-2 select-none hover:text-slate-900">
+                            🔍 Calculation Debug Info (Click to expand)
+                        </summary>
+                        <div className="max-h-60 overflow-y-auto whitespace-pre-wrap">
+                            {debugLogs.map((log, i) => (
+                                <div key={i} className="py-0.5 border-b border-slate-100 last:border-0">
+                                    {log}
+                                </div>
+                            ))}
+                        </div>
+                    </details>
+                )
+            }
+        </div >
     );
 };
 

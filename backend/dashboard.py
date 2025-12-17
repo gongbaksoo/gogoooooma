@@ -120,8 +120,13 @@ def calculate_days_list(df, months):
                 # max('day_col') would be 31. We want max day WITH SALES.
                 # ----------------------------------------------------------------
                 
-                # Ensure '판매액' is numeric
-                month_df_valid = month_df[pd.to_numeric(month_df['판매액'], errors='coerce').fillna(0) > 0]
+                # Ensure '판매액' is numeric (handle commas if string)
+                sales_series = month_df['판매액']
+                if sales_series.dtype == 'object':
+                    # Remove commas and clean whitespace
+                    sales_series = sales_series.astype(str).str.replace(',', '').str.strip()
+                
+                month_df_valid = month_df[pd.to_numeric(sales_series, errors='coerce').fillna(0) > 0]
                 
                 if not month_df_valid.empty:
                     max_day = month_df_valid[day_col].max()

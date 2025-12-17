@@ -177,3 +177,86 @@ def get_filtered_monthly_sales(filename: str, group: str = None, category: str =
     }
     
     return result
+
+def get_channel_layer_options(filename: str):
+    """
+    파트구분 > 채널구분 > 거래처명 계층 구조 옵션 반환
+    """
+    file_path = os.path.join("uploads", filename)
+    
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {filename}")
+    
+    df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
+    df.columns = df.columns.str.replace('\t', '').str.strip()
+    
+    # Handle known typos
+    df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+    
+    required_cols = ['파트구분', '채널구분', '거래처명']
+    for col in required_cols:
+        if col not in df.columns:
+            raise ValueError(f"Required column '{col}' not found in data")
+
+    options = {}
+    
+    # NaN 값 처리 및 중복 제거
+    df_clean = df[required_cols].fillna('Unknown')
+    
+    for _, row in df_clean.drop_duplicates().iterrows():
+        part = row['파트구분']
+        channel = row['채널구분']
+        account = row['거래처명']
+        
+        if part not in options:
+            options[part] = {}
+            
+        if channel not in options[part]:
+            options[part][channel] = []
+            
+        if account not in options[part][channel]:
+            options[part][channel].append(account)
+            
+    return options
+
+def get_channel_layer_sales(filename: str, part: str = None, channel: str = None, account: str = None):
+    """
+    조건(파트 > 채널 > 거래처)에 따른 월별 매출 데이터 반환
+    """
+    file_path = os.path.join("uploads", filename)
+    
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {filename}")
+    
+    df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
+    df.columns = df.columns.str.replace('\t', '').str.strip()
+    
+    # Handle known typos
+    df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+    
+    all_months = sorted(df['월구분'].unique())
+    
+    df_filtered = df.copy()
+    current_label = "전체 채널"
+    
+    if part and part != 'all':
+        df_filtered = df_filtered[df_filtered['파트구분'] == part]
+        current_label = part
+        
+    if channel and channel != 'all':
+        df_filtered = df_filtered[df_filtered['채널구분'] == channel]
+        current_label = f"{part} > {channel}"
+        
+    if account and account != 'all':
+        df_filtered = df_filtered[df_filtered['거래처명'] == account]
+        current_label = account
+        
+    monthly_sales = df_filtered.groupby('월구분')['판매액'].sum().reindex(all_months, fill_value=0)
+    
+    result = {
+        "months": [str(int(month)) for month in all_months],
+        "sales": monthly_sales.values.tolist(),
+        "label": current_label
+    }
+    
+    return result

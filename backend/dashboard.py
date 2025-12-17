@@ -106,7 +106,7 @@ def get_hierarchical_options(filename: str):
         raise FileNotFoundError(f"File not found: {filename}")
     
     df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
-    df.columns = df.columns.str.replace('\\t', '').str.strip()
+    df.columns = df.columns.str.replace('\t', '').str.strip()
     
     required_cols = ['품목그룹1', '품목 구분', '품목 구분_2']
     for col in required_cols:
@@ -144,7 +144,7 @@ def get_filtered_monthly_sales(filename: str, group: str = None, category: str =
         raise FileNotFoundError(f"File not found: {filename}")
     
     df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
-    df.columns = df.columns.str.replace('\\t', '').str.strip()
+    df.columns = df.columns.str.replace('\t', '').str.strip()
     
     # 1. 월별 전체 데이터를 먼저 구해서 모든 월 리스트 확보
     all_months = sorted(df['월구분'].unique())

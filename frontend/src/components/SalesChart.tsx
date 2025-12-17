@@ -65,17 +65,21 @@ const SalesChart: React.FC<SalesChartProps> = ({ filename }) => {
         // Convert YYMM to readable format (e.g., "2511" -> "25년 11월")
         if (month.length === 4) {
             const year = month.substring(0, 2);
-            const monthNum = month.substring(2, 4);
+            const monthNum = parseInt(month.substring(2, 4)); // Remove leading zero
             return `${year}년 ${monthNum}월`;
         }
         return month;
     };
 
     const formatMillions = (value: any): string => {
-        // Convert to millions and format
+        // Convert to 억 and format
         if (typeof value === 'number') {
-            const millions = value / 1000000;
-            return millions.toFixed(1) + 'M';
+            if (value >= 100000000) {
+                return `${(value / 100000000).toFixed(1)}억`;
+            } else if (value >= 10000) {
+                return `${(value / 10000).toFixed(0)}만`;
+            }
+            return value.toLocaleString();
         }
         return String(value);
     };

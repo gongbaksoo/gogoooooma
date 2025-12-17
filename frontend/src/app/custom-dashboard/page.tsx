@@ -10,6 +10,7 @@ import ChatHistoryList from "@/components/ChatHistoryList";
 import SchemaAliasManager from "@/components/SchemaAliasManager";
 import AIInstructionsManager from "@/components/AIInstructionsManager";
 import SalesChart from "@/components/SalesChart";
+import ProductGroupChart from "@/components/ProductGroupChart";
 import { ArrowLeft, Settings, BookOpen } from "lucide-react";
 
 export default function CustomDashboard() {
@@ -86,9 +87,14 @@ export default function CustomDashboard() {
                     </div>
                 </div>
 
-                {/* Sales Chart */}
+                {/* Sales Chart - 채널별 */}
                 <div className="mb-8">
                     <SalesChart filename={selectedFile || filename} />
+                </div>
+
+                {/* Product Group Chart - 품목그룹별 */}
+                <div className="mb-8">
+                    <ProductGroupChart filename={selectedFile || filename} />
                 </div>
 
                 {/* Chat Interface */}

@@ -377,14 +377,31 @@ def save_instructions(request: InstructionsRequest):
 
 @app.get("/api/dashboard/monthly-sales")
 def get_dashboard_monthly_sales(filename: str):
-    """월별 이커머스 vs 오프라인 매출 데이터"""
+    """
+    월별 채널별 매출 데이터 반환 (이커머스 vs 오프라인)
+    """
     try:
-        data = get_monthly_sales_by_channel(filename)
-        return data
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        from dashboard import get_monthly_sales_by_channel
+        result = get_monthly_sales_by_channel(filename)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"데이터 조회 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
+
+@app.get("/api/dashboard/product-group-sales")
+def get_dashboard_product_group_sales(filename: str):
+    """
+    월별 품목그룹별 매출 데이터 반환
+    """
+    try:
+        from dashboard import get_monthly_sales_by_product_group
+        result = get_monthly_sales_by_product_group(filename)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
 
 @app.delete("/custom/aliases/{column}")
 def delete_column_aliases(column: str):

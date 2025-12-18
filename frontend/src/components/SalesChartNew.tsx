@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label } from 'recharts';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
 
@@ -16,9 +16,14 @@ interface ChartData {
     총매출: number;
     days?: number;
     rawMonth?: string;
+    // Profit data
+    ecommerceProfit?: number;
+    offlineProfit?: number;
+    totalProfit?: number;
+    profitRate?: number; // Added for profitRate view
 }
 
-type ViewMode = 'sales' | 'growth' | 'daily';
+type ViewMode = 'sales' | 'growth' | 'daily' | 'profitRate';
 type ChannelFilter = 'all' | 'total' | 'ecommerce' | 'offline';
 
 const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
@@ -27,6 +32,9 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
         ecommerce: number[];
         offline: number[];
         total: number[];
+        ecommerceProfit: number[];
+        offlineProfit: number[];
+        totalProfit: number[];
     } | null>(null);
     const [viewMode, setViewMode] = useState<ViewMode>('sales');
     const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
@@ -53,14 +61,25 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                 const response = await axios.get(`${API_BASE_URL}/api/dashboard/monthly-sales`, {
                     params: { filename }
                 });
-                setData(response.data);
-                setDaysList(response.data.days_list || []);
-                setDebugLogs(response.data.debug_logs || []);
+
+                const { months, ecommerce, offline, total, days_list, debug_logs, ecommerce_profit, offline_profit, total_profit } = response.data;
+
+                setData({
+                    months: months || [],
+                    ecommerce: ecommerce || [],
+                    offline: offline || [],
+                    total: total || [],
+                    ecommerceProfit: ecommerce_profit || [],
+                    offlineProfit: offline_profit || [],
+                    totalProfit: total_profit || []
+                });
+                setDaysList(days_list || []);
+                setDebugLogs(debug_logs || []);
 
                 // Initialize Date Range to full range
-                if (response.data.months && response.data.months.length > 0) {
-                    setStartMonth(response.data.months[0]);
-                    setEndMonth(response.data.months[response.data.months.length - 1]);
+                if (months && months.length > 0) {
+                    setStartMonth(months[0]);
+                    setEndMonth(months[months.length - 1]);
                 }
             } catch (err) {
                 console.error('Failed to fetch sales data:', err);
@@ -110,53 +129,73 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
     const getChartData = (): ChartData[] => {
         if (!data) return [];
 
-        const transformedData = data.months.map((month, index) => {
-            // 원본 데이터가 없는 경우 0 처리
-            const ecommerce = data.ecommerce[index] || 0;
-            const offline = data.offline[index] || 0;
-            const total = data.total[index] || 0;
+        const { months, ecommerce, offline, total, ecommerceProfit, offlineProfit, totalProfit } = data;
 
-            // 일수 정보가 없으면 30일로 가정 (예외 처리)
-            const days = daysList[index] || 30;
-
-            let ecommerceVal = ecommerce;
-            let offlineVal = offline;
-            let totalVal = total;
-
-            if (viewMode === 'growth') {
-                const prevEcommerce = index > 0 ? data.ecommerce[index - 1] : 0;
-                const prevOffline = index > 0 ? data.offline[index - 1] : 0;
-                const prevTotal = index > 0 ? data.total[index - 1] : 0;
-
-                ecommerceVal = calculateGrowth(ecommerce, prevEcommerce);
-                offlineVal = calculateGrowth(offline, prevOffline);
-                totalVal = calculateGrowth(total, prevTotal);
-            } else if (viewMode === 'daily') {
-                ecommerceVal = ecommerce / days;
-                offlineVal = offline / days;
-                totalVal = total / days;
-            }
-
-            return {
-                month: formatMonth(month),
-                이커머스: ecommerceVal,
-                오프라인: offlineVal,
-                총매출: totalVal, // ChartData 인터페이스에 맞춰 '총매출' 사용 (기존에 정의됨)
-                days: days,
-                rawMonth: month
-            };
-        });
+        // Transform raw data into ChartData objects
+        const transformedData = months.map((month: string, index: number) => ({
+            month: formatMonth(month),
+            이커머스: ecommerce[index] || 0,
+            오프라인: offline[index] || 0,
+            총매출: total[index] || 0,
+            rawMonth: month,
+            days: daysList[index] || 30,
+            ecommerceProfit: ecommerceProfit[index] || 0,
+            offlineProfit: offlineProfit[index] || 0,
+            totalProfit: totalProfit[index] || 0
+        }));
 
         // Filter by Date Range
-        const filteredData = transformedData.filter(item => {
+        let filteredData = transformedData.filter(item => {
             if (!item.rawMonth) return true;
             if (startMonth && item.rawMonth < startMonth) return false;
             if (endMonth && item.rawMonth > endMonth) return false;
             return true;
         });
 
-        // 증감율 모드일 때는 첫 달 제외
-        return filteredData.slice(viewMode === 'growth' ? 1 : 0);
+        // Apply view mode specific calculations
+        if (viewMode === 'growth') {
+            const growthData: ChartData[] = [];
+            for (let i = 1; i < filteredData.length; i++) {
+                const current = filteredData[i];
+                const previous = filteredData[i - 1];
+
+                growthData.push({
+                    ...current,
+                    이커머스: calculateGrowth(current.이커머스, previous.이커머스),
+                    오프라인: calculateGrowth(current.오프라인, previous.오프라인),
+                    총매출: calculateGrowth(current.총매출, previous.총매출),
+                });
+            }
+            return growthData;
+        }
+
+        if (viewMode === 'daily') {
+            return filteredData.map(item => {
+                const days = item.days || 30;
+                return {
+                    ...item,
+                    이커머스: item.이커머스 / days,
+                    오프라인: item.오프라인 / days,
+                    총매출: item.총매출 / days
+                };
+            });
+        }
+
+        if (viewMode === 'profitRate') {
+            return filteredData.map(item => {
+                const totalSales = item.총매출 || 0;
+                const totalProfit = item.totalProfit || 0;
+                const rate = totalSales === 0 ? 0 : (totalProfit / totalSales) * 100;
+                return {
+                    ...item,
+                    총매출: rate, // Use '총매출' key for simple rendering or add dedicated key
+                    profitRate: rate
+                };
+            });
+        }
+
+        // Default 'sales' view mode
+        return filteredData;
     };
 
     if (!filename) {
@@ -193,10 +232,9 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
     }
 
     const chartData = getChartData();
-    const yAxisFormatter = viewMode === 'growth' ? formatPercent : formatMillions;
     const tooltipFormatter = (value: number, name: string, props: any) => {
-        if (viewMode === 'growth') {
-            return [formatPercent(value), ''];
+        if (viewMode === 'growth' || viewMode === 'profitRate') {
+            return [formatPercent(value), name];
         } else {
             const days = props.payload.days;
             const suffix = viewMode === 'daily' ? ` (기준: ${days}일)` : '';
@@ -205,12 +243,32 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
     };
 
     const chartTitle = viewMode === 'sales'
-        ? '월별 매출 추이 (이커머스 vs 오프라인)'
+        ? '📊 월별 이커머스 vs 오프라인 매출 추이'
         : viewMode === 'daily'
-            ? '월별 일평균 매출 (이커머스 vs 오프라인)'
-            : '월별 매출 증감율 (전월 대비)';
+            ? '📊 월별 일평균 매출 (이커머스 vs 오프라인)'
+            : viewMode === 'profitRate'
+                ? '📊 월별 평균 이익률 (%)'
+                : '📈 월별 매출 증감율 (전월 대비)';
 
-    const yAxisLabel = viewMode === 'sales' ? '매출 (백만원)' : viewMode === 'daily' ? '일평균 매출 (백만원)' : '증감율 (%)';
+    const yAxisLabel = viewMode === 'sales'
+        ? '매출액'
+        : viewMode === 'daily'
+            ? '일평균 매출'
+            : viewMode === 'profitRate'
+                ? '이익률 (%)'
+                : '증감율 (%)';
+
+    // YAxis formatter selection
+    const yAxisFormatter = (viewMode === 'growth' || viewMode === 'profitRate') ? formatPercent : formatMillions;
+
+    // Label formatter selection
+    const labelFormatter = (val: any) => {
+        if (typeof val !== 'number') return String(val);
+        if (viewMode === 'growth' || viewMode === 'profitRate') {
+            return val.toFixed(1) + '%';
+        }
+        return formatMillions(val);
+    };
 
     return (
         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
@@ -261,6 +319,15 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                         일평균
                     </button>
                     <button
+                        onClick={() => setViewMode('profitRate')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'profitRate'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                    >
+                        이익률
+                    </button>
+                    <button
                         onClick={() => setViewMode('growth')}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'growth'
                             ? 'bg-blue-600 text-white'
@@ -282,7 +349,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                 </div>
             </div>
             <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis
                         dataKey="month"
@@ -304,57 +371,43 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                             padding: '10px'
                         }}
                     />
-                    <Legend
-                        wrapperStyle={{ paddingTop: '20px' }}
-                        iconType="line"
-                    />
-                    {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
-                        <Line
-                            type="monotone"
-                            dataKey="이커머스"
-                            stroke="#3b82f6"
-                            strokeWidth={3}
-                            dot={{ fill: '#3b82f6', r: 4 }}
-                            activeDot={{ r: 6 }}
-                            label={{
-                                position: 'top',
-                                formatter: yAxisFormatter,
-                                style: { fontSize: '10px', fill: '#3b82f6', fontWeight: 'bold' }
-                            }}
-                        />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="line" />
+
+                    {/* Sales & Daily Mode */}
+                    {(viewMode === 'sales' || viewMode === 'daily') && (
+                        <>
+                            {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
+                                <Line type="monotone" dataKey="이커머스" name="이커머스" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                            )}
+                            {(channelFilter === 'all' || channelFilter === 'offline') && (
+                                <Line type="monotone" dataKey="오프라인" name="오프라인" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                            )}
+                            {(channelFilter === 'all' || channelFilter === 'total') && (
+                                <Line type="monotone" dataKey="총매출" name="전체 합계" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#f59e0b', fontWeight: 'bold' } }} />
+                            )}
+                        </>
                     )}
-                    {(channelFilter === 'all' || channelFilter === 'offline') && (
-                        <Line
-                            type="monotone"
-                            dataKey="오프라인"
-                            stroke="#10b981"
-                            strokeWidth={3}
-                            dot={{ fill: '#10b981', r: 4 }}
-                            activeDot={{ r: 6 }}
-                            label={{
-                                position: 'bottom',
-                                formatter: yAxisFormatter,
-                                style: { fontSize: '10px', fill: '#10b981', fontWeight: 'bold' }
-                            }}
-                        />
+
+                    {/* Growth Mode */}
+                    {viewMode === 'growth' && (
+                        <>
+                            {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
+                                <Bar dataKey="이커머스" name="이커머스 증감율" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={60} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#3b82f6' } }} />
+                            )}
+                            {(channelFilter === 'all' || channelFilter === 'offline') && (
+                                <Bar dataKey="오프라인" name="오프라인 증감율" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={60} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#10b981' } }} />
+                            )}
+                            {(channelFilter === 'all' || channelFilter === 'total') && (
+                                <Line type="monotone" dataKey="총매출" name="전체 증감율" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#f59e0b', fontWeight: 'bold' } }} />
+                            )}
+                        </>
                     )}
-                    {(channelFilter === 'all' || channelFilter === 'total') && (
-                        <Line
-                            type="monotone"
-                            dataKey="총매출"
-                            stroke="#f59e0b"
-                            strokeWidth={4}
-                            strokeDasharray="5 5"
-                            dot={{ fill: '#f59e0b', r: 5 }}
-                            activeDot={{ r: 7 }}
-                            label={{
-                                position: 'top',
-                                formatter: yAxisFormatter,
-                                style: { fontSize: '11px', fill: '#f59e0b', fontWeight: 'bold' }
-                            }}
-                        />
+
+                    {/* Profit Rate Mode */}
+                    {viewMode === 'profitRate' && (
+                        <Line type="monotone" dataKey="profitRate" name="평균 이익률" stroke="#ef4444" strokeWidth={3} dot={{ r: 6, fill: '#ef4444', strokeWidth: 2 }} activeDot={{ r: 8 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '11px', fill: '#ef4444', fontWeight: 'bold' } }} />
                     )}
-                </LineChart>
+                </ComposedChart>
             </ResponsiveContainer>
 
             {/* Debug Info Section */}

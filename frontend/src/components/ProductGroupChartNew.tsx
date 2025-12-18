@@ -16,7 +16,6 @@ interface ChartData {
     days?: number;
 }
 
-type ViewMode = 'sales' | 'growth';
 
 const COLORS = [
     '#3b82f6', // blue
@@ -31,10 +30,12 @@ const COLORS = [
     '#84cc16', // lime
 ];
 
+type ViewMode = 'sales' | 'growth' | 'daily' | 'profitRate';
+
 const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) => {
     const [data, setData] = useState<ChartData[]>([]);
     const [groups, setGroups] = useState<string[]>([]);
-    const [viewMode, setViewMode] = useState<ViewMode | 'daily'>('sales');
+    const [viewMode, setViewMode] = useState<ViewMode>('sales');
     const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -63,6 +64,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
 
                 const months = response.data.months;
                 const groupsData = response.data.groups;
+                const profitGroupsData = response.data.profit_groups || {};
                 const groupNames = Object.keys(groupsData);
                 setDaysList(response.data.days_list || []);
 
@@ -74,17 +76,25 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                         days: response.data.days_list ? response.data.days_list[index] : 30
                     };
 
-                    // Add each group's data
+                    // Add each group's data (Sales and Profit)
                     groupNames.forEach((group: string) => {
                         dataPoint[group] = groupsData[group][index];
+                        dataPoint[`${group}_profit`] = profitGroupsData[group] ? profitGroupsData[group][index] : 0;
                     });
 
                     // Add combined data for 마이비+누비+쏭레브
-                    const combinedValue =
+                    const combinedSales =
                         (groupsData['마이비']?.[index] || 0) +
                         (groupsData['누비']?.[index] || 0) +
                         (groupsData['쏭레브']?.[index] || 0);
-                    dataPoint['마이비+누비+쏭레브'] = combinedValue;
+
+                    const combinedProfit =
+                        (profitGroupsData['마이비']?.[index] || 0) +
+                        (profitGroupsData['누비']?.[index] || 0) +
+                        (profitGroupsData['쏭레브']?.[index] || 0);
+
+                    dataPoint['마이비+누비+쏭레브'] = combinedSales;
+                    dataPoint['마이비+누비+쏭레브_profit'] = combinedProfit;
 
                     return dataPoint;
                 });
@@ -157,13 +167,26 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
             return filteredData;
         }
 
+        if (viewMode === 'profitRate') {
+            return filteredData.map(item => {
+                const rateData: ChartData = { month: item.month, rawMonth: item.rawMonth };
+                groups.forEach(group => {
+                    const sales = (item[group] as number) || 0;
+                    const profit = (item[`${group}_profit`] as number) || 0;
+                    const rate = sales === 0 ? 0 : (profit / sales) * 100;
+                    rateData[group] = rate;
+                });
+                return rateData;
+            });
+        }
+
         if (viewMode === 'daily') {
             return filteredData.map((item) => {
                 const days = item.days || 30;
                 const dailyData: ChartData = { month: item.month, days: days, rawMonth: item.rawMonth };
 
                 Object.keys(item).forEach(key => {
-                    if (key !== 'month' && key !== 'days' && key !== 'rawMonth' && typeof item[key] === 'number') {
+                    if (key !== 'month' && key !== 'days' && key !== 'rawMonth' && !key.endsWith('_profit') && typeof item[key] === 'number') {
                         dailyData[key] = (item[key] as number) / days;
                     }
                 });
@@ -242,7 +265,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
 
     const chartData = getChartData();
     const tooltipFormatter = (value: number, name: string, props: any) => {
-        if (viewMode === 'growth') {
+        if (viewMode === 'growth' || viewMode === 'profitRate') {
             return [value.toFixed(1) + '%', ''];
         } else {
             const days = props.payload.days;
@@ -254,8 +277,10 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
         ? '📦 품목그룹별 월별 매출 추이'
         : viewMode === 'daily'
             ? '📦 품목그룹별 월별 일평균 매출'
-            : '📈 품목그룹별 월별 증감율 (전월 대비)';
-    const yAxisLabel = viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : '증감율 (%)';
+            : viewMode === 'profitRate'
+                ? '📦 품목그룹별 월별 평균 이익률'
+                : '📈 품목그룹별 월별 증감율 (전월 대비)';
+    const yAxisLabel = viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : viewMode === 'profitRate' ? '이익률 (%)' : '증감율 (%)';
 
     return (
         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
@@ -303,6 +328,15 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                             }`}
                     >
                         일평균
+                    </button>
+                    <button
+                        onClick={() => setViewMode('profitRate')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'profitRate'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                    >
+                        이익률
                     </button>
                     <button
                         onClick={() => setViewMode('growth')}

@@ -22,6 +22,8 @@ def get_monthly_sales_by_channel(filename: str):
     # Handle known typos
     if '거래쳐명' in df.columns:
         df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+        
+    df = clean_sales_column(df)
     
     # 필요한 컬럼 확인
     required_cols = ['월구분', '파트구분', '판매액']
@@ -61,6 +63,14 @@ def get_monthly_sales_by_channel(filename: str):
     }
     
     return result
+
+def clean_sales_column(df):
+    """판매액 컬럼의 쉼표 제거 및 숫자로 변환"""
+    if '판매액' in df.columns:
+        if df['판매액'].dtype == 'object':
+            df['판매액'] = df['판매액'].astype(str).str.replace(',', '').str.strip()
+        df['판매액'] = pd.to_numeric(df['판매액'], errors='coerce').fillna(0)
+    return df
 
 def get_days_in_month(year, month):
     """해당 연/월의 총 일수 반환"""
@@ -144,7 +154,14 @@ def calculate_days_list(df, months):
                     
                     max_day_int = int(max_day)
                     
-                    if max_day_int > 0:
+                    # Heuristic: If only Day 1 exists, it's likely Monthly Summary data
+                    # so we should divide by full calendar days, not 1.
+                    unique_days = month_df_valid[day_col].unique()
+                    if max_day_int == 1 and len(unique_days) == 1:
+                        calendar_days = get_days_in_month(year, month)
+                        days_list.append(calendar_days)
+                        logs.append(f"Month {m_str}: Monthly Summary detected (Day 1 only). Using {calendar_days} days.")
+                    elif max_day_int > 0:
                         days_list.append(max_day_int)
                     else:
                         days_list.append(get_days_in_month(year, month))
@@ -176,6 +193,8 @@ def get_monthly_sales_by_product_group(filename: str):
     
     if '거래쳐명' in df.columns:
         df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+        
+    df = clean_sales_column(df)
         
     # 필요한 컬럼 확인
     required_cols = ['월구분', '품목그룹1', '판매액']
@@ -269,6 +288,8 @@ def get_filtered_monthly_sales(filename: str, group: str = None, category: str =
     
     if '거래쳐명' in df.columns:
         df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+        
+    df = clean_sales_column(df)
     
     # 1. 월별 전체 데이터를 먼저 구해서 모든 월 리스트 확보
     all_months = sorted(df['월구분'].unique())
@@ -365,6 +386,8 @@ def get_channel_layer_sales(filename: str, part: str = None, channel: str = None
     # Handle known typos
     if '거래쳐명' in df.columns:
         df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+        
+    df = clean_sales_column(df)
     
     all_months = sorted(df['월구분'].unique())
     all_months = sorted(df['월구분'].unique())

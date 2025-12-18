@@ -12,14 +12,12 @@ interface DetailedSalesChartProps {
 interface ChartData {
     month: string;
     value: number;
-    profit?: number;
-    profitRate?: number;
-    rawMonth?: string; // Add rawMonth to ChartData for filtering
-    days?: number; // Add days to ChartData for daily average calculation
-    growth?: number; // Add growth to ChartData
+    growth?: number;
+    days?: number;
+    rawMonth?: string;
 }
 
-type ViewMode = 'sales' | 'growth' | 'daily' | 'profitRate';
+type ViewMode = 'sales' | 'growth';
 
 interface OptionsTree {
     [group: string]: {
@@ -30,7 +28,7 @@ interface OptionsTree {
 const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) => {
     const [data, setData] = useState<ChartData[]>([]);
     const [daysList, setDaysList] = useState<number[]>([]);
-    const [viewMode, setViewMode] = useState<ViewMode>('sales');
+    const [viewMode, setViewMode] = useState<ViewMode | 'daily'>('sales');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -96,7 +94,6 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
 
                 const months = response.data.months;
                 const sales = response.data.sales;
-                const profit = response.data.profit || [];
                 const days = response.data.days_list || [];
                 setDaysList(days);
 
@@ -105,11 +102,9 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                 // Transform data for chart
                 const chartData: ChartData[] = months.map((month: string, index: number) => {
                     const value = sales[index] || 0;
-                    const profitValue = profit[index] || 0;
                     return {
                         month: formatMonth(month),
                         value,
-                        profit: profitValue,
                         rawMonth: month,
                         days: days[index] || 30
                     };
@@ -198,7 +193,7 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
         if (viewMode === 'sales') return filteredData;
         if (viewMode === 'growth') return filteredData.slice(1);
         if (viewMode === 'daily') {
-            return filteredData.map(item => {
+            return filteredData.map((item) => {
                 const days = item.days || 30;
                 return {
                     ...item,
@@ -207,20 +202,6 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                 };
             });
         }
-
-        if (viewMode === 'profitRate') {
-            return filteredData.map(item => {
-                const sales = item.value || 0;
-                const profit = item.profit || 0;
-                const rate = sales === 0 ? 0 : (profit / sales) * 100;
-                return {
-                    ...item,
-                    value: rate,
-                    profitRate: rate
-                };
-            });
-        }
-
         return filteredData;
     };
 
@@ -229,25 +210,14 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
         ? `🔍 ${currentLabel} 월별 매출 추이`
         : viewMode === 'daily'
             ? `🔍 ${currentLabel} 월별 일평균 매출`
-            : viewMode === 'profitRate'
-                ? `🔍 ${currentLabel} 월별 평균 이익률`
-                : `📈 ${currentLabel} 월별 증감율 (전월 대비)`;
-    const yAxisLabel = viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : viewMode === 'profitRate' ? '이익률 (%)' : '증감율 (%)';
+            : `📈 ${currentLabel} 월별 증감율 (전월 대비)`;
+    const yAxisLabel = viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : '증감율 (%)';
 
     // YAxis formatter selection
-    const yAxisFormatter = (viewMode === 'growth' || viewMode === 'profitRate') ? formatPercent : formatMillions;
+    const yAxisFormatter = viewMode === 'growth' ? formatPercent : formatMillions;
 
     // Label formatter selection
-    const labelFormatter = (viewMode === 'growth' || viewMode === 'profitRate') ? (val: any) => typeof val === 'number' ? val.toFixed(1) + '%' : String(val) : formatMillions;
-
-    const tooltipFormatter = (value: number, name: string, props: any) => {
-        if (viewMode === 'growth' || viewMode === 'profitRate') {
-            return [value.toFixed(1) + '%', name];
-        }
-        const days = props.payload.days;
-        const suffix = viewMode === 'daily' ? ` (기준: ${days}일)` : '';
-        return [formatMillions(value) + (viewMode === 'daily' ? '' : '원'), name + suffix];
-    };
+    const labelFormatter = viewMode === 'growth' ? (val: any) => typeof val === 'number' ? val.toFixed(1) + '%' : String(val) : formatMillions;
 
     return (
         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
@@ -296,15 +266,6 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                 }`}
                         >
                             일평균
-                        </button>
-                        <button
-                            onClick={() => setViewMode('profitRate')}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'profitRate'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                        >
-                            이익률
                         </button>
                         <button
                             onClick={() => setViewMode('growth')}

@@ -23,10 +23,10 @@ def get_monthly_sales_by_channel(filename: str):
     if '거래쳐명' in df.columns:
         df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
         
-    df = clean_numeric_columns(df)
+    df = clean_sales_column(df)
     
     # 필요한 컬럼 확인
-    required_cols = ['월구분', '파트구분', '판매액', '이익']
+    required_cols = ['월구분', '파트구분', '판매액']
     for col in required_cols:
         if col not in df.columns:
             raise ValueError(f"Required column '{col}' not found in data")
@@ -35,28 +35,22 @@ def get_monthly_sales_by_channel(filename: str):
     df_filtered = df[df['파트구분'].isin(['이커머스', '오프라인'])].copy()
     
     # 월구분과 파트구분으로 그룹화하여 합계
-    monthly_sales = df_filtered.groupby(['월구분', '파트구분'])[['판매액', '이익']].sum().reset_index()
+    monthly_sales = df_filtered.groupby(['월구분', '파트구분'])['판매액'].sum().reset_index()
     
     # 피벗하여 이커머스와 오프라인을 별도 컬럼으로
-    pivot_sales = monthly_sales.pivot(index='월구분', columns='파트구분', values='판매액').fillna(0)
-    pivot_profit = monthly_sales.pivot(index='월구분', columns='파트구분', values='이익').fillna(0)
+    pivot_df = monthly_sales.pivot(index='월구분', columns='파트구분', values='판매액').fillna(0)
     
     # 월구분 정렬
-    pivot_sales = pivot_sales.sort_index()
-    pivot_profit = pivot_profit.sort_index()
+    pivot_df = pivot_df.sort_index()
     
     # 총 매출 계산 (이커머스 + 오프라인)
-    ecommerce_values = pivot_sales.get('이커머스', pd.Series([0] * len(pivot_sales))).tolist()
-    offline_values = pivot_sales.get('오프라인', pd.Series([0] * len(pivot_sales))).tolist()
+    ecommerce_values = pivot_df.get('이커머스', pd.Series([0] * len(pivot_df))).tolist()
+    offline_values = pivot_df.get('오프라인', pd.Series([0] * len(pivot_df))).tolist()
     total_values = [e + o for e, o in zip(ecommerce_values, offline_values)]
     
-    # 총 이익 계산
-    ecommerce_profit = pivot_profit.get('이커머스', pd.Series([0] * len(pivot_profit))).tolist()
-    offline_profit = pivot_profit.get('오프라인', pd.Series([0] * len(pivot_profit))).tolist()
-    total_profit = [e + o for e, o in zip(ecommerce_profit, offline_profit)]
-    
-    months = [str(int(month)) for month in pivot_sales.index.tolist()]
-    days_list, debug_logs = calculate_days_list(df, pivot_sales.index.tolist())
+    months = [str(int(month)) for month in pivot_df.index.tolist()]
+    months = [str(int(month)) for month in pivot_df.index.tolist()]
+    days_list, debug_logs = calculate_days_list(df, pivot_df.index.tolist())
 
     # 결과 포맷팅
     result = {
@@ -64,23 +58,18 @@ def get_monthly_sales_by_channel(filename: str):
         "ecommerce": ecommerce_values,
         "offline": offline_values,
         "total": total_values,
-        "ecommerce_profit": ecommerce_profit,
-        "offline_profit": offline_profit,
-        "total_profit": total_profit,
         "days_list": days_list,
         "debug_logs": debug_logs
     }
     
     return result
 
-def clean_numeric_columns(df):
-    """판매액 및 이익 컬럼의 쉼표 제거 및 숫자로 변환"""
-    target_cols = ['판매액', '이익']
-    for col in target_cols:
-        if col in df.columns:
-            if df[col].dtype == 'object':
-                df[col] = df[col].astype(str).str.replace(',', '').str.strip()
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+def clean_sales_column(df):
+    """판매액 컬럼의 쉼표 제거 및 숫자로 변환"""
+    if '판매액' in df.columns:
+        if df['판매액'].dtype == 'object':
+            df['판매액'] = df['판매액'].astype(str).str.replace(',', '').str.strip()
+        df['판매액'] = pd.to_numeric(df['판매액'], errors='coerce').fillna(0)
     return df
 
 def get_days_in_month(year, month):
@@ -206,45 +195,40 @@ def get_monthly_sales_by_product_group(filename: str):
     if '거래쳐명' in df.columns:
         df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
         
-    df = clean_numeric_columns(df)
+    df = clean_sales_column(df)
         
     # 필요한 컬럼 확인
-    required_cols = ['월구분', '품목그룹1', '판매액', '이익']
+    required_cols = ['월구분', '품목그룹1', '판매액']
     for col in required_cols:
         if col not in df.columns:
             raise ValueError(f"Required column '{col}' not found in data")
     
     # 월구분과 품목그룹1으로 그룹화하여 합계
-    monthly_sales = df.groupby(['월구분', '품목그룹1'])[['판매액', '이익']].sum().reset_index()
+    monthly_sales = df.groupby(['월구분', '품목그룹1'])['판매액'].sum().reset_index()
     
     # 피벗하여 각 품목그룹을 별도 컬럼으로
-    pivot_sales = monthly_sales.pivot(index='월구분', columns='품목그룹1', values='판매액').fillna(0)
-    pivot_profit = monthly_sales.pivot(index='월구분', columns='품목그룹1', values='이익').fillna(0)
+    pivot_df = monthly_sales.pivot(index='월구분', columns='품목그룹1', values='판매액').fillna(0)
     
     # 월구분 정렬
-    pivot_sales = pivot_sales.sort_index()
-    pivot_profit = pivot_profit.sort_index()
+    pivot_df = pivot_df.sort_index()
     
     # 품목그룹 리스트 (매출액 기준 내림차순 정렬)
-    group_totals = pivot_sales.sum().sort_values(ascending=False)
+    group_totals = pivot_df.sum().sort_values(ascending=False)
     top_groups = group_totals.head(10).index.tolist()  # 상위 10개 품목그룹
     
-    days_list, debug_logs = calculate_days_list(df, pivot_sales.index.tolist())
+    days_list, debug_logs = calculate_days_list(df, pivot_df.index.tolist())
     
     result = {
-        "months": [str(int(month)) for month in pivot_sales.index.tolist()],
+        "months": [str(int(month)) for month in pivot_df.index.tolist()],
         "groups": {},
-        "profit_groups": {},
         "days_list": days_list,
         "debug_logs": debug_logs
     }
     
     # 각 품목그룹의 월별 데이터 추가
     for group in top_groups:
-        if group in pivot_sales.columns:
-            result["groups"][group] = pivot_sales[group].tolist()
-        if group in pivot_profit.columns:
-            result["profit_groups"][group] = pivot_profit[group].tolist()
+        if group in pivot_df.columns:
+            result["groups"][group] = pivot_df[group].tolist()
     
     return result
 
@@ -306,11 +290,11 @@ def get_filtered_monthly_sales(filename: str, group: str = None, category: str =
     if '거래쳐명' in df.columns:
         df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
         
-    df = clean_numeric_columns(df)
+    df = clean_sales_column(df)
     
     # 1. 월별 전체 데이터를 먼저 구해서 모든 월 리스트 확보
     all_months = sorted(df['월구분'].unique())
-    # Duplicate sorted call was here, removed
+    all_months = sorted(df['월구분'].unique())
     days_list, debug_logs = calculate_days_list(df, all_months)
     
     # 2. 필터링
@@ -330,15 +314,13 @@ def get_filtered_monthly_sales(filename: str, group: str = None, category: str =
         df_filtered = df_filtered[df_filtered['품목 구분_2'] == sub_category]
         current_label = sub_category
         
-    # 3. 월별 매출 및 이익 집계
+    # 3. 월별 매출 집계
     monthly_sales = df_filtered.groupby('월구분')['판매액'].sum().reindex(all_months, fill_value=0)
-    monthly_profit = df_filtered.groupby('월구분')['이익'].sum().reindex(all_months, fill_value=0)
     
     # 4. 결과 포맷팅
     result = {
         "months": [str(int(month)) for month in all_months],
         "sales": monthly_sales.values.tolist(),
-        "profit": monthly_profit.values.tolist(),
         "label": current_label,
         "days_list": days_list,
         "debug_logs": debug_logs
@@ -406,10 +388,10 @@ def get_channel_layer_sales(filename: str, part: str = None, channel: str = None
     if '거래쳐명' in df.columns:
         df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
         
-    df = clean_numeric_columns(df)
+    df = clean_sales_column(df)
     
     all_months = sorted(df['월구분'].unique())
-    # Removed duplicate sorted call
+    all_months = sorted(df['월구분'].unique())
     days_list, debug_logs = calculate_days_list(df, all_months)
     
     df_filtered = df.copy()
@@ -421,19 +403,17 @@ def get_channel_layer_sales(filename: str, part: str = None, channel: str = None
         
     if channel and channel != 'all':
         df_filtered = df_filtered[df_filtered['채널구분'] == channel]
-        current_label = channel
+        current_label = f"{part} > {channel}"
         
     if account and account != 'all':
         df_filtered = df_filtered[df_filtered['거래처명'] == account]
         current_label = account
         
     monthly_sales = df_filtered.groupby('월구분')['판매액'].sum().reindex(all_months, fill_value=0)
-    monthly_profit = df_filtered.groupby('월구분')['이익'].sum().reindex(all_months, fill_value=0)
     
     result = {
         "months": [str(int(month)) for month in all_months],
         "sales": monthly_sales.values.tolist(),
-        "profit": monthly_profit.values.tolist(),
         "label": current_label,
         "days_list": days_list,
         "debug_logs": debug_logs

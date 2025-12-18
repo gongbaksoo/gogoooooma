@@ -14,6 +14,7 @@ interface ChartData {
     value: number;
     growth?: number;
     days?: number;
+    rawMonth?: string;
 }
 
 type ViewMode = 'sales' | 'growth';
@@ -30,6 +31,10 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
     const [viewMode, setViewMode] = useState<ViewMode | 'daily'>('sales');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Date Range Filter State
+    const [startMonth, setStartMonth] = useState<string>('');
+    const [endMonth, setEndMonth] = useState<string>('');
 
     // Filter states
     const [options, setOptions] = useState<OptionsTree>({});
@@ -99,9 +104,17 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                     const value = sales[index] || 0;
                     return {
                         month: formatMonth(month),
-                        value
+                        value,
+                        rawMonth: month,
+                        days: days[index] || 30
                     };
                 });
+
+                // Initialize Date Range
+                if (months.length > 0) {
+                    setStartMonth(months[0]);
+                    setEndMonth(months[months.length - 1]);
+                }
 
                 // Calculate growth rates
                 const chartDataWithGrowth = chartData.map((item, index) => {
@@ -169,11 +182,19 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
         : [];
 
     const getDisplayData = () => {
-        if (viewMode === 'sales') return data;
-        if (viewMode === 'growth') return data.slice(1);
+        // Filter by Date Range
+        const filteredData = data.filter(item => {
+            if (!item.rawMonth) return true;
+            if (startMonth && item.rawMonth < startMonth) return false;
+            if (endMonth && item.rawMonth > endMonth) return false;
+            return true;
+        });
+
+        if (viewMode === 'sales') return filteredData;
+        if (viewMode === 'growth') return filteredData.slice(1);
         if (viewMode === 'daily') {
-            return data.map((item, index) => {
-                const days = daysList[index] || 30;
+            return filteredData.map((item) => {
+                const days = item.days || 30;
                 return {
                     ...item,
                     value: item.value / days,
@@ -181,7 +202,7 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                 };
             });
         }
-        return data;
+        return filteredData;
     };
 
     const displayData = getDisplayData();
@@ -204,6 +225,30 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                 <div className="flex justify-between items-center">
                     <h3 className="text-lg font-bold text-gray-700">🔍 상세 품목 매출 분석</h3>
                     <div className="flex gap-2">
+                        {/* Date Range Selectors */}
+                        {data.length > 0 && (
+                            <div className="flex items-center gap-1 mr-4 bg-gray-50 p-1 rounded-lg border border-gray-200">
+                                <select
+                                    value={startMonth}
+                                    onChange={(e) => setStartMonth(e.target.value)}
+                                    className="bg-transparent text-sm font-medium text-gray-700 focus:outline-none p-1"
+                                >
+                                    {data.map(d => (
+                                        <option key={`start-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
+                                    ))}
+                                </select>
+                                <span className="text-gray-400">~</span>
+                                <select
+                                    value={endMonth}
+                                    onChange={(e) => setEndMonth(e.target.value)}
+                                    className="bg-transparent text-sm font-medium text-gray-700 focus:outline-none p-1"
+                                >
+                                    {data.map(d => (
+                                        <option key={`end-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                         <button
                             onClick={() => setViewMode('sales')}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'sales'

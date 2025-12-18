@@ -377,10 +377,10 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                     {(viewMode === 'sales' || viewMode === 'daily') && (
                         <>
                             {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
-                                <Line type="monotone" dataKey="이커머스" name="이커머스" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                                <Bar dataKey="이커머스" name="이커머스" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={60} />
                             )}
                             {(channelFilter === 'all' || channelFilter === 'offline') && (
-                                <Line type="monotone" dataKey="오프라인" name="오프라인" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                                <Bar dataKey="오프라인" name="오프라인" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={60} />
                             )}
                             {(channelFilter === 'all' || channelFilter === 'total') && (
                                 <Line type="monotone" dataKey="총매출" name="전체 합계" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#f59e0b', fontWeight: 'bold' } }} />

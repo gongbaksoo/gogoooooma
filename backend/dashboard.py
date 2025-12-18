@@ -6,7 +6,9 @@ def get_monthly_sales_by_channel(filename: str):
     """
     월별 이커머스 vs 오프라인 매출 데이터 반환
     """
-    file_path = os.path.join("uploads", filename)
+    # Use absolute path relative to this file
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "uploads", filename)
     
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {filename}")
@@ -161,7 +163,7 @@ def get_monthly_sales_by_product_group(filename: str):
     """
     월별 품목그룹별 매출 데이터 반환
     """
-    file_path = os.path.join("uploads", filename)
+    file_path = os.path.join(base_dir, "uploads", filename)
     
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {filename}")
@@ -214,7 +216,8 @@ def get_hierarchical_options(filename: str):
     """
     품목그룹 > 품목 구분 > 품목 구분_2 계층 구조 옵션 반환
     """
-    file_path = os.path.join("uploads", filename)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "uploads", filename)
     
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {filename}")
@@ -255,7 +258,8 @@ def get_filtered_monthly_sales(filename: str, group: str = None, category: str =
     """
     조건에 따른 월별 매출 데이터 반환
     """
-    file_path = os.path.join("uploads", filename)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "uploads", filename)
     
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {filename}")
@@ -306,7 +310,8 @@ def get_channel_layer_options(filename: str):
     """
     파트구분 > 채널구분 > 거래처명 계층 구조 옵션 반환
     """
-    file_path = os.path.join("uploads", filename)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "uploads", filename)
     
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {filename}")
@@ -348,7 +353,8 @@ def get_channel_layer_sales(filename: str, part: str = None, channel: str = None
     """
     조건(파트 > 채널 > 거래처)에 따른 월별 매출 데이터 반환
     """
-    file_path = os.path.join("uploads", filename)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "uploads", filename)
     
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {filename}")

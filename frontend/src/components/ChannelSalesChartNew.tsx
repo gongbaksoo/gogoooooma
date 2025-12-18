@@ -222,7 +222,7 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                         >
-                            일평균 (New)
+                            일평균
                         </button>
                         <button
                             onClick={() => setViewMode('growth')}

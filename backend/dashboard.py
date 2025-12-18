@@ -137,10 +137,19 @@ def calculate_days_list(df, months):
                     max_day = month_df[day_col].max()
                     logs.append(f"Month {m_str}: No sales > 0. Using raw max {max_day}")
 
-                if max_day > 0:
-                    days_list.append(int(max_day))
-                else:
-                    days_list.append(get_days_in_month(year, month))
+                # Clean max_day if it's a string (e.g. "9일")
+                try:
+                    if isinstance(max_day, str):
+                        max_day = ''.join(filter(str.isdigit, max_day))
+                    
+                    max_day_int = int(max_day)
+                    
+                    if max_day_int > 0:
+                        days_list.append(max_day_int)
+                    else:
+                        days_list.append(get_days_in_month(year, month))
+                except:
+                     days_list.append(get_days_in_month(year, month))
             else:
                 logs.append(f"Month {m_str}: No data found in DF. Fallback.")
                 days_list.append(get_days_in_month(year, month))

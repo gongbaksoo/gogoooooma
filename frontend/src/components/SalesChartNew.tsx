@@ -15,6 +15,7 @@ interface ChartData {
     오프라인: number;
     총매출: number;
     days?: number;
+    rawMonth?: string;
 }
 
 type ViewMode = 'sales' | 'growth' | 'daily';
@@ -34,6 +35,10 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
     const [daysList, setDaysList] = useState<number[]>([]);
     const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
+    // Date Range Filter State
+    const [startMonth, setStartMonth] = useState<string>('');
+    const [endMonth, setEndMonth] = useState<string>('');
+
     useEffect(() => {
         const fetchData = async () => {
             if (!filename) {
@@ -51,6 +56,12 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                 setData(response.data);
                 setDaysList(response.data.days_list || []);
                 setDebugLogs(response.data.debug_logs || []);
+
+                // Initialize Date Range to full range
+                if (response.data.months && response.data.months.length > 0) {
+                    setStartMonth(response.data.months[0]);
+                    setEndMonth(response.data.months[response.data.months.length - 1]);
+                }
             } catch (err) {
                 console.error('Failed to fetch sales data:', err);
                 setError('데이터를 불러오는데 실패했습니다');
@@ -131,12 +142,21 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                 이커머스: ecommerceVal,
                 오프라인: offlineVal,
                 총매출: totalVal, // ChartData 인터페이스에 맞춰 '총매출' 사용 (기존에 정의됨)
-                days: days
+                days: days,
+                rawMonth: month
             };
         });
 
+        // Filter by Date Range
+        const filteredData = transformedData.filter(item => {
+            if (!item.rawMonth) return true;
+            if (startMonth && item.rawMonth < startMonth) return false;
+            if (endMonth && item.rawMonth > endMonth) return false;
+            return true;
+        });
+
         // 증감율 모드일 때는 첫 달 제외
-        return transformedData.slice(viewMode === 'growth' ? 1 : 0);
+        return filteredData.slice(viewMode === 'growth' ? 1 : 0);
     };
 
     if (!filename) {
@@ -197,6 +217,31 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-700">📊 {chartTitle}</h3>
                 <div className="flex gap-2 items-center">
+                    {/* Date Range Selectors */}
+                    {data && data.months && (
+                        <div className="flex items-center gap-1 mr-4 bg-gray-50 p-1 rounded-lg border border-gray-200">
+                            <select
+                                value={startMonth}
+                                onChange={(e) => setStartMonth(e.target.value)}
+                                className="bg-transparent text-sm font-medium text-gray-700 focus:outline-none p-1"
+                            >
+                                {data.months.map(m => (
+                                    <option key={`start-${m}`} value={m}>{formatMonth(m)}</option>
+                                ))}
+                            </select>
+                            <span className="text-gray-400">~</span>
+                            <select
+                                value={endMonth}
+                                onChange={(e) => setEndMonth(e.target.value)}
+                                className="bg-transparent text-sm font-medium text-gray-700 focus:outline-none p-1"
+                            >
+                                {data.months.map(m => (
+                                    <option key={`end-${m}`} value={m}>{formatMonth(m)}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     <button
                         onClick={() => setViewMode('sales')}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'sales'

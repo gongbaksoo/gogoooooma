@@ -45,6 +45,25 @@ async def startup_event():
     init_db()
     logging.info("Application started, database initialized")
 
+def ensure_file_on_disk(filename: str):
+    """Ensure that the file exists on the local disk (fetching from DB if needed)"""
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if os.path.exists(file_path):
+        return True
+    
+    # Try fetching from DB
+    file_data = get_file_from_db(filename)
+    if file_data:
+        try:
+            with open(file_path, "wb") as f:
+                f.write(file_data)
+            logging.info(f"Synchronized {filename} from database to disk")
+            return True
+        except Exception as e:
+            logging.error(f"Failed to write disk fallback for {filename}: {e}")
+    
+    return False
+
 @app.get("/")
 def read_root():
     return {"message": "매출 분석 API가 실행 중입니다."}
@@ -153,10 +172,12 @@ def get_admin_api_key_status():
 @app.post("/chat/")
 def chat_endpoint(request: ChatRequest):
     print(f"Chat request for {request.filename}: {request.query}")
-    file_path = os.path.join(UPLOAD_DIR, request.filename)
     
-    if not os.path.exists(file_path):
+    # Ensure file is available on disk
+    if not ensure_file_on_disk(request.filename):
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다. 다시 업로드해 주세요.")
+        
+    file_path = os.path.join(UPLOAD_DIR, request.filename)
     
     # Resolve API Key
     final_api_key = request.api_key
@@ -225,10 +246,23 @@ def list_files():
 
 @app.delete("/files/{filename}")
 def delete_file(filename: str):
-    """특정 파일 삭제 (Database)"""
+    """특정 파일 삭제 (Database and Local Disk)"""
     success = delete_file_from_db(filename)
     
+    # Also attempt to delete from disk
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+            logging.info(f"Deleted local cache for {filename}")
+        except Exception as e:
+            logging.error(f"Failed to delete local cache for {filename}: {e}")
+    
     if not success:
+        # If successfully deleted from disk but not from DB, still return success 
+        # as it might have been a disk-only file (fallback)
+        if not os.path.exists(file_path):
+             return {"message": f"{filename} 삭제 완료 (Local only)"}
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
     
     return {"message": f"{filename} 삭제 완료"}
@@ -381,6 +415,7 @@ def get_dashboard_monthly_sales(filename: str):
     월별 채널별 매출 데이터 반환 (이커머스 vs 오프라인)
     """
     try:
+        ensure_file_on_disk(filename)
         from dashboard import get_monthly_sales_by_channel
         result = get_monthly_sales_by_channel(filename)
         return result
@@ -395,6 +430,7 @@ def get_dashboard_product_group_sales(filename: str):
     월별 품목그룹별 매출 데이터 반환
     """
     try:
+        ensure_file_on_disk(filename)
         from dashboard import get_monthly_sales_by_product_group
         result = get_monthly_sales_by_product_group(filename)
         return result
@@ -409,6 +445,7 @@ def get_dashboard_options(filename: str):
     품목그룹 > 품목 구분 > 품목 구분_2 계층 구조 옵션 반환
     """
     try:
+        ensure_file_on_disk(filename)
         from dashboard import get_hierarchical_options
         result = get_hierarchical_options(filename)
         return result
@@ -423,6 +460,7 @@ def get_dashboard_hierarchical_sales(filename: str, group: str = None, category:
     조건에 따른 월별 매출 데이터 반환
     """
     try:
+        ensure_file_on_disk(filename)
         from dashboard import get_filtered_monthly_sales
         result = get_filtered_monthly_sales(filename, group, category, sub_category)
         return result
@@ -441,6 +479,7 @@ def get_dashboard_channel_options(filename: str):
     파트구분 > 채널구분 > 거래처명 계층 구조 옵션 반환
     """
     try:
+        ensure_file_on_disk(filename)
         from dashboard import get_channel_layer_options
         result = get_channel_layer_options(filename)
         return result
@@ -455,34 +494,7 @@ def get_dashboard_channel_sales(filename: str, part: str = None, channel: str = 
     조건(파트 > 채널 > 거래처)에 따른 월별 매출 데이터 반환
     """
     try:
-        from dashboard import get_channel_layer_sales
-        result = get_channel_layer_sales(filename, part, channel, account)
-        return result
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
-
-@app.get("/api/dashboard/channel-options")
-def get_dashboard_channel_options(filename: str):
-    """
-    파트구분 > 채널구분 > 거래처명 계층 구조 옵션 반환
-    """
-    try:
-        from dashboard import get_channel_layer_options
-        result = get_channel_layer_options(filename)
-        return result
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"옵션 데이터 처리 실패: {str(e)}")
-
-@app.get("/api/dashboard/channel-sales")
-def get_dashboard_channel_sales(filename: str, part: str = None, channel: str = None, account: str = None):
-    """
-    조건(파트 > 채널 > 거래처)에 따른 월별 매출 데이터 반환
-    """
-    try:
+        ensure_file_on_disk(filename)
         from dashboard import get_channel_layer_sales
         result = get_channel_layer_sales(filename, part, channel, account)
         return result

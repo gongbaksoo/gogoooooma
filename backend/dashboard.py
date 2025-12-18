@@ -108,10 +108,8 @@ def calculate_days_list(df, months):
             continue
 
         try:
-            first_val = df['월구분'].iloc[0]
-            month_val_for_filter = int(m_str) if isinstance(first_val, (int, float)) else m_str
-            
-            month_df = df[df['월구분'] == month_val_for_filter]
+            # Robust filtering: Always match as string to handle mixed types
+            month_df = df[df['월구분'].astype(str) == m_str]
             
             if not month_df.empty:
                 # ----------------------------------------------------------------

@@ -4,6 +4,10 @@ from pydantic import BaseModel
 import os
 import shutil
 import logging
+from dotenv import load_dotenv
+
+# Load .env file for local development
+load_dotenv()
 from analysis import analyze_sales_data
 from chat import process_chat_query
 from dashboard import get_monthly_sales_by_channel

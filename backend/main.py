@@ -1,13 +1,15 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import os
 import shutil
 import logging
 from dotenv import load_dotenv
 
-# Load .env file for local development
+# Configure logging and environment FIRST
+logging.basicConfig(level=logging.INFO)
 load_dotenv()
+
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from analysis import analyze_sales_data
 from chat import process_chat_query
 from dashboard import get_monthly_sales_by_channel
@@ -16,9 +18,6 @@ from database import (
     list_files_in_db, delete_file_from_db, 
     cleanup_old_files_in_db, get_file_count
 )
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Sales Analysis API")
 
@@ -263,11 +262,14 @@ def delete_file(filename: str):
             logging.error(f"Failed to delete local cache for {filename}: {e}")
     
     if not success:
-        # If successfully deleted from disk but not from DB, still return success 
-        # as it might have been a disk-only file (fallback)
+        # If not in DB, check if it was on disk and successfully removed
         if not os.path.exists(file_path):
-             return {"message": f"{filename} 삭제 완료 (Local only)"}
-        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+            # If it's gone from disk (or never existed), and not in DB
+            # We should have returned 404 if it never existed, but let's be safe
+            logging.warning(f"File {filename} not found in DB or on disk")
+            raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+        
+        return {"message": f"{filename} 삭제 완료 (Local only)"}
     
     return {"message": f"{filename} 삭제 완료"}
 

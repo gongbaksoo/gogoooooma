@@ -377,14 +377,17 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                         <LineChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                             <XAxis
-                                dataKey="month"
-                                stroke="#666"
-                                style={{ fontSize: '12px' }}
+                                dataKey="date"
+                                stroke="#94a3b8"
+                                style={{ fontSize: '10px', fontWeight: 500 }}
+                                tickLine={false}
+                                axisLine={false}
+                                dy={10}
                             />
                             <YAxis
                                 stroke="#94a3b8"
-                                style={{ fontSize: '11px', fontWeight: 600 }}
-                                tickFormatter={yAxisFormatter}
+                                style={{ fontSize: '9px', fontWeight: 600 }}
+                                tickFormatter={viewMode === 'growth' || viewMode === 'profitRate' ? formatPercent : formatMillions}
                                 axisLine={false}
                                 tickLine={false}
                             />

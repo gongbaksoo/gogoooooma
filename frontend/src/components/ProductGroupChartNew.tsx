@@ -379,13 +379,16 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis
                         dataKey="month"
-                        stroke="#666"
-                        style={{ fontSize: '12px' }}
+                        stroke="#94a3b8"
+                        style={{ fontSize: '10px', fontWeight: 500 }}
+                        tickLine={false}
+                        axisLine={false}
+                        dy={10}
                     />
                     <YAxis
                         stroke="#94a3b8"
-                        style={{ fontSize: '11px', fontWeight: 600 }}
-                        tickFormatter={viewMode === 'growth' ? formatPercent : formatMillions}
+                        style={{ fontSize: '9px', fontWeight: 600 }}
+                        tickFormatter={viewMode === 'growth' || viewMode === 'profitRate' ? formatPercent : formatMillions}
                         axisLine={false}
                         tickLine={false}
                     />

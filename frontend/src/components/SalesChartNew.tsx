@@ -20,7 +20,10 @@ interface ChartData {
     ecommerceProfit?: number;
     offlineProfit?: number;
     totalProfit?: number;
-    profitRate?: number; // Added for profitRate view
+    profitRate?: number;
+    ecommerceRate?: number;
+    offlineRate?: number;
+    totalRate?: number;
 }
 
 type ViewMode = 'sales' | 'growth' | 'daily' | 'profitRate';
@@ -183,13 +186,24 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
 
         if (viewMode === 'profitRate') {
             return filteredData.map(item => {
-                const totalSales = item.총매출 || 0;
-                const totalProfit = item.totalProfit || 0;
-                const rate = totalSales === 0 ? 0 : (totalProfit / totalSales) * 100;
+                const eSales = item.이커머스 || 0;
+                const eProfit = item.ecommerceProfit || 0;
+                const eRate = eSales === 0 ? 0 : (eProfit / eSales) * 100;
+
+                const oSales = item.오프라인 || 0;
+                const oProfit = item.offlineProfit || 0;
+                const oRate = oSales === 0 ? 0 : (oProfit / oSales) * 100;
+
+                const tSales = item.총매출 || 0;
+                const tProfit = item.totalProfit || 0;
+                const tRate = tSales === 0 ? 0 : (tProfit / tSales) * 100;
+
                 return {
                     ...item,
-                    총매출: rate, // Use '총매출' key for simple rendering or add dedicated key
-                    profitRate: rate
+                    ecommerceRate: eRate,
+                    offlineRate: oRate,
+                    totalRate: tRate,
+                    profitRate: tRate // for backward compatibility/default
                 };
             });
         }
@@ -271,13 +285,18 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-700">📊 {chartTitle}</h3>
-                <div className="flex gap-2 items-center">
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60 mt-12 first:mt-0">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
+                <div>
+                    <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight">
+                        {chartTitle}
+                    </h3>
+                    <p className="text-slate-400 text-sm mt-1 font-medium">Monthly performance overview</p>
+                </div>
+                <div className="flex flex-wrap gap-2 w-full xl:w-auto">
                     {/* Date Range Selectors */}
                     {data && data.months && (
-                        <div className="flex items-center gap-1 mr-4 bg-gray-50 p-1 rounded-lg border border-gray-200">
+                        <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200 w-full sm:w-auto justify-between">
                             <select
                                 value={startMonth}
                                 onChange={(e) => setStartMonth(e.target.value)}
@@ -302,36 +321,36 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
 
                     <button
                         onClick={() => setViewMode('sales')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'sales'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'sales'
+                            ? 'bg-blue-600 text-white shadow-blue-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         매출액
                     </button>
                     <button
                         onClick={() => setViewMode('daily')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'daily'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'daily'
+                            ? 'bg-blue-600 text-white shadow-blue-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         일평균
                     </button>
                     <button
                         onClick={() => setViewMode('profitRate')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'profitRate'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'profitRate'
+                            ? 'bg-blue-600 text-white shadow-blue-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         이익률
                     </button>
                     <button
                         onClick={() => setViewMode('growth')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'growth'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'growth'
+                            ? 'bg-blue-600 text-white shadow-blue-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         증감율
@@ -339,95 +358,108 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                     <select
                         value={channelFilter}
                         onChange={(e) => setChannelFilter(e.target.value as ChannelFilter)}
-                        className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm grow sm:grow-0"
                     >
-                        <option value="all">전체</option>
-                        <option value="total">총매출</option>
+                        <option value="all">전체 채널</option>
+                        <option value="total">총매출만</option>
                         <option value="ecommerce">이커머스</option>
                         <option value="offline">오프라인</option>
                     </select>
                 </div>
             </div>
-            <ResponsiveContainer width="100%" height={400}>
-                <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis
-                        dataKey="month"
-                        stroke="#666"
-                        style={{ fontSize: '12px' }}
-                    />
-                    <YAxis
-                        stroke="#666"
-                        style={{ fontSize: '12px' }}
-                        tickFormatter={yAxisFormatter}
-                        label={{ value: yAxisLabel, angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#666' } }}
-                    />
-                    <Tooltip
-                        formatter={tooltipFormatter}
-                        contentStyle={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            border: '1px solid #ddd',
-                            borderRadius: '8px',
-                            padding: '10px'
-                        }}
-                    />
-                    <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="line" />
+            <div className="h-[350px] md:h-[450px] w-full mt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis
+                            dataKey="month"
+                            stroke="#666"
+                            style={{ fontSize: '12px' }}
+                        />
+                        <YAxis
+                            stroke="#94a3b8"
+                            style={{ fontSize: '11px', fontWeight: 600 }}
+                            tickFormatter={viewMode === 'growth' || viewMode === 'profitRate' ? formatPercent : formatMillions}
+                            axisLine={false}
+                            tickLine={false}
+                        />
+                        <Tooltip
+                            formatter={tooltipFormatter}
+                            contentStyle={{
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                border: '1px solid #ddd',
+                                borderRadius: '8px',
+                                padding: '10px'
+                            }}
+                        />
+                        <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="line" />
 
-                    {/* Sales & Daily Mode */}
-                    {(viewMode === 'sales' || viewMode === 'daily') && (
-                        <>
-                            {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
-                                <Line type="monotone" dataKey="이커머스" name="이커머스" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                            )}
-                            {(channelFilter === 'all' || channelFilter === 'offline') && (
-                                <Line type="monotone" dataKey="오프라인" name="오프라인" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                            )}
-                            {(channelFilter === 'all' || channelFilter === 'total') && (
-                                <Line type="monotone" dataKey="총매출" name="전체 합계" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#f59e0b', fontWeight: 'bold' } }} />
-                            )}
-                        </>
-                    )}
+                        {/* Sales & Daily Mode */}
+                        {(viewMode === 'sales' || viewMode === 'daily') && (
+                            <>
+                                {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
+                                    <Line type="monotone" dataKey="이커머스" name="이커머스" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                                )}
+                                {(channelFilter === 'all' || channelFilter === 'offline') && (
+                                    <Line type="monotone" dataKey="오프라인" name="오프라인" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                                )}
+                                {(channelFilter === 'all' || channelFilter === 'total') && (
+                                    <Line type="monotone" dataKey="총매출" name="전체 합계" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#f59e0b', fontWeight: 'bold' } }} />
+                                )}
+                            </>
+                        )}
 
-                    {/* Growth Mode */}
-                    {viewMode === 'growth' && (
-                        <>
-                            {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
-                                <Line type="monotone" dataKey="이커머스" name="이커머스 증감율" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#3b82f6' } }} />
-                            )}
-                            {(channelFilter === 'all' || channelFilter === 'offline') && (
-                                <Line type="monotone" dataKey="오프라인" name="오프라인 증감율" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#10b981' } }} />
-                            )}
-                            {(channelFilter === 'all' || channelFilter === 'total') && (
-                                <Line type="monotone" dataKey="총매출" name="전체 증감율" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#f59e0b', fontWeight: 'bold' } }} />
-                            )}
-                        </>
-                    )}
+                        {/* Growth Mode */}
+                        {viewMode === 'growth' && (
+                            <>
+                                {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
+                                    <Line type="monotone" dataKey="이커머스" name="이커머스 증감율" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#3b82f6' } }} />
+                                )}
+                                {(channelFilter === 'all' || channelFilter === 'offline') && (
+                                    <Line type="monotone" dataKey="오프라인" name="오프라인 증감율" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#10b981' } }} />
+                                )}
+                                {(channelFilter === 'all' || channelFilter === 'total') && (
+                                    <Line type="monotone" dataKey="총매출" name="전체 증감율" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#f59e0b', fontWeight: 'bold' } }} />
+                                )}
+                            </>
+                        )}
 
-                    {/* Profit Rate Mode */}
-                    {viewMode === 'profitRate' && (
-                        <Line type="monotone" dataKey="profitRate" name="평균 이익률" stroke="#ef4444" strokeWidth={3} dot={{ r: 6, fill: '#ef4444', strokeWidth: 2 }} activeDot={{ r: 8 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '11px', fill: '#ef4444', fontWeight: 'bold' } }} />
-                    )}
-                </ComposedChart>
-            </ResponsiveContainer>
+                        {/* Profit Rate Mode */}
+                        {viewMode === 'profitRate' && (
+                            <>
+                                {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
+                                    <Line type="monotone" dataKey="ecommerceRate" name="이커머스 이익률" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#3b82f6' } }} />
+                                )}
+                                {(channelFilter === 'all' || channelFilter === 'offline') && (
+                                    <Line type="monotone" dataKey="offlineRate" name="오프라인 이익률" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#10b981' } }} />
+                                )}
+                                {(channelFilter === 'all' || channelFilter === 'total') && (
+                                    <Line type="monotone" dataKey="totalRate" name="전체 이익률" stroke="#ef4444" strokeWidth={3} dot={{ r: 6, fill: '#ef4444', strokeWidth: 2 }} activeDot={{ r: 8 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '11px', fill: '#ef4444', fontWeight: 'bold' } }} />
+                                )}
+                            </>
+                        )}
+                    </ComposedChart>
+                </ResponsiveContainer>
 
-            {/* Debug Info Section */}
-            {
-                debugLogs.length > 0 && (
-                    <details className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs font-mono text-slate-600">
-                        <summary className="cursor-pointer font-bold mb-2 select-none hover:text-slate-900">
-                            🔍 Calculation Debug Info (Click to expand)
-                        </summary>
-                        <div className="max-h-60 overflow-y-auto whitespace-pre-wrap">
-                            {debugLogs.map((log, i) => (
-                                <div key={i} className="py-0.5 border-b border-slate-100 last:border-0">
-                                    {log}
-                                </div>
-                            ))}
-                        </div>
-                    </details>
-                )
-            }
-        </div >
+                {/* Debug Info Section */}
+                {
+                    debugLogs.length > 0 && (
+                        <details className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs font-mono text-slate-600">
+                            <summary className="cursor-pointer font-bold mb-2 select-none hover:text-slate-900">
+                                🔍 Calculation Debug Info (Click to expand)
+                            </summary>
+                            <div className="max-h-60 overflow-y-auto whitespace-pre-wrap">
+                                {debugLogs.map((log, i) => (
+                                    <div key={i} className="py-0.5 border-b border-slate-100 last:border-0">
+                                        {log}
+                                    </div>
+                                ))}
+                            </div>
+                        </details>
+                    )
+                }
+            </div>
+        </div>
     );
 };
 

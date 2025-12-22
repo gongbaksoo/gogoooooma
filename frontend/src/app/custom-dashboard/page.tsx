@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import FileUpload from "@/components/FileUpload";
 import { getLogs } from "@/lib/api";
@@ -24,6 +24,17 @@ export default function CustomDashboard() {
     const [isLoadingLogs, setIsLoadingLogs] = useState(false);
     const [showAliasManager, setShowAliasManager] = useState(false);
     const [showInstructionsManager, setShowInstructionsManager] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) {
+        return <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>;
+    }
 
     const handleUploadSuccess = (responseData: any) => {
         setData(responseData.data);
@@ -49,41 +60,43 @@ export default function CustomDashboard() {
         <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
             <div className="container mx-auto px-4 py-8 max-w-7xl">
 
-                <div className="mb-8">
+                <div className="mb-6 md:mb-10">
                     <Link
                         href="/"
-                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4 transition"
+                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-6 transition font-medium"
                     >
-                        <ArrowLeft className="w-5 h-5" />
+                        <ArrowLeft className="w-4 h-4" />
                         뒤로 돌아가기
                     </Link>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div>
-                            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                                커스텀 매출 분석 대시보드
+                            <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-slate-900">
+                                <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                                    Vibe Sales
+                                </span>
+                                <span className="block text-slate-400 text-lg md:text-xl font-medium mt-2">Premium Analytics Dashboard</span>
                             </h1>
-                            <p className="text-gray-600 mt-2">고급 스키마 데이터 전용 분석 및 시각화</p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2 md:gap-3">
                             <button
                                 onClick={() => setShowInstructionsManager(true)}
-                                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                                className="px-5 py-2.5 text-sm font-semibold bg-white text-slate-700 border border-slate-200 rounded-full hover:bg-slate-50 shadow-sm transition-all flex items-center gap-2"
                             >
-                                <BookOpen className="w-4 h-4" />
+                                <BookOpen className="w-4 h-4 text-blue-500" />
                                 AI 지침
                             </button>
                             <button
                                 onClick={() => setShowAliasManager(true)}
-                                className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center gap-2"
+                                className="px-5 py-2.5 text-sm font-semibold bg-white text-slate-700 border border-slate-200 rounded-full hover:bg-slate-50 shadow-sm transition-all flex items-center gap-2"
                             >
-                                <Settings className="w-4 h-4" />
+                                <Settings className="w-4 h-4 text-purple-500" />
                                 스키마 설정
                             </button>
                             <button
                                 onClick={handleShowLogs}
-                                className="px-4 py-2 text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition"
+                                className="px-5 py-2.5 text-sm font-semibold bg-slate-900 text-white rounded-full hover:bg-slate-800 shadow-lg transition-all"
                             >
-                                🛠️ 개발자 로그
+                                🛠️ 로그
                             </button>
                         </div>
                     </div>

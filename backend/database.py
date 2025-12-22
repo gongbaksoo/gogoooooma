@@ -8,6 +8,12 @@ import logging
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+if DATABASE_URL:
+    host = DATABASE_URL.split('@')[-1] if '@' in DATABASE_URL else "local/unknown"
+    logging.info(f"Database URL detected. Host suffix: ...@{host}")
+else:
+    logging.warning("DATABASE_URL NOT FOUND in os.getenv")
+
 # Fix for Railway PostgreSQL URL (postgres:// -> postgresql://)
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -37,7 +43,14 @@ def init_db():
         return False
     
     try:
-        engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+        # Increase pool size and max overflow for higher concurrency on dashboard
+        engine = create_engine(
+            DATABASE_URL, 
+            pool_pre_ping=True,
+            pool_size=20,
+            max_overflow=10,
+            pool_timeout=30
+        )
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         
         # Create tables

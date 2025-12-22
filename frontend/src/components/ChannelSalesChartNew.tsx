@@ -243,116 +243,116 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
     const labelFormatter = (viewMode === 'growth' || viewMode === 'profitRate') ? (val: any) => typeof val === 'number' ? val.toFixed(1) + '%' : String(val) : formatMillions;
 
     return (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <div className="flex flex-col gap-4 mb-6">
-                <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-gray-700">🏢 채널별 매출 상세 분석</h3>
-                    <div className="flex gap-2">
-                        {/* Date Range Selectors */}
-                        {data.length > 0 && (
-                            <div className="flex items-center gap-1 mr-4 bg-gray-50 p-1 rounded-lg border border-gray-200">
-                                <select
-                                    value={startMonth}
-                                    onChange={(e) => setStartMonth(e.target.value)}
-                                    className="bg-transparent text-sm font-medium text-gray-700 focus:outline-none p-1"
-                                >
-                                    {data.map(d => (
-                                        <option key={`start-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
-                                    ))}
-                                </select>
-                                <span className="text-gray-400">~</span>
-                                <select
-                                    value={endMonth}
-                                    onChange={(e) => setEndMonth(e.target.value)}
-                                    className="bg-transparent text-sm font-medium text-gray-700 focus:outline-none p-1"
-                                >
-                                    {data.map(d => (
-                                        <option key={`end-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-                        <button
-                            onClick={() => setViewMode('sales')}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'sales'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                        >
-                            매출액
-                        </button>
-                        <button
-                            onClick={() => {
-                                console.log('Switched to daily view');
-                                setViewMode('daily');
-                            }}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'daily'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                        >
-                            일평균
-                        </button>
-                        <button
-                            onClick={() => setViewMode('profitRate')}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'profitRate'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                        >
-                            이익률
-                        </button>
-                        <button
-                            onClick={() => setViewMode('growth')}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'growth'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                        >
-                            증감율
-                        </button>
-                    </div>
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60 mt-12">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
+                <div>
+                    <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight">
+                        🏢 채널별 매출 상세 분석
+                    </h3>
+                    <p className="text-slate-400 text-sm mt-1 font-medium italic">{currentLabel}</p>
                 </div>
-
-                <div className="flex flex-wrap gap-2">
-                    {/* 파트구분 Select */}
-                    <select
-                        value={selectedPart}
-                        onChange={(e) => handlePartChange(e.target.value)}
-                        className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]"
+                <div className="flex flex-wrap gap-2 w-full xl:w-auto">
+                    {/* Date Range Selectors */}
+                    {data.length > 0 && (
+                        <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200 w-full sm:w-auto justify-between">
+                            <select
+                                value={startMonth}
+                                onChange={(e) => setStartMonth(e.target.value)}
+                                className="bg-transparent text-xs font-bold text-slate-600 focus:outline-none p-1.5"
+                            >
+                                {data.map(d => (
+                                    <option key={`start-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
+                                ))}
+                            </select>
+                            <span className="text-slate-300">~</span>
+                            <select
+                                value={endMonth}
+                                onChange={(e) => setEndMonth(e.target.value)}
+                                className="bg-transparent text-xs font-bold text-slate-600 focus:outline-none p-1.5"
+                            >
+                                {data.map(d => (
+                                    <option key={`end-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                    <button
+                        onClick={() => setViewMode('sales')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'sales'
+                            ? 'bg-blue-600 text-white shadow-blue-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                            }`}
                     >
-                        <option value="" disabled>파트구분 선택</option>
-                        {Object.keys(options).map((part) => (
-                            <option key={part} value={part}>{part}</option>
-                        ))}
-                    </select>
-
-                    {/* 채널구분 Select */}
-                    <select
-                        value={selectedChannel}
-                        onChange={(e) => handleChannelChange(e.target.value)}
-                        className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]"
-                        disabled={!selectedPart}
+                        매출액
+                    </button>
+                    <button
+                        onClick={() => setViewMode('daily')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'daily'
+                            ? 'bg-blue-600 text-white shadow-blue-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                            }`}
                     >
-                        <option value="">전체 (채널 구분)</option>
-                        {availableChannels.map((channel) => (
-                            <option key={channel} value={channel}>{channel}</option>
-                        ))}
-                    </select>
-
-                    {/* 거래처명 Select */}
-                    <select
-                        value={selectedAccount}
-                        onChange={(e) => setSelectedAccount(e.target.value)}
-                        className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]"
-                        disabled={!selectedChannel}
+                        일평균
+                    </button>
+                    <button
+                        onClick={() => setViewMode('profitRate')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'profitRate'
+                            ? 'bg-blue-600 text-white shadow-blue-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                            }`}
                     >
-                        <option value="">전체 (거래처)</option>
-                        {availableAccounts.map((account) => (
-                            <option key={account} value={account}>{account}</option>
-                        ))}
-                    </select>
+                        이익률
+                    </button>
+                    <button
+                        onClick={() => setViewMode('growth')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'growth'
+                            ? 'bg-blue-600 text-white shadow-blue-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                            }`}
+                    >
+                        증감율
+                    </button>
                 </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                {/* 파트구분 Select */}
+                <select
+                    value={selectedPart}
+                    onChange={(e) => handlePartChange(e.target.value)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 grow md:grow-0"
+                >
+                    <option value="" disabled>파트구분 선택</option>
+                    {Object.keys(options).map((part) => (
+                        <option key={part} value={part}>{part}</option>
+                    ))}
+                </select>
+
+                {/* 채널구분 Select */}
+                <select
+                    value={selectedChannel}
+                    onChange={(e) => handleChannelChange(e.target.value)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 grow md:grow-0"
+                    disabled={!selectedPart}
+                >
+                    <option value="">전체 (채널 구분)</option>
+                    {availableChannels.map((channel) => (
+                        <option key={channel} value={channel}>{channel}</option>
+                    ))}
+                </select>
+
+                {/* 거래처명 Select */}
+                <select
+                    value={selectedAccount}
+                    onChange={(e) => setSelectedAccount(e.target.value)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 grow md:grow-0"
+                    disabled={!selectedChannel}
+                >
+                    <option value="">전체 (거래처)</option>
+                    {availableAccounts.map((account) => (
+                        <option key={account} value={account}>{account}</option>
+                    ))}
+                </select>
             </div>
 
             {loading ? (
@@ -375,10 +375,11 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                 style={{ fontSize: '12px' }}
                             />
                             <YAxis
-                                stroke="#666"
-                                style={{ fontSize: '12px' }}
+                                stroke="#94a3b8"
+                                style={{ fontSize: '11px', fontWeight: 600 }}
                                 tickFormatter={yAxisFormatter}
-                                label={{ value: yAxisLabel, angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#666' } }}
+                                axisLine={false}
+                                tickLine={false}
                             />
                             <Tooltip
                                 formatter={(value: number) => {

@@ -283,27 +283,32 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
     const yAxisLabel = viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : viewMode === 'profitRate' ? '이익률 (%)' : '증감율 (%)';
 
     return (
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-700">{chartTitle}</h3>
-                <div className="flex gap-2 items-center">
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60 mt-12 last:mb-12">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
+                <div>
+                    <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight">
+                        📦 품목그룹별 월별 매출
+                    </h3>
+                    <p className="text-slate-400 text-sm mt-1 font-medium">Performance by brand group</p>
+                </div>
+                <div className="flex flex-wrap gap-2 w-full xl:w-auto">
                     {/* Date Range Selectors */}
                     {data.length > 0 && (
-                        <div className="flex items-center gap-1 mr-4 bg-gray-50 p-1 rounded-lg border border-gray-200">
+                        <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200 w-full sm:w-auto justify-between">
                             <select
                                 value={startMonth}
                                 onChange={(e) => setStartMonth(e.target.value)}
-                                className="bg-transparent text-sm font-medium text-gray-700 focus:outline-none p-1"
+                                className="bg-transparent text-xs font-bold text-slate-600 focus:outline-none p-1.5"
                             >
                                 {data.map(d => (
                                     <option key={`start-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
                                 ))}
                             </select>
-                            <span className="text-gray-400">~</span>
+                            <span className="text-slate-300">~</span>
                             <select
                                 value={endMonth}
                                 onChange={(e) => setEndMonth(e.target.value)}
-                                className="bg-transparent text-sm font-medium text-gray-700 focus:outline-none p-1"
+                                className="bg-transparent text-xs font-bold text-slate-600 focus:outline-none p-1.5"
                             >
                                 {data.map(d => (
                                     <option key={`end-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
@@ -313,36 +318,36 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                     )}
                     <button
                         onClick={() => setViewMode('sales')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'sales'
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'sales'
                             ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         매출액
                     </button>
                     <button
                         onClick={() => setViewMode('daily')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'daily'
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'daily'
                             ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         일평균
                     </button>
                     <button
                         onClick={() => setViewMode('profitRate')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'profitRate'
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'profitRate'
                             ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         이익률
                     </button>
                     <button
                         onClick={() => setViewMode('growth')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${viewMode === 'growth'
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'growth'
                             ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                             }`}
                     >
                         증감율
@@ -358,10 +363,10 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                                 setSelectedGroups([e.target.value]);
                             }
                         }}
-                        className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all focus:outline-none shadow-sm grow sm:grow-0"
                     >
-                        <option value="all">전체 ({groups.length}개)</option>
-                        <option value="combined">마이비+누비+쏭레브</option>
+                        <option value="all">전체 브랜드</option>
+                        <option value="combined">주요 3사 합계</option>
                         {groups.filter(g => g !== '마이비+누비+쏭레브').map((group) => (
                             <option key={group} value={group}>{group}</option>
                         ))}
@@ -378,10 +383,11 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                         style={{ fontSize: '12px' }}
                     />
                     <YAxis
-                        stroke="#666"
-                        style={{ fontSize: '12px' }}
+                        stroke="#94a3b8"
+                        style={{ fontSize: '11px', fontWeight: 600 }}
                         tickFormatter={viewMode === 'growth' ? formatPercent : formatMillions}
-                        label={{ value: yAxisLabel, angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#666' } }}
+                        axisLine={false}
+                        tickLine={false}
                     />
                     <Tooltip
                         formatter={tooltipFormatter}

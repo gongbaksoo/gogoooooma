@@ -224,28 +224,33 @@ def cleanup_old_files(max_files: int = 5):
             print(f"Failed to remove {oldest_file}: {e}")
 
 @app.get("/files/")
-def list_files():
+def list_files(t: str = None):
     """게시된 파일 목록 가져오기 (Database with disk fallback)"""
     # Try database first
-    files = list_files_in_db()
-    count = get_file_count()
+    db_files = list_files_in_db()
     
-    if count == 0:
+    if not db_files:
         # Fallback to disk storage
-        files = []
+        local_files = []
         for filename in os.listdir(UPLOAD_DIR):
             filepath = os.path.join(UPLOAD_DIR, filename)
             if os.path.isfile(filepath) and not filename.startswith('.'):
                 stat = os.stat(filepath)
-                files.append({
+                local_files.append({
                     "filename": filename,
                     "size": stat.st_size,
                     "modified": stat.st_mtime
                 })
-        files.sort(key=lambda x: x["modified"], reverse=True)
-        count = len(files)
+        local_files.sort(key=lambda x: x["modified"], reverse=True)
+        files = local_files
+    else:
+        files = db_files
     
-    return {"files": files, "count": count, "max": 5}
+    # Limit to max_files
+    max_files = 5
+    files = files[:max_files]
+    
+    return {"files": files, "count": len(files), "max": max_files}
 
 @app.delete("/files/{filename}")
 def delete_file(filename: str):

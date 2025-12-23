@@ -172,6 +172,18 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
         return value.toLocaleString();
     };
 
+    const formatXAxisTick = (value: string, index: number) => {
+        if (!value || value.length !== 4) return value;
+        const year = value.substring(0, 2);
+        const month = parseInt(value.substring(2, 4));
+
+        // 첫 번째 데이터이거나 1월인 경우에만 연도 표시 ("24' 1" 형식)
+        if (index === 0 || month === 1) {
+            return `${year}' ${month}`;
+        }
+        return `${month}`;
+    };
+
     const formatPercent = (value: any): string => {
         if (typeof value !== 'number') return String(value);
         return `${value.toFixed(1)}%`;
@@ -377,7 +389,8 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                         <LineChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                             <XAxis
-                                dataKey="month"
+                                dataKey="rawMonth"
+                                tickFormatter={formatXAxisTick}
                                 stroke="#94a3b8"
                                 style={{ fontSize: '10px', fontWeight: 500 }}
                                 tickLine={false}

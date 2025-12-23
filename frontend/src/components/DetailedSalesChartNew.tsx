@@ -38,29 +38,44 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
     const [startMonth, setStartMonth] = useState<string>('');
     const [endMonth, setEndMonth] = useState<string>('');
 
-    // Filter states
+    // Product filter states
     const [options, setOptions] = useState<OptionsTree>({});
     const [selectedGroup, setSelectedGroup] = useState<string>('');
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
+
+    // Channel filter states
+    const [channelOptions, setChannelOptions] = useState<OptionsTree>({});
+    const [selectedPart, setSelectedPart] = useState<string>('');
+    const [selectedChannel, setSelectedChannel] = useState<string>('');
+    const [selectedAccount, setSelectedAccount] = useState<string>('');
+
     const [currentLabel, setCurrentLabel] = useState<string>('전체');
 
     // Load options on file change
     useEffect(() => {
-        const fetchOptions = async () => {
+        const fetchAllOptions = async () => {
             if (!filename) {
                 setOptions({});
+                setChannelOptions({});
                 return;
             }
 
             try {
-                const response = await axios.get(`${API_BASE_URL}/api/dashboard/options`, {
+                // Fetch product options
+                const prodResponse = await axios.get(`${API_BASE_URL}/api/dashboard/options`, {
                     params: { filename }
                 });
-                setOptions(response.data);
+                setOptions(prodResponse.data);
 
-                // Set default to first group if available
-                const groups = Object.keys(response.data);
+                // Fetch channel options
+                const channelResponse = await axios.get(`${API_BASE_URL}/api/dashboard/channel-options`, {
+                    params: { filename }
+                });
+                setChannelOptions(channelResponse.data);
+
+                // Set default group if available
+                const groups = Object.keys(prodResponse.data);
                 if (groups.length > 0) {
                     setSelectedGroup(groups[0]);
                 }
@@ -70,76 +85,78 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
             }
         };
 
-        fetchOptions();
+        fetchAllOptions();
     }, [filename]);
 
-    // Load sales data when filters change
-    useEffect(() => {
-        const fetchData = async () => {
-            if (!filename || !selectedGroup) {
-                setData([]);
-                return;
-            }
+    const fetchData = async () => {
+        if (!filename) return;
 
-            setLoading(true);
-            setError(null);
+        setLoading(true);
+        setError(null);
 
-            try {
-                const response = await axios.get(`${API_BASE_URL}/api/dashboard/hierarchical-sales`, {
-                    params: {
-                        filename,
-                        group: selectedGroup,
-                        category: selectedCategory || 'all',
-                        sub_category: selectedSubCategory || 'all'
-                    }
-                });
-
-                const months = response.data.months;
-                const sales = response.data.sales;
-                const profit = response.data.profit || [];
-                const days = response.data.days_list || [];
-                setDaysList(days);
-
-                setCurrentLabel(response.data.label);
-
-                // Transform data for chart
-                const chartData: ChartData[] = months.map((month: string, index: number) => {
-                    const value = sales[index] || 0;
-                    const profitValue = profit[index] || 0;
-                    return {
-                        month: formatMonth(month),
-                        value,
-                        profit: profitValue,
-                        rawMonth: month,
-                        days: days[index] || 30
-                    };
-                });
-
-                // Initialize Date Range
-                if (months.length > 0) {
-                    setStartMonth(months[0]);
-                    setEndMonth(months[months.length - 1]);
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/dashboard/hierarchical-sales`, {
+                params: {
+                    filename,
+                    group: selectedGroup || 'all',
+                    category: selectedCategory || 'all',
+                    sub_category: selectedSubCategory || 'all',
+                    part: selectedPart || 'all',
+                    channel: selectedChannel || 'all',
+                    account: selectedAccount || 'all'
                 }
+            });
 
-                // Calculate growth rates
-                const chartDataWithGrowth = chartData.map((item, index) => {
-                    if (index === 0) return { ...item, growth: 0 };
-                    const prevValue = chartData[index - 1].value;
-                    const growth = prevValue === 0 ? 0 : ((item.value - prevValue) / prevValue) * 100;
-                    return { ...item, growth };
-                });
+            const months = response.data.months;
+            const sales = response.data.sales;
+            const profit = response.data.profit || [];
+            const days = response.data.days_list || [];
+            setDaysList(days);
 
-                setData(chartDataWithGrowth);
-            } catch (err) {
-                console.error('Failed to fetch hierarchical sales data:', err);
-                setError('데이터를 불러오는데 실패했습니다');
-            } finally {
-                setLoading(false);
+            setCurrentLabel(response.data.label);
+
+            // Transform data for chart
+            const chartData: ChartData[] = months.map((month: string, index: number) => {
+                const value = sales[index] || 0;
+                const profitValue = profit[index] || 0;
+                return {
+                    month: formatMonth(month),
+                    value,
+                    profit: profitValue,
+                    rawMonth: month,
+                    days: days[index] || 30
+                };
+            });
+
+            // Initialize Date Range
+            if (months.length > 0 && !startMonth) {
+                setStartMonth(months[0]);
+                setEndMonth(months[months.length - 1]);
             }
-        };
 
-        fetchData();
-    }, [filename, selectedGroup, selectedCategory, selectedSubCategory]);
+            // Calculate growth rates
+            const chartDataWithGrowth = chartData.map((item, index) => {
+                if (index === 0) return { ...item, growth: 0 };
+                const prevValue = chartData[index - 1].value;
+                const growth = prevValue === 0 ? 0 : ((item.value - prevValue) / prevValue) * 100;
+                return { ...item, growth };
+            });
+
+            setData(chartDataWithGrowth);
+        } catch (err) {
+            console.error('Failed to fetch hierarchical sales data:', err);
+            setError('데이터를 불러오는데 실패했습니다');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Load initial data once selectedGroup is set
+    useEffect(() => {
+        if (filename && selectedGroup && !data.length) {
+            fetchData();
+        }
+    }, [filename, selectedGroup]);
 
     // Reset child filters when parent changes
     const handleGroupChange = (group: string) => {
@@ -151,6 +168,17 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
     const handleCategoryChange = (category: string) => {
         setSelectedCategory(category);
         setSelectedSubCategory('');
+    };
+
+    const handlePartChange = (part: string) => {
+        setSelectedPart(part);
+        setSelectedChannel('');
+        setSelectedAccount('');
+    };
+
+    const handleChannelChange = (channel: string) => {
+        setSelectedChannel(channel);
+        setSelectedAccount('');
     };
 
     const formatMonth = (month: string): string => {
@@ -196,6 +224,11 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
     const availableCategories = selectedGroup && options[selectedGroup] ? Object.keys(options[selectedGroup]) : [];
     const availableSubCategories = selectedGroup && selectedCategory && options[selectedGroup][selectedCategory]
         ? options[selectedGroup][selectedCategory]
+        : [];
+
+    const availableChannels = selectedPart && channelOptions[selectedPart] ? Object.keys(channelOptions[selectedPart]) : [];
+    const availableAccounts = selectedPart && selectedChannel && channelOptions[selectedPart][selectedChannel]
+        ? channelOptions[selectedPart][selectedChannel]
         : [];
 
     const getDisplayData = () => {
@@ -334,44 +367,107 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                 </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                {/* 품목그룹 Select */}
-                <select
-                    value={selectedGroup}
-                    onChange={(e) => handleGroupChange(e.target.value)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 grow md:grow-0"
-                >
-                    <option value="" disabled>품목그룹 선택</option>
-                    {Object.keys(options).map((group) => (
-                        <option key={group} value={group}>{group}</option>
-                    ))}
-                </select>
+            <div className="flex flex-col gap-4 mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    {/* Left: Product Filters */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {/* 품목그룹 Select */}
+                        <select
+                            value={selectedGroup}
+                            onChange={(e) => handleGroupChange(e.target.value)}
+                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        >
+                            <option value="">전체 (브랜드)</option>
+                            {Object.keys(options).map((group) => (
+                                <option key={group} value={group}>{group}</option>
+                            ))}
+                        </select>
 
-                {/* 품목 구분 Select */}
-                <select
-                    value={selectedCategory}
-                    onChange={(e) => handleCategoryChange(e.target.value)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 grow md:grow-0"
-                    disabled={!selectedGroup}
-                >
-                    <option value="">전체 (품목 구분)</option>
-                    {availableCategories.map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                </select>
+                        {/* 품목 구분 Select */}
+                        <select
+                            value={selectedCategory}
+                            onChange={(e) => handleCategoryChange(e.target.value)}
+                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            disabled={!selectedGroup}
+                        >
+                            <option value="">전체 (품목 구분)</option>
+                            {availableCategories.map((cat) => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                        </select>
 
-                {/* 품목 구분_2 Select */}
-                <select
-                    value={selectedSubCategory}
-                    onChange={(e) => setSelectedSubCategory(e.target.value)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 grow md:grow-0"
-                    disabled={!selectedCategory}
-                >
-                    <option value="">전체 (세부 구분)</option>
-                    {availableSubCategories.map((sub) => (
-                        <option key={sub} value={sub}>{sub}</option>
-                    ))}
-                </select>
+                        {/* 품목 구분_2 Select */}
+                        <select
+                            value={selectedSubCategory}
+                            onChange={(e) => setSelectedSubCategory(e.target.value)}
+                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            disabled={!selectedCategory}
+                        >
+                            <option value="">전체 (세부 구분)</option>
+                            {availableSubCategories.map((sub) => (
+                                <option key={sub} value={sub}>{sub}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Right: Channel Filters */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {/* 파트구분 Select */}
+                        <select
+                            value={selectedPart}
+                            onChange={(e) => handlePartChange(e.target.value)}
+                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        >
+                            <option value="">전체 (파트구분)</option>
+                            {Object.keys(channelOptions).map((part) => (
+                                <option key={part} value={part}>{part}</option>
+                            ))}
+                        </select>
+
+                        {/* 채널구분 Select */}
+                        <select
+                            value={selectedChannel}
+                            onChange={(e) => handleChannelChange(e.target.value)}
+                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            disabled={!selectedPart}
+                        >
+                            <option value="">전체 (채널구분)</option>
+                            {availableChannels.map((channel) => (
+                                <option key={channel} value={channel}>{channel}</option>
+                            ))}
+                        </select>
+
+                        {/* 거래처명 Select */}
+                        <select
+                            value={selectedAccount}
+                            onChange={(e) => setSelectedAccount(e.target.value)}
+                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            disabled={!selectedChannel}
+                        >
+                            <option value="">전체 (거래처)</option>
+                            {availableAccounts.map((account) => (
+                                <option key={account} value={account}>{account}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="flex justify-center">
+                    <button
+                        onClick={fetchData}
+                        disabled={loading}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl flex items-center gap-2 text-sm font-bold shadow-lg shadow-blue-200 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        {loading ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        )}
+                        조회
+                    </button>
+                </div>
             </div>
 
             {loading ? (

@@ -466,14 +466,22 @@ def get_dashboard_options(filename: str):
         raise HTTPException(status_code=500, detail=f"옵션 데이터 처리 실패: {str(e)}")
 
 @app.get("/api/dashboard/hierarchical-sales")
-def get_dashboard_hierarchical_sales(filename: str, group: str = None, category: str = None, sub_category: str = None):
+def get_dashboard_hierarchical_sales(
+    filename: str, 
+    group: str = None, 
+    category: str = None, 
+    sub_category: str = None,
+    part: str = None,
+    channel: str = None,
+    account: str = None
+):
     """
-    조건에 따른 월별 매출 데이터 반환
+    조건(품목 그룹 + 채널 세그먼트)에 따른 월별 매출 데이터 반환
     """
     try:
         ensure_file_on_disk(filename)
         from dashboard import get_filtered_monthly_sales
-        result = get_filtered_monthly_sales(filename, group, category, sub_category)
+        result = get_filtered_monthly_sales(filename, group, category, sub_category, part, channel, account)
         return result
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")

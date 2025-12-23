@@ -230,10 +230,21 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
         }
     };
 
+    const handleBrandSelection = (value: string) => {
+        if (value === 'all') {
+            setSelectedGroups(groups);
+        } else if (value === 'combined') {
+            // "주요 브랜드" 선택 시 합계와 개별 브랜드를 모두 표시
+            setSelectedGroups(['마이비+누비+쏭레브', '마이비', '누비', '쏭레브']);
+        } else {
+            setSelectedGroups([value]);
+        }
+    };
+
     if (!filename) {
         return (
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-700 mb-4">📦 품목그룹별 월별 매출</h3>
+                <h3 className="text-lg font-bold text-gray-700 mb-4">📦 브랜드별 월별 매출</h3>
                 <div className="h-80 flex items-center justify-center text-gray-500">
                     파일을 업로드하거나 선택해주세요
                 </div>
@@ -244,7 +255,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
     if (loading) {
         return (
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-700 mb-4">📦 품목그룹별 월별 매출</h3>
+                <h3 className="text-lg font-bold text-gray-700 mb-4">📦 브랜드별 월별 매출</h3>
                 <div className="h-80 flex items-center justify-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                 </div>
@@ -255,7 +266,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
     if (error) {
         return (
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-700 mb-4">📦 품목그룹별 월별 매출</h3>
+                <h3 className="text-lg font-bold text-gray-700 mb-4">📦 브랜드별 월별 매출</h3>
                 <div className="h-80 flex items-center justify-center text-red-500">
                     {error}
                 </div>
@@ -274,12 +285,12 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
         }
     };
     const chartTitle = viewMode === 'sales'
-        ? '📦 품목그룹별 월별 매출 추이'
+        ? '📦 브랜드별 월별 매출 추이'
         : viewMode === 'daily'
-            ? '📦 품목그룹별 월별 일평균 매출'
+            ? '📦 브랜드별 월별 일평균 매출'
             : viewMode === 'profitRate'
-                ? '📦 품목그룹별 월별 평균 이익률'
-                : '📈 품목그룹별 월별 증감율 (전월 대비)';
+                ? '📦 브랜드별 월별 평균 이익률'
+                : '📈 브랜드별 월별 증감율 (전월 대비)';
     const yAxisLabel = viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : viewMode === 'profitRate' ? '이익률 (%)' : '증감율 (%)';
 
     return (
@@ -287,9 +298,9 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
                 <div>
                     <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight">
-                        📦 품목그룹별 월별 매출
+                        📦 브랜드별 월별매출
                     </h3>
-                    <p className="text-slate-400 text-sm mt-1 font-medium">Performance by brand group</p>
+                    <p className="text-slate-400 text-sm mt-1 font-medium">Monthly performance by brand</p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full xl:w-auto">
                     {/* Date Range Selectors */}
@@ -353,20 +364,12 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                         증감율
                     </button>
                     <select
-                        value={selectedGroups.length === groups.length ? 'all' : selectedGroups[0] || ''}
-                        onChange={(e) => {
-                            if (e.target.value === 'all') {
-                                toggleAllGroups();
-                            } else if (e.target.value === 'combined') {
-                                setSelectedGroups(['마이비+누비+쏭레브']);
-                            } else {
-                                setSelectedGroups([e.target.value]);
-                            }
-                        }}
+                        value={selectedGroups.length === groups.length ? 'all' : selectedGroups.includes('마이비+누비+쏭레브') && selectedGroups.includes('마이비') ? 'combined' : selectedGroups[0] || ''}
+                        onChange={(e) => handleBrandSelection(e.target.value)}
                         className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all focus:outline-none shadow-sm grow sm:grow-0"
                     >
                         <option value="all">전체 브랜드</option>
-                        <option value="combined">주요 3사 합계</option>
+                        <option value="combined">주요 브랜드</option>
                         {groups.filter(g => g !== '마이비+누비+쏭레브').map((group) => (
                             <option key={group} value={group}>{group}</option>
                         ))}
@@ -405,24 +408,31 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                         wrapperStyle={{ paddingTop: '20px' }}
                         iconType="line"
                     />
-                    {groups.map((group, index) => (
-                        selectedGroups.includes(group) && (
+                    {groups.map((group, index) => {
+                        if (!selectedGroups.includes(group)) return null;
+
+                        // "마이비+누비+쏭레브" (합계)는 강조를 위해 별도 고유 상위 색상 지정
+                        const isCombined = group === '마이비+누비+쏭레브';
+                        const color = isCombined ? '#6366f1' : COLORS[index % COLORS.length]; // Indigo for total
+                        const strokeWidth = isCombined ? 4 : 2;
+
+                        return (
                             <Line
                                 key={group}
                                 type="monotone"
                                 dataKey={group}
-                                stroke={COLORS[index % COLORS.length]}
-                                strokeWidth={2}
-                                dot={{ fill: COLORS[index % COLORS.length], r: 3 }}
-                                activeDot={{ r: 5 }}
+                                stroke={color}
+                                strokeWidth={strokeWidth}
+                                dot={{ fill: color, r: isCombined ? 5 : 3 }}
+                                activeDot={{ r: isCombined ? 7 : 5 }}
                                 label={{
                                     position: 'top',
                                     formatter: viewMode === 'growth' ? formatPercent : formatMillions,
-                                    style: { fontSize: '10px', fill: COLORS[index % COLORS.length], fontWeight: 'bold' }
+                                    style: { fontSize: '10px', fill: color, fontWeight: 'bold' }
                                 }}
                             />
-                        )
-                    ))}
+                        );
+                    })}
                 </LineChart>
             </ResponsiveContainer>
         </div>

@@ -19,7 +19,7 @@ interface ChartData {
     growth?: number; // Add growth to ChartData
 }
 
-type ViewMode = 'sales' | 'growth' | 'daily' | 'profitRate';
+type ViewMode = 'sales' | 'growth' | 'daily' | 'profitRate' | 'salesProfitRate' | 'dailyProfitRate';
 
 interface OptionsTree {
     [group: string]: {
@@ -266,18 +266,54 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
             });
         }
 
+        if (viewMode === 'salesProfitRate') {
+            return filteredData.map(item => {
+                const sales = item.value || 0;
+                const profit = item.profit || 0;
+                const rate = sales === 0 ? 0 : (profit / sales) * 100;
+                return {
+                    ...item,
+                    value: sales, // Left Y-Axis
+                    profitRate: rate // Right Y-Axis
+                };
+            });
+        }
+
+        if (viewMode === 'dailyProfitRate') {
+            return filteredData.map(item => {
+                const sales = item.value || 0;
+                const profit = item.profit || 0;
+                const days = item.days || 30;
+                const dailyAvg = sales / days;
+                const rate = sales === 0 ? 0 : (profit / sales) * 100;
+                return {
+                    ...item,
+                    value: dailyAvg, // Left Y-Axis
+                    profitRate: rate // Right Y-Axis
+                };
+            });
+        }
+
         return filteredData;
     };
 
     const displayData = getDisplayData();
+    const isCombination = viewMode === 'salesProfitRate' || viewMode === 'dailyProfitRate';
     const chartTitle = viewMode === 'sales'
         ? `🔍 ${currentLabel} 월별 매출 추이`
         : viewMode === 'daily'
             ? `🔍 ${currentLabel} 월별 일평균 매출`
             : viewMode === 'profitRate'
                 ? `🔍 ${currentLabel} 월별 평균 이익률`
-                : `📈 ${currentLabel} 월별 증감율 (전월 대비)`;
-    const yAxisLabel = viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : viewMode === 'profitRate' ? '이익률 (%)' : '증감율 (%)';
+                : viewMode === 'salesProfitRate'
+                    ? `💰 ${currentLabel} 매출액 + 이익률 분석`
+                    : viewMode === 'dailyProfitRate'
+                        ? `⏱️ ${currentLabel} 일평균 + 이익률 분석`
+                        : `📈 ${currentLabel} 월별 증감율 (전월 대비)`;
+
+    const yAxisLabel = isCombination
+        ? (viewMode === 'salesProfitRate' ? '매출액' : '일평균 매출')
+        : (viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : viewMode === 'profitRate' ? '이익률 (%)' : '증감율 (%)');
 
     // YAxis formatter selection
     const yAxisFormatter = (viewMode === 'growth' || viewMode === 'profitRate') ? formatPercent : formatMillions;
@@ -363,6 +399,25 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                             }`}
                     >
                         증감율
+                    </button>
+                    <div className="h-10 w-px bg-slate-200 mx-1 hidden sm:block" />
+                    <button
+                        onClick={() => setViewMode('salesProfitRate')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'salesProfitRate'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                    >
+                        매출+이익률
+                    </button>
+                    <button
+                        onClick={() => setViewMode('dailyProfitRate')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'dailyProfitRate'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                    >
+                        일평균+이익률
                     </button>
                 </div>
             </div>
@@ -494,19 +549,33 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                 dy={10}
                             />
                             <YAxis
+                                yAxisId="left"
                                 stroke="#94a3b8"
                                 style={{ fontSize: '9px', fontWeight: 600 }}
-                                tickFormatter={viewMode === 'growth' || viewMode === 'profitRate' ? formatPercent : formatMillions}
+                                tickFormatter={yAxisFormatter}
                                 axisLine={false}
                                 tickLine={false}
                             />
+                            {isCombination && (
+                                <YAxis
+                                    yAxisId="right"
+                                    orientation="right"
+                                    stroke="#ec4899"
+                                    style={{ fontSize: '9px', fontWeight: 600 }}
+                                    tickFormatter={formatPercent}
+                                    axisLine={false}
+                                    tickLine={false}
+                                />
+                            )}
                             <Tooltip
                                 formatter={(value: number, name: string, props: any) => {
-                                    if (viewMode === 'sales') return [formatMillions(value), '매출액'];
-                                    if (viewMode === 'daily') {
+                                    if (name === '이익률') return [formatPercent(value), name];
+                                    if (viewMode === 'sales' || viewMode === 'salesProfitRate') return [formatMillions(value) + '원', '매출액'];
+                                    if (viewMode === 'daily' || viewMode === 'dailyProfitRate') {
                                         const days = props.payload.days;
-                                        return [formatMillions(value), `일평균 매출 (기준: ${days}일)`];
+                                        return [formatMillions(value) + '원', `일평균 매출 (기준: ${days}일)`];
                                     }
+                                    if (viewMode === 'profitRate') return [formatPercent(value), '이익률'];
                                     return [value.toFixed(1) + '%', '증감율'];
                                 }}
                                 contentStyle={{
@@ -518,19 +587,37 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                             />
                             <Legend wrapperStyle={{ paddingTop: '20px' }} />
                             <Line
+                                yAxisId="left"
                                 type="monotone"
                                 dataKey={viewMode === 'growth' ? "growth" : "value"}
-                                name={currentLabel}
+                                name={viewMode === 'growth' ? "증감율" : (viewMode === 'daily' || viewMode === 'dailyProfitRate' ? "일평균 매출" : "매출액")}
                                 stroke="#8b5cf6"
                                 strokeWidth={3}
                                 dot={{ fill: "#8b5cf6", r: 4 }}
                                 activeDot={{ r: 6 }}
-                                label={{
+                                label={!isCombination ? {
                                     position: 'top',
                                     formatter: labelFormatter,
                                     style: { fontSize: '10px', fill: '#8b5cf6', fontWeight: 'bold' }
-                                }}
+                                } : undefined}
                             />
+                            {isCombination && (
+                                <Line
+                                    yAxisId="right"
+                                    type="monotone"
+                                    dataKey="profitRate"
+                                    name="이익률"
+                                    stroke="#ec4899"
+                                    strokeWidth={3}
+                                    dot={{ fill: "#ec4899", r: 4 }}
+                                    activeDot={{ r: 6 }}
+                                    label={{
+                                        position: 'top',
+                                        formatter: formatPercent,
+                                        style: { fontSize: '10px', fill: '#ec4899', fontWeight: 'bold' }
+                                    }}
+                                />
+                            )}
                         </LineChart>
                     </ResponsiveContainer>
                 </>

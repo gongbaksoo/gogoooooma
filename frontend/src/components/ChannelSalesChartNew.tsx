@@ -20,7 +20,7 @@ interface ChartData {
     profitRate?: number;
 }
 
-type ViewMode = 'sales' | 'growth' | 'daily' | 'profitRate';
+type ViewMode = 'sales' | 'growth' | 'daily' | 'profitRate' | 'salesProfitRate' | 'dailyProfitRate';
 
 interface OptionsTree {
     [part: string]: {
@@ -39,108 +39,125 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
     const [startMonth, setStartMonth] = useState<string>('');
     const [endMonth, setEndMonth] = useState<string>('');
 
-    // Filter states
+    // Channel filter states
     const [options, setOptions] = useState<OptionsTree>({});
     const [selectedPart, setSelectedPart] = useState<string>('');
     const [selectedChannel, setSelectedChannel] = useState<string>('');
     const [selectedAccount, setSelectedAccount] = useState<string>('');
+
+    // Product filter states
+    const [productOptions, setProductOptions] = useState<OptionsTree>({});
+    const [selectedGroup, setSelectedGroup] = useState<string>('');
+    const [selectedCategory, setSelectedCategory] = useState<string>('');
+    const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
+
     const [currentLabel, setCurrentLabel] = useState<string>('전체 채널');
 
     // Load options on file change
     useEffect(() => {
-        const fetchOptions = async () => {
+        const fetchAllOptions = async () => {
             if (!filename) {
                 setOptions({});
+                setProductOptions({});
                 return;
             }
 
             try {
-                const response = await axios.get(`${API_BASE_URL}/api/dashboard/channel-options`, {
+                // Fetch channel options
+                const channelResponse = await axios.get(`${API_BASE_URL}/api/dashboard/channel-options`, {
                     params: { filename }
                 });
-                setOptions(response.data);
+                setOptions(channelResponse.data);
 
-                // Set default to first part if available (e.g. 이커머스)
-                const parts = Object.keys(response.data);
+                // Fetch product options
+                const prodResponse = await axios.get(`${API_BASE_URL}/api/dashboard/options`, {
+                    params: { filename }
+                });
+                setProductOptions(prodResponse.data);
+
+                // Set default to first part if available
+                const parts = Object.keys(channelResponse.data);
                 if (parts.length > 0) {
                     setSelectedPart(parts[0]);
                 }
             } catch (err) {
-                console.error('Failed to fetch channel options:', err);
+                console.error('Failed to fetch options:', err);
                 setError('옵션 데이터를 불러오는데 실패했습니다');
             }
         };
 
-        fetchOptions();
+        fetchAllOptions();
     }, [filename]);
 
-    // Load sales data when filters change
-    useEffect(() => {
-        const fetchData = async () => {
-            if (!filename || !selectedPart) {
-                setData([]);
-                return;
-            }
+    const fetchData = async () => {
+        if (!filename) return;
 
-            setLoading(true);
-            setError(null);
+        setLoading(true);
+        setError(null);
 
-            try {
-                const response = await axios.get(`${API_BASE_URL}/api/dashboard/channel-sales`, {
-                    params: {
-                        filename,
-                        part: selectedPart,
-                        channel: selectedChannel || 'all',
-                        account: selectedAccount || 'all'
-                    }
-                });
-
-                const months = response.data.months;
-                const sales = response.data.sales;
-                const profit = response.data.profit || [];
-                const days = response.data.days_list || [];
-                setDaysList(days);
-
-                setCurrentLabel(response.data.label);
-
-                // Transform data for chart
-                const chartData: ChartData[] = months.map((month: string, index: number) => {
-                    const value = sales[index] || 0;
-                    const profitValue = profit[index] || 0;
-                    return {
-                        month: formatMonth(month),
-                        value,
-                        profit: profitValue,
-                        rawMonth: month,
-                        days: days[index] || 30
-                    };
-                });
-
-                // Initialize Date Range
-                if (months.length > 0) {
-                    setStartMonth(months[0]);
-                    setEndMonth(months[months.length - 1]);
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/dashboard/channel-sales`, {
+                params: {
+                    filename,
+                    part: selectedPart || 'all',
+                    channel: selectedChannel || 'all',
+                    account: selectedAccount || 'all',
+                    group: selectedGroup || 'all',
+                    category: selectedCategory || 'all',
+                    sub_category: selectedSubCategory || 'all'
                 }
+            });
 
-                // Calculate growth rates
-                const chartDataWithGrowth = chartData.map((item, index) => {
-                    if (index === 0) return { ...item, growth: 0 };
-                    const prevValue = chartData[index - 1].value;
-                    const growth = prevValue === 0 ? 0 : ((item.value - prevValue) / prevValue) * 100;
-                    return { ...item, growth };
-                });
+            const months = response.data.months;
+            const sales = response.data.sales;
+            const profit = response.data.profit || [];
+            const days = response.data.days_list || [];
+            setDaysList(days);
 
-                setData(chartDataWithGrowth);
-            } catch (err) {
-                console.error('Failed to fetch channel sales data:', err);
-                setError('데이터를 불러오는데 실패했습니다');
-            } finally {
-                setLoading(false);
+            setCurrentLabel(response.data.label);
+
+            // Transform data for chart
+            const chartData: ChartData[] = months.map((month: string, index: number) => {
+                const value = sales[index] || 0;
+                const profitValue = profit[index] || 0;
+                return {
+                    month: formatMonth(month),
+                    value,
+                    profit: profitValue,
+                    rawMonth: month,
+                    days: days[index] || 30
+                };
+            });
+
+            // Initialize Date Range
+            if (months.length > 0 && !startMonth) {
+                setStartMonth(months[0]);
+                setEndMonth(months[months.length - 1]);
             }
-        };
 
-        fetchData();
-    }, [filename, selectedPart, selectedChannel, selectedAccount]);
+            // Calculate growth rates
+            const chartDataWithGrowth = chartData.map((item, index) => {
+                if (index === 0) return { ...item, growth: 0 };
+                const prevValue = chartData[index - 1].value;
+                const growth = prevValue === 0 ? 0 : ((item.value - prevValue) / prevValue) * 100;
+                return { ...item, growth };
+            });
+
+            setData(chartDataWithGrowth);
+        } catch (err) {
+            console.error('Failed to fetch channel sales data:', err);
+            setError('데이터를 불러오는데 실패했습니다');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Load initial data once selectedPart is set
+    useEffect(() => {
+        if (filename && selectedPart && !data.length) {
+            fetchData();
+        }
+    }, [filename, selectedPart]);
 
     // Reset child filters when parent changes
     const handlePartChange = (part: string) => {
@@ -152,6 +169,17 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
     const handleChannelChange = (channel: string) => {
         setSelectedChannel(channel);
         setSelectedAccount('');
+    };
+
+    const handleGroupChange = (group: string) => {
+        setSelectedGroup(group);
+        setSelectedCategory('');
+        setSelectedSubCategory('');
+    };
+
+    const handleCategoryChange = (category: string) => {
+        setSelectedCategory(category);
+        setSelectedSubCategory('');
     };
 
     const formatMonth = (month: string): string => {
@@ -199,6 +227,11 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
         ? options[selectedPart][selectedChannel]
         : [];
 
+    const availableCategories = selectedGroup && productOptions[selectedGroup] ? Object.keys(productOptions[selectedGroup]) : [];
+    const availableSubCategories = selectedGroup && selectedCategory && productOptions[selectedGroup][selectedCategory]
+        ? productOptions[selectedGroup][selectedCategory]
+        : [];
+
     const getDisplayData = () => {
         // Filter by Date Range
         const filteredData = data.filter(item => {
@@ -234,10 +267,38 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
             });
         }
 
+        if (viewMode === 'salesProfitRate') {
+            return filteredData.map(item => {
+                const sales = item.value || 0;
+                const profit = item.profit || 0;
+                const rate = sales === 0 ? 0 : (profit / sales) * 100;
+                return {
+                    ...item,
+                    value: sales,
+                    profitRate: rate
+                };
+            });
+        }
+
+        if (viewMode === 'dailyProfitRate') {
+            return filteredData.map(item => {
+                const sales = item.value || 0;
+                const profit = item.profit || 0;
+                const days = item.days || 30;
+                const dailyAvg = sales / days;
+                const rate = sales === 0 ? 0 : (profit / sales) * 100;
+                return {
+                    ...item,
+                    value: dailyAvg,
+                    profitRate: rate
+                };
+            });
+        }
         return filteredData;
     };
 
     const displayData = getDisplayData();
+    const isCombination = viewMode === 'salesProfitRate' || viewMode === 'dailyProfitRate';
 
     const chartTitle = viewMode === 'sales'
         ? `🏢 ${currentLabel} 월별 매출 추이`
@@ -245,8 +306,15 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
             ? `🏢 ${currentLabel} 월별 일평균 매출`
             : viewMode === 'profitRate'
                 ? `🏢 ${currentLabel} 월별 평균 이익률`
-                : `📈 ${currentLabel} 월별 증감율 (전월 대비)`;
-    const yAxisLabel = viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : viewMode === 'profitRate' ? '이익률 (%)' : '증감율 (%)';
+                : viewMode === 'salesProfitRate'
+                    ? `💰 ${currentLabel} 매출액 + 이익률 분석`
+                    : viewMode === 'dailyProfitRate'
+                        ? `⏱️ ${currentLabel} 일평균 + 이익률 분석`
+                        : `📈 ${currentLabel} 월별 증감율 (전월 대비)`;
+
+    const yAxisLabel = isCombination
+        ? (viewMode === 'salesProfitRate' ? '매출액' : '일평균 매출')
+        : (viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : viewMode === 'profitRate' ? '이익률 (%)' : '증감율 (%)');
 
     // YAxis formatter selection
     const yAxisFormatter = (viewMode === 'growth' || viewMode === 'profitRate') ? formatPercent : formatMillions;
@@ -324,47 +392,129 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                     >
                         증감율
                     </button>
+                    <div className="h-10 w-px bg-slate-200 mx-1 hidden sm:block" />
+                    <button
+                        onClick={() => setViewMode('salesProfitRate')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'salesProfitRate'
+                            ? 'bg-emerald-600 text-white shadow-emerald-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                            }`}
+                    >
+                        매출+이익률
+                    </button>
+                    <button
+                        onClick={() => setViewMode('dailyProfitRate')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'dailyProfitRate'
+                            ? 'bg-emerald-600 text-white shadow-emerald-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                            }`}
+                    >
+                        일평균+이익률
+                    </button>
                 </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                {/* 파트구분 Select */}
-                <select
-                    value={selectedPart}
-                    onChange={(e) => handlePartChange(e.target.value)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 grow md:grow-0"
-                >
-                    <option value="" disabled>파트구분 선택</option>
-                    {Object.keys(options).map((part) => (
-                        <option key={part} value={part}>{part}</option>
-                    ))}
-                </select>
+            <div className="flex flex-col gap-4 mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    {/* Left: Channel Filters */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {/* 파트구분 Select */}
+                        <select
+                            value={selectedPart}
+                            onChange={(e) => handlePartChange(e.target.value)}
+                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        >
+                            <option value="">전체 (파트구분)</option>
+                            {Object.keys(options).map((part) => (
+                                <option key={part} value={part}>{part}</option>
+                            ))}
+                        </select>
 
-                {/* 채널구분 Select */}
-                <select
-                    value={selectedChannel}
-                    onChange={(e) => handleChannelChange(e.target.value)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 grow md:grow-0"
-                    disabled={!selectedPart}
-                >
-                    <option value="">전체 (채널 구분)</option>
-                    {availableChannels.map((channel) => (
-                        <option key={channel} value={channel}>{channel}</option>
-                    ))}
-                </select>
+                        {/* 채널구분 Select */}
+                        <select
+                            value={selectedChannel}
+                            onChange={(e) => handleChannelChange(e.target.value)}
+                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            disabled={!selectedPart}
+                        >
+                            <option value="">전체 (채널 구분)</option>
+                            {availableChannels.map((channel) => (
+                                <option key={channel} value={channel}>{channel}</option>
+                            ))}
+                        </select>
 
-                {/* 거래처명 Select */}
-                <select
-                    value={selectedAccount}
-                    onChange={(e) => setSelectedAccount(e.target.value)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 grow md:grow-0"
-                    disabled={!selectedChannel}
-                >
-                    <option value="">전체 (거래처)</option>
-                    {availableAccounts.map((account) => (
-                        <option key={account} value={account}>{account}</option>
-                    ))}
-                </select>
+                        {/* 거래처명 Select */}
+                        <select
+                            value={selectedAccount}
+                            onChange={(e) => setSelectedAccount(e.target.value)}
+                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            disabled={!selectedChannel}
+                        >
+                            <option value="">전체 (거래처)</option>
+                            {availableAccounts.map((account) => (
+                                <option key={account} value={account}>{account}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Right: Product Filters */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {/* 품목그룹 Select */}
+                        <select
+                            value={selectedGroup}
+                            onChange={(e) => handleGroupChange(e.target.value)}
+                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        >
+                            <option value="">전체 (브랜드)</option>
+                            {Object.keys(productOptions).map((group) => (
+                                <option key={group} value={group}>{group}</option>
+                            ))}
+                        </select>
+
+                        {/* 품목 구분 Select */}
+                        <select
+                            value={selectedCategory}
+                            onChange={(e) => handleCategoryChange(e.target.value)}
+                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            disabled={!selectedGroup}
+                        >
+                            <option value="">전체 (품목 구분)</option>
+                            {availableCategories.map((cat) => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                        </select>
+
+                        {/* 품목 구분_2 Select */}
+                        <select
+                            value={selectedSubCategory}
+                            onChange={(e) => setSelectedSubCategory(e.target.value)}
+                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            disabled={!selectedCategory}
+                        >
+                            <option value="">전체 (세부 구분)</option>
+                            {availableSubCategories.map((sub) => (
+                                <option key={sub} value={sub}>{sub}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="flex justify-center">
+                    <button
+                        onClick={fetchData}
+                        disabled={loading}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-2xl flex items-center gap-2 text-sm font-bold shadow-lg shadow-emerald-200 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        {loading ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        )}
+                        조회
+                    </button>
+                </div>
             </div>
 
             {loading ? (
@@ -391,16 +541,33 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                 dy={10}
                             />
                             <YAxis
+                                yAxisId="left"
                                 stroke="#94a3b8"
                                 style={{ fontSize: '9px', fontWeight: 600 }}
-                                tickFormatter={formatMillions}
+                                tickFormatter={yAxisFormatter}
                                 axisLine={false}
                                 tickLine={false}
                             />
+                            {isCombination && (
+                                <YAxis
+                                    yAxisId="right"
+                                    orientation="right"
+                                    stroke="#ec4899"
+                                    style={{ fontSize: '9px', fontWeight: 600 }}
+                                    tickFormatter={formatPercent}
+                                    axisLine={false}
+                                    tickLine={false}
+                                />
+                            )}
                             <Tooltip
-                                formatter={(value: number) => {
-                                    if (viewMode === 'sales') return [formatMillions(value), '매출액'];
-                                    if (viewMode === 'daily') return [formatMillions(value), '일평균 매출'];
+                                formatter={(value: number, name: string, props: any) => {
+                                    if (name === '이익률') return [formatPercent(value), name];
+                                    if (viewMode === 'sales' || viewMode === 'salesProfitRate') return [formatMillions(value) + '원', '매출액'];
+                                    if (viewMode === 'daily' || viewMode === 'dailyProfitRate') {
+                                        const days = props.payload.days;
+                                        return [formatMillions(value) + '원', `일평균 매출 (기준: ${days}일)`];
+                                    }
+                                    if (viewMode === 'profitRate') return [formatPercent(value), '이익률'];
                                     return [value.toFixed(1) + '%', '증감율'];
                                 }}
                                 contentStyle={{
@@ -412,19 +579,37 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                             />
                             <Legend wrapperStyle={{ paddingTop: '20px' }} />
                             <Line
+                                yAxisId="left"
                                 type="monotone"
                                 dataKey={viewMode === 'growth' ? "growth" : "value"}
-                                name={currentLabel}
+                                name={viewMode === 'growth' ? "증감율" : (viewMode === 'daily' || viewMode === 'dailyProfitRate' ? "일평균 매출" : "매출액")}
                                 stroke="#10b981"
                                 strokeWidth={3}
                                 dot={{ fill: "#10b981", r: 4 }}
                                 activeDot={{ r: 6 }}
-                                label={{
+                                label={!isCombination ? {
                                     position: 'top',
                                     formatter: labelFormatter,
                                     style: { fontSize: '10px', fill: '#10b981', fontWeight: 'bold' }
-                                }}
+                                } : undefined}
                             />
+                            {isCombination && (
+                                <Line
+                                    yAxisId="right"
+                                    type="monotone"
+                                    dataKey="profitRate"
+                                    name="이익률"
+                                    stroke="#ec4899"
+                                    strokeWidth={3}
+                                    dot={{ fill: "#ec4899", r: 4 }}
+                                    activeDot={{ r: 6 }}
+                                    label={{
+                                        position: 'top',
+                                        formatter: formatPercent,
+                                        style: { fontSize: '10px', fill: '#ec4899', fontWeight: 'bold' }
+                                    }}
+                                />
+                            )}
                         </LineChart>
                     </ResponsiveContainer>
                 </>

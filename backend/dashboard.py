@@ -412,9 +412,17 @@ def get_channel_layer_options(filename: str):
             
     return options
 
-def get_channel_layer_sales(filename: str, part: str = None, channel: str = None, account: str = None):
+def get_channel_layer_sales(
+    filename: str, 
+    part: str = None, 
+    channel: str = None, 
+    account: str = None,
+    group: str = None,
+    category: str = None,
+    sub_category: str = None
+):
     """
-    조건(파트 > 채널 > 거래처)에 따른 월별 매출 데이터 반환
+    조건(채널 세그먼트 + 품목 그룹)에 따른 월별 매출 데이터 반환
     """
     base_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(base_dir, "uploads", filename)
@@ -432,23 +440,38 @@ def get_channel_layer_sales(filename: str, part: str = None, channel: str = None
     df = clean_numeric_columns(df)
     
     all_months = sorted(df['월구분'].unique())
-    # Removed duplicate sorted call
     days_list, debug_logs = calculate_days_list(df, all_months)
     
     df_filtered = df.copy()
-    current_label = "전체 채널"
+    labels = []
     
+    # Channel Filtering
     if part and part != 'all':
         df_filtered = df_filtered[df_filtered['파트구분'] == part]
-        current_label = part
+        labels.append(part)
         
     if channel and channel != 'all':
         df_filtered = df_filtered[df_filtered['채널구분'] == channel]
-        current_label = channel
+        labels.append(channel)
         
     if account and account != 'all':
         df_filtered = df_filtered[df_filtered['거래처명'] == account]
-        current_label = account
+        labels.append(account)
+
+    # Product Filtering
+    if group and group != 'all':
+        df_filtered = df_filtered[df_filtered['품목그룹1'] == group]
+        labels.append(group)
+        
+    if category and category != 'all':
+        df_filtered = df_filtered[df_filtered['품목 구분'] == category]
+        labels.append(category)
+        
+    if sub_category and sub_category != 'all':
+        df_filtered = df_filtered[df_filtered['품목 구분_2'] == sub_category]
+        labels.append(sub_category)
+
+    current_label = " > ".join(labels) if labels else "전체 채널"
         
     monthly_sales = df_filtered.groupby('월구분')['판매액'].sum().reindex(all_months, fill_value=0)
     monthly_profit = df_filtered.groupby('월구분')['이익'].sum().reindex(all_months, fill_value=0)

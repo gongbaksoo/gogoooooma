@@ -508,14 +508,22 @@ def get_dashboard_channel_options(filename: str):
         raise HTTPException(status_code=500, detail=f"옵션 데이터 처리 실패: {str(e)}")
 
 @app.get("/api/dashboard/channel-sales")
-def get_dashboard_channel_sales(filename: str, part: str = None, channel: str = None, account: str = None):
+def get_dashboard_channel_sales(
+    filename: str, 
+    part: str = None, 
+    channel: str = None, 
+    account: str = None,
+    group: str = None,
+    category: str = None,
+    sub_category: str = None
+):
     """
-    조건(파트 > 채널 > 거래처)에 따른 월별 매출 데이터 반환
+    조건(채널 세그먼트 + 품목 그룹)에 따른 월별 매출 데이터 반환
     """
     try:
         ensure_file_on_disk(filename)
         from dashboard import get_channel_layer_sales
-        result = get_channel_layer_sales(filename, part, channel, account)
+        result = get_channel_layer_sales(filename, part, channel, account, group, category, sub_category)
         return result
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")

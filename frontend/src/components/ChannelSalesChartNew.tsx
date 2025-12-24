@@ -29,7 +29,6 @@ interface OptionsTree {
 }
 
 const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) => {
-    console.log('Rendering ChannelSalesChartNew', { filename });
     const [data, setData] = useState<ChartData[]>([]);
     const [daysList, setDaysList] = useState<number[]>([]);
     const [viewMode, setViewMode] = useState<ViewMode | 'daily'>('sales');
@@ -325,13 +324,10 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
 
     return (
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60 mt-12">
-            <div className="bg-yellow-400 text-black text-center py-1 font-black mb-4">
-                COMPONENT_CHECK: ChannelSalesChartNew.tsx IS RENDERING
-            </div>
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
                 <div>
                     <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight">
-                        🏢 DEBUG: 채널별 매출 상세 분석
+                        🏢 채널별 매출 상세 분석
                     </h3>
                     <p className="text-slate-400 text-sm mt-1 font-medium italic">{currentLabel}</p>
                 </div>
@@ -360,25 +356,6 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                             </select>
                         </div>
                     )}
-                    <button
-                        onClick={() => setViewMode('salesProfitRate')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'salesProfitRate'
-                            ? 'bg-emerald-600 text-white shadow-emerald-200'
-                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                            }`}
-                    >
-                        매출+이익률
-                    </button>
-                    <button
-                        onClick={() => setViewMode('dailyProfitRate')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'dailyProfitRate'
-                            ? 'bg-emerald-600 text-white shadow-emerald-200'
-                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                            }`}
-                    >
-                        일평균+이익률
-                    </button>
-                    <div className="h-10 w-px bg-slate-200 mx-1 hidden sm:block" />
                     <button
                         onClick={() => setViewMode('sales')}
                         className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'sales'
@@ -414,6 +391,25 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                             }`}
                     >
                         증감율
+                    </button>
+                    <div className="h-10 w-px bg-slate-200 mx-1 hidden sm:block" />
+                    <button
+                        onClick={() => setViewMode('salesProfitRate')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'salesProfitRate'
+                            ? 'bg-emerald-600 text-white shadow-emerald-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                            }`}
+                    >
+                        매출+이익률
+                    </button>
+                    <button
+                        onClick={() => setViewMode('dailyProfitRate')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'dailyProfitRate'
+                            ? 'bg-emerald-600 text-white shadow-emerald-200'
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                            }`}
+                    >
+                        일평균+이익률
                     </button>
                 </div>
             </div>

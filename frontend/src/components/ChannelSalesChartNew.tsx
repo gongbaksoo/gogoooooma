@@ -325,6 +325,9 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
 
     return (
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60 mt-12">
+            <div className="bg-yellow-400 text-black text-center py-1 font-black mb-4">
+                COMPONENT_CHECK: ChannelSalesChartNew.tsx IS RENDERING
+            </div>
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
                 <div>
                     <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight">

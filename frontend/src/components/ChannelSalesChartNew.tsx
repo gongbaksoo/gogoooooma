@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
 
@@ -27,6 +27,24 @@ interface OptionsTree {
         [channel: string]: string[];
     };
 }
+
+const CustomLabel = (props: any) => {
+    const { x, y, value, fill, formatter } = props;
+    if (value === undefined || value === null) return null;
+    return (
+        <text
+            x={x}
+            y={y}
+            dy={-10}
+            fill={fill}
+            fontSize={10}
+            textAnchor="middle"
+            fontWeight="bold"
+        >
+            {formatter ? formatter(value) : value}
+        </text>
+    );
+};
 
 const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) => {
     const [data, setData] = useState<ChartData[]>([]);
@@ -529,7 +547,7 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                 <>
                     <h4 className="text-md font-semibold text-gray-600 mb-2 text-center">{chartTitle}</h4>
                     <ResponsiveContainer width="100%" height={400}>
-                        <LineChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                        <ComposedChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                             <XAxis
                                 dataKey="rawMonth"
@@ -587,12 +605,18 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                 strokeWidth={3}
                                 dot={{ fill: "#10b981", r: 4 }}
                                 activeDot={{ r: 6 }}
-                                label={!isCombination ? {
-                                    position: 'top',
-                                    formatter: labelFormatter,
-                                    style: { fontSize: '10px', fill: '#10b981', fontWeight: 'bold' }
-                                } : undefined}
-                            />
+                                isAnimationActive={false}
+                            >
+                                <LabelList
+                                    dataKey={viewMode === 'growth' ? "growth" : "value"}
+                                    content={
+                                        <CustomLabel
+                                            fill="#10b981"
+                                            formatter={labelFormatter}
+                                        />
+                                    }
+                                />
+                            </Line>
                             {isCombination && (
                                 <Line
                                     yAxisId="right"
@@ -603,14 +627,20 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                     strokeWidth={3}
                                     dot={{ fill: "#ec4899", r: 4 }}
                                     activeDot={{ r: 6 }}
-                                    label={{
-                                        position: 'top',
-                                        formatter: formatPercent,
-                                        style: { fontSize: '10px', fill: '#ec4899', fontWeight: 'bold' }
-                                    }}
-                                />
+                                    isAnimationActive={false}
+                                >
+                                    <LabelList
+                                        dataKey="profitRate"
+                                        content={
+                                            <CustomLabel
+                                                fill="#ec4899"
+                                                formatter={formatPercent}
+                                            />
+                                        }
+                                    />
+                                </Line>
                             )}
-                        </LineChart>
+                        </ComposedChart>
                     </ResponsiveContainer>
                 </>
             )}

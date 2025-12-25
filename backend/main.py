@@ -12,12 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from analysis import analyze_sales_data
 from chat import process_chat_query
-from dashboard import get_monthly_sales_by_channel
 from database import (
     init_db, save_file_to_db, get_file_from_db, 
     list_files_in_db, delete_file_from_db, 
     cleanup_old_files_in_db, get_file_count
 )
+from dashboard import clear_df_cache
 
 app = FastAPI(title="Sales Analysis API")
 
@@ -263,6 +263,8 @@ def delete_file(filename: str):
         try:
             os.remove(file_path)
             logging.info(f"Deleted local cache for {filename}")
+            # Also clear memory cache
+            clear_df_cache(filename)
         except Exception as e:
             logging.error(f"Failed to delete local cache for {filename}: {e}")
     
@@ -302,6 +304,9 @@ def upload_file(file: UploadFile = File(...)):
             with open(file_path, "wb") as f:
                 f.write(file_data)
             cleanup_old_files()
+        
+        # Clear memory cache if it was already there
+        clear_df_cache(file.filename)
         
         # Write to temp file for analysis
         temp_path = f"/tmp/{file.filename}"

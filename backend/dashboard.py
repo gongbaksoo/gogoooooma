@@ -1,29 +1,91 @@
 import pandas as pd
 import os
 import calendar
+import logging
+import time
 
+# In-memory cache for DataFrames
+df_cache = {}
+
+def get_dataframe(filename: str):
+    """
+    Get a DataFrame from cache, parquet fallback, or original file
+    """
+    global df_cache
+    
+    # 1. Check in-memory cache
+    if filename in df_cache:
+        logging.info(f"Cache HIT for {filename}")
+        return df_cache[filename]
+    
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "uploads", filename)
+    
+    # Cache directory for parquet files
+    cache_dir = os.path.join(base_dir, "uploads", "cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    parquet_path = os.path.join(cache_dir, f"{filename}.parquet")
+    
+    # 2. Check if parquet version exists and is newer than original
+    if os.path.exists(parquet_path) and os.path.exists(file_path) and os.path.getmtime(parquet_path) > os.path.getmtime(file_path):
+        try:
+            logging.info(f"Reading from Parquet: {parquet_path}")
+            df = pd.read_parquet(parquet_path)
+            df_cache[filename] = df
+            return df
+        except Exception as e:
+            logging.error(f"Failed to read parquet {parquet_path}: {e}")
+
+    # 3. Read from original file (Excel or CSV)
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {filename}")
+        
+    logging.info(f"Reading from source file: {file_path}")
+    start_time = time.time()
+    
+    if file_path.endswith('.xlsx'):
+        df = pd.read_excel(file_path)
+    else:
+        df = pd.read_csv(file_path)
+    
+    end_time = time.time()
+    logging.info(f"Loaded {filename} in {end_time - start_time:.2f}s")
+    
+    # Clean up column names and common types
+    df.columns = df.columns.astype(str).str.replace('\t', '').str.strip()
+    if '거래쳐명' in df.columns:
+        df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+    
+    df = clean_numeric_columns(df)
+    
+    # Save to parquet for next time
+    try:
+        df.to_parquet(parquet_path)
+        logging.info(f"Saved {filename} to Parquet for future fast loading")
+    except Exception as e:
+        logging.error(f"Failed to save parquet {parquet_path}: {e}")
+        
+    df_cache[filename] = df
+    return df
+
+def clear_df_cache(filename: str = None):
+    """Clear specific or all cache entries"""
+    global df_cache
+    if filename:
+        if filename in df_cache:
+            del df_cache[filename]
+            logging.info(f"Cleared cache for {filename}")
+    else:
+        df_cache = {}
+        logging.info("Cleared entire DataFrame cache")
+        
 def get_monthly_sales_by_channel(filename: str):
     """
     월별 이커머스 vs 오프라인 매출 데이터 반환
     """
-    # Use absolute path relative to this file
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(base_dir, "uploads", filename)
-    
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {filename}")
-    
-    # 데이터 로드
-    df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
-    
-    # 컬럼명 클리닝
-    df.columns = df.columns.str.replace('\t', '').str.strip()
-    
-    # Handle known typos
-    if '거래쳐명' in df.columns:
-        df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
-        
-    df = clean_numeric_columns(df)
+    # 데이터 로드 (캐싱 적용)
+    df = get_dataframe(filename)
     
     # 필요한 컬럼 확인
     required_cols = ['월구분', '파트구분', '판매액', '이익']
@@ -57,7 +119,7 @@ def get_monthly_sales_by_channel(filename: str):
     
     months = [str(int(month)) for month in pivot_sales.index.tolist()]
     days_list, debug_logs = calculate_days_list(df, pivot_sales.index.tolist())
-
+ 
     # 결과 포맷팅
     result = {
         "months": months,
@@ -70,6 +132,53 @@ def get_monthly_sales_by_channel(filename: str):
         "days_list": days_list,
         "debug_logs": debug_logs
     }
+    
+    return result
+
+def get_monthly_sales_by_product_group(filename: str):
+    """
+    월별 품목그룹별 매출 데이터 반환
+    """
+    # 데이터 로드 (캐싱 적용)
+    df = get_dataframe(filename)
+        
+    # 필요한 컬럼 확인
+    required_cols = ['월구분', '품목그룹1', '판매액', '이익']
+    for col in required_cols:
+        if col not in df.columns:
+            raise ValueError(f"Required column '{col}' not found in data")
+    
+    # 월구분과 품목그룹1으로 그룹화하여 합계
+    monthly_sales = df.groupby(['월구분', '품목그룹1'])[['판매액', '이익']].sum().reset_index()
+    
+    # 피벗하여 각 품목그룹을 별도 컬럼으로
+    pivot_sales = monthly_sales.pivot(index='월구분', columns='품목그룹1', values='판매액').fillna(0)
+    pivot_profit = monthly_sales.pivot(index='월구분', columns='품목그룹1', values='이익').fillna(0)
+    
+    # 월구분 정렬
+    pivot_sales = pivot_sales.sort_index()
+    pivot_profit = pivot_profit.sort_index()
+    
+    # 품목그룹 리스트 (매출액 기준 내림차순 정렬)
+    group_totals = pivot_sales.sum().sort_values(ascending=False)
+    top_groups = group_totals.head(10).index.tolist()  # 상위 10개 품목그룹
+    
+    days_list, debug_logs = calculate_days_list(df, pivot_sales.index.tolist())
+    
+    result = {
+        "months": [str(int(month)) for month in pivot_sales.index.tolist()],
+        "groups": {},
+        "profit_groups": {},
+        "days_list": days_list,
+        "debug_logs": debug_logs
+    }
+    
+    # 각 품목그룹의 월별 데이터 추가
+    for group in top_groups:
+        if group in pivot_sales.columns:
+            result["groups"][group] = pivot_sales[group].tolist()
+        if group in pivot_profit.columns:
+            result["profit_groups"][group] = pivot_profit[group].tolist()
     
     return result
 
@@ -258,11 +367,7 @@ def get_hierarchical_options(filename: str):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {filename}")
     
-    df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
-    df.columns = df.columns.str.replace('\t', '').str.strip()
-    
-    if '거래쳐명' in df.columns:
-        df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+    df = get_dataframe(filename)
     
     required_cols = ['품목그룹1', '품목 구분', '품목 구분_2']
     for col in required_cols:
@@ -308,13 +413,7 @@ def get_filtered_monthly_sales(
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {filename}")
     
-    df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
-    df.columns = df.columns.str.replace('\t', '').str.strip()
-    
-    if '거래쳐명' in df.columns:
-        df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
-        
-    df = clean_numeric_columns(df)
+    df = get_dataframe(filename)
     
     # 1. 월별 전체 데이터를 먼저 구해서 모든 월 리스트 확보
     all_months = sorted(df['월구분'].unique())
@@ -379,12 +478,7 @@ def get_channel_layer_options(filename: str):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {filename}")
     
-    df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
-    df.columns = df.columns.str.replace('\t', '').str.strip()
-    
-    # Handle known typos
-    if '거래쳐명' in df.columns:
-        df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
+    df = get_dataframe(filename)
     
     required_cols = ['파트구분', '채널구분', '거래처명']
     for col in required_cols:
@@ -430,14 +524,7 @@ def get_channel_layer_sales(
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {filename}")
     
-    df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
-    df.columns = df.columns.str.replace('\t', '').str.strip()
-    
-    # Handle known typos
-    if '거래쳐명' in df.columns:
-        df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
-        
-    df = clean_numeric_columns(df)
+    df = get_dataframe(filename)
     
     all_months = sorted(df['월구분'].unique())
     days_list, debug_logs = calculate_days_list(df, all_months)

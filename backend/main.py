@@ -661,3 +661,46 @@ def delete_chat_history(chat_id: str):
         return {"message": "Chat deleted", "id": chat_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete chat: {str(e)}")
+
+@app.get("/api/dashboard/daily-hierarchical-sales")
+def get_dashboard_daily_hierarchical_sales(
+    filename: str, 
+    group: str = None, 
+    category: str = None, 
+    sub_category: str = None,
+    part: str = None,
+    channel: str = None,
+    account: str = None
+):
+    """
+    일별 품목 계층별 매출 데이터 조회
+    """
+    try:
+        ensure_file_on_disk(filename)
+        from dashboard import get_daily_hierarchical_sales
+        result = get_daily_hierarchical_sales(
+            filename, 
+            group=group, 
+            category=category, 
+            sub_category=sub_category,
+            part=part,
+            channel=channel,
+            account=account
+        )
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
+
+@app.get("/api/dashboard/summary")
+def get_dashboard_summary(filename: str):
+    try:
+        ensure_file_on_disk(filename)
+        from dashboard import get_monthly_summary
+        result = get_monthly_summary(filename)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"요약 데이터 처리 실패: {str(e)}")

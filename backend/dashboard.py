@@ -573,3 +573,192 @@ def get_channel_layer_sales(
     }
     
     return result
+
+def get_daily_hierarchical_sales(
+    filename: str, 
+    group: str = None, 
+    category: str = None, 
+    sub_category: str = None,
+    part: str = None,
+    channel: str = None,
+    account: str = None
+):
+    """
+    일별 품목 계층별 매출 데이터 반환
+    """
+    df = get_dataframe(filename)
+    
+    # 1. 필터링 로직 (get_filtered_monthly_sales와 동일)
+    if group and group != 'all':
+        df = df[df['품목그룹1'] == group]
+    if category and category != 'all':
+        df = df[df['품목 구분'] == category]
+    if sub_category and sub_category != 'all':
+        df = df[df['품목 구분_2'] == sub_category]
+        
+    if part and part != 'all':
+        df = df[df['파트구분'] == part]
+    if channel and channel != 'all':
+        df = df[df['채널구분'] == channel]
+    if account and account != 'all':
+        df = df[df['거래처명'] == account]
+        
+    # 2. 일자별 그룹화
+    # 컬럼명 '일별' 사용
+    date_col = '일별'
+    
+    # 혼합된 타입 처리 (숫자인 엑셀 시리얼과 문자열 날짜가 섞여있음)
+    
+    # 이미 datetime 형식이면 변환 불필요
+    if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
+        # 1) 먼저 숫자로 변환 가능한 부분(엑셀 시리얼 날짜) 처리
+        # 주의: datetime 컬럼에 to_numeric을 쓰면 나노초로 변환되므로 위에서 타입 체크 필수
+        numeric_dates = pd.to_numeric(df[date_col], errors='coerce')
+        
+        # 2) 날짜로 변환 (숫자인 경우)
+        # 엑셀 시리얼 날짜는 1900년 1월 1일 이전 등을 제외하고 통상적으로 아래와 같이 변환
+        date_series = pd.to_datetime(numeric_dates, unit='D', origin='1899-12-30')
+        
+        # 3) 숫자가 아니어서 NaT로 된 부분은 문자열로 간주하고 다시 파싱 시도
+        mask = date_series.isna() & df[date_col].notna()
+        if mask.any():
+            try:
+                # 문자열 날짜 파싱 (예: 2025/12/01)
+                date_series.loc[mask] = pd.to_datetime(df.loc[mask, date_col], errors='coerce')
+            except Exception as e:
+                print(f"Date conversion error: {e}")
+                
+        df[date_col] = date_series
+
+    # 유효한 일자만 필터링
+    df = df.dropna(subset=[date_col])
+
+    # 일자별 집계
+    daily_sales = df.groupby(date_col)[['판매액', '이익']].sum().reset_index()
+    
+    # 일자 정렬
+    daily_sales = daily_sales.sort_values(date_col)
+    
+    # 날짜 포맷팅 (YYYY-MM-DD -> MM/DD or str)
+    # 프론트엔드에서 처리하기 쉽도록 ISO 문자열로 반환
+    dates = daily_sales[date_col].dt.strftime('%Y-%m-%d').tolist()
+    sales = daily_sales['판매액'].tolist()
+    profit = daily_sales['이익'].tolist()
+    
+    # 레이블 생성 (필터 조건에 따라)
+    label_parts = []
+    if part and part != 'all': label_parts.append(part)
+    if channel and channel != 'all': label_parts.append(channel)
+    if account and account != 'all': label_parts.append(account)
+    if group and group != 'all': label_parts.append(group)
+    if category and category != 'all': label_parts.append(category)
+    if sub_category and sub_category != 'all': label_parts.append(sub_category)
+    
+    label = " > ".join(label_parts) if label_parts else "전체"
+    
+    # 결과 반환
+    return {
+        "dates": dates,
+        "sales": sales,
+        "profit": profit,
+        "label": label
+    }
+
+def get_monthly_summary(filename):
+    df = get_dataframe(filename)
+    if df.empty:
+        return {}
+        
+    date_col = '일별'
+    
+    # 이미 datetime 형식이면 변환 불필요
+    if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
+        numeric_dates = pd.to_numeric(df[date_col], errors='coerce')
+        date_series = pd.to_datetime(numeric_dates, unit='D', origin='1899-12-30')
+        mask = date_series.isna() & df[date_col].notna()
+        if mask.any():
+            try:
+                date_series.loc[mask] = pd.to_datetime(df.loc[mask, date_col], errors='coerce')
+            except Exception as e:
+                pass
+        df[date_col] = date_series
+
+    df = df.dropna(subset=[date_col])
+    
+    # 월 컬럼 생성 (YYYY-MM)
+    df['Month'] = df[date_col].dt.strftime('%Y-%m')
+    
+    # 최근 2개 월 확인
+    unique_months = sorted(df['Month'].unique())
+    if not unique_months:
+        return {}
+        
+    current_month = unique_months[-1]
+    prev_month = unique_months[-2] if len(unique_months) >= 2 else None
+    
+    # 데이터 전체에서의 마지막 날짜 (기준일)
+    max_date = df[date_col].max().strftime('%Y-%m-%d')
+    
+    results = {
+        "meta": {
+            "current_month": current_month,
+            "prev_month": prev_month,
+            "max_date": max_date
+        },
+        "data": {}
+    }
+    
+    def calculate_stats(sub_df, month):
+        if sub_df.empty:
+            return {"total": 0, "daily_avg": 0, "days_count": 0}
+        
+        monthly_data = sub_df[sub_df['Month'] == month]
+        if monthly_data.empty:
+             return {"total": 0, "daily_avg": 0, "days_count": 0}
+             
+        total_sales = monthly_data['판매액'].sum()
+        days_count = monthly_data[date_col].nunique()
+        daily_avg = total_sales / days_count if days_count > 0 else 0
+        
+        return {"total": total_sales, "daily_avg": daily_avg, "days_count": days_count}
+
+    # Column names verification: The code uses '판매액' at line 637.
+    # But earlier analysis or other functions might use '매출금액'.
+    # I should verify which column `get_daily_hierarchical_sales` used.
+    # Viewing result says: daily_sales = df.groupby(date_col)[['판매액', '이익']].sum()  <-- Line 637
+    # So I will use '판매액'.
+    
+    categories = {
+        "전체": lambda d: d,
+        "이커머스": lambda d: d[d['파트구분'] == '이커머스'],
+        "오프라인": lambda d: d[d['파트구분'] == '오프라인'],
+        "마이비": lambda d: d[d['품목그룹1'] == '마이비'],
+        "누비": lambda d: d[d['품목그룹1'] == '누비'],
+        "쏭레브": lambda d: d[d['품목그룹1'] == '쏭레브']
+    }
+    
+    for key, filter_func in categories.items():
+        subset = filter_func(df)
+        curr_stats = calculate_stats(subset, current_month)
+        
+        if prev_month:
+            prev_stats = calculate_stats(subset, prev_month)
+        else:
+            prev_stats = {"total": 0, "daily_avg": 0}
+        
+        # Growth Rate (Current Daily Avg vs Prev Daily Avg)
+        if prev_stats['daily_avg'] > 0:
+            growth_rate = ((curr_stats['daily_avg'] - prev_stats['daily_avg']) / prev_stats['daily_avg']) * 100
+        else:
+            growth_rate = 0 if curr_stats['daily_avg'] == 0 else 100
+            
+        results["data"][key] = {
+            "current_total": int(curr_stats['total']),
+            "current_daily_avg": int(curr_stats['daily_avg']),
+            "current_days": curr_stats['days_count'],
+            "growth_rate": round(growth_rate, 1),
+            "prev_total": int(prev_stats['total']),
+            "prev_daily_avg": int(prev_stats['daily_avg'])
+        }
+        
+    return results

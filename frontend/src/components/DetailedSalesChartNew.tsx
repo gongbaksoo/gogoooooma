@@ -62,6 +62,9 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
 
+    // Time unit state
+    const [timeUnit, setTimeUnit] = useState<'month' | 'day'>('month');
+
     // Channel filter states
     const [channelOptions, setChannelOptions] = useState<OptionsTree>({});
     const [selectedPart, setSelectedPart] = useState<string>('');
@@ -113,7 +116,11 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
         setError(null);
 
         try {
-            const response = await axios.get(`${API_BASE_URL}/api/dashboard/hierarchical-sales`, {
+            const endpoint = timeUnit === 'month'
+                ? `${API_BASE_URL}/api/dashboard/hierarchical-sales`
+                : `${API_BASE_URL}/api/dashboard/daily-hierarchical-sales`;
+
+            const response = await axios.get(endpoint, {
                 params: {
                     filename,
                     group: selectedGroup || 'all',
@@ -125,10 +132,26 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                 }
             });
 
-            const months = response.data.months;
-            const sales = response.data.sales;
-            const profit = response.data.profit || [];
-            const days = response.data.days_list || [];
+            // Handle different response structures
+            let months: string[] = [];
+            let sales: number[] = [];
+            let profit: number[] = [];
+            let days: number[] = [];
+
+            if (timeUnit === 'month') {
+                months = response.data.months;
+                sales = response.data.sales;
+                profit = response.data.profit || [];
+                days = response.data.days_list || [];
+            } else {
+                months = response.data.dates; // 'dates' from backend
+                sales = response.data.sales;
+                profit = response.data.profit || [];
+                // Daily view doesn't use days_list for average calculation in the same way,
+                // but we can default to 1 for daily average calculation if needed.
+                days = new Array(sales.length).fill(1);
+            }
+
             setDaysList(days);
 
             setCurrentLabel(response.data.label);
@@ -138,18 +161,28 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                 const value = sales[index] || 0;
                 const profitValue = profit[index] || 0;
                 return {
-                    month: formatMonth(month),
+                    month: timeUnit === 'month' ? formatMonth(month) : month, // Use raw date for daily view initially
                     value,
                     profit: profitValue,
                     rawMonth: month,
-                    days: days[index] || 30
+                    days: days[index] || (timeUnit === 'month' ? 30 : 1)
                 };
             });
 
-            // Initialize Date Range
-            if (months.length > 0 && !startMonth) {
+            // Initialize Date Range (Only for monthly view initially)
+            if (months.length > 0 && !startMonth && timeUnit === 'month') {
                 setStartMonth(months[0]);
                 setEndMonth(months[months.length - 1]);
+            } else if (timeUnit === 'day' && !startMonth) {
+                // For daily view, initialize start/end month based on the daily data range logic if needed,
+                // or just default to empty (which shows all) or derive from unique months in daily data.
+                // For now, let's derive unique months from daily data for the filter.
+                const uniqueMonths = Array.from(new Set(months.map(d => d.substring(0, 7).replace('-', ''))));
+                // Assuming format YYYY-MM-DD
+                if (uniqueMonths.length > 0) {
+                    setStartMonth(uniqueMonths[0]);
+                    setEndMonth(uniqueMonths[uniqueMonths.length - 1]);
+                }
             }
 
             // Calculate growth rates
@@ -161,9 +194,10 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
             });
 
             setData(chartDataWithGrowth);
-        } catch (err) {
-            console.error('Failed to fetch hierarchical sales data:', err);
-            setError('데이터를 불러오는데 실패했습니다');
+        } catch (err: any) {
+            console.error('Detailed chart error:', err);
+            const errorMessage = err.response?.data?.detail || err.message || '데이터를 불러오는데 실패했습니다';
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -175,6 +209,13 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
             fetchData();
         }
     }, [filename, selectedGroup]);
+
+    // Refetch when timeUnit changes
+    useEffect(() => {
+        if (filename && selectedGroup) {
+            fetchData();
+        }
+    }, [timeUnit]);
 
     // Reset child filters when parent changes
     const handleGroupChange = (group: string) => {
@@ -200,6 +241,15 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
     };
 
     const formatMonth = (month: string): string => {
+        if (timeUnit === 'day') {
+            // Input might be '2024-01-01'
+            // Return '01.01'
+            if (month.length >= 10) {
+                return month.substring(5).replace('-', '.');
+            }
+            return month;
+        }
+
         if (month.length === 4) {
             const year = month.substring(0, 2);
             const monthNum = parseInt(month.substring(2, 4));
@@ -219,6 +269,21 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
     };
 
     const formatXAxisTick = (value: string, index: number) => {
+        if (timeUnit === 'day') {
+            // value is likely 'YYYY-MM-DD' or 'MM.DD' (if already formatted, but dataKey uses 'rawMonth')
+            // Let's assume rawMonth is 'YYYY-MM-DD'
+            if (!value) return value;
+
+            // Format: "MM.DD"
+            const dateParts = value.split('-');
+            if (dateParts.length === 3) {
+                const month = dateParts[1];
+                const day = dateParts[2];
+                return `${month}.${day}`;
+            }
+            return value;
+        }
+
         if (!value || value.length !== 4) return value;
         const year = value.substring(0, 2);
         const month = parseInt(value.substring(2, 4));
@@ -250,11 +315,22 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
         : [];
 
     const getDisplayData = () => {
+        // Filter by Date Range (only for Monthly view currently)
         // Filter by Date Range
         const filteredData = data.filter(item => {
             if (!item.rawMonth) return true;
-            if (startMonth && item.rawMonth < startMonth) return false;
-            if (endMonth && item.rawMonth > endMonth) return false;
+
+            // For monthly view, item.rawMonth is "YYYYMM"
+            // For daily view, item.rawMonth is "YYYY-MM-DD"
+
+            let itemMonth = item.rawMonth;
+            if (timeUnit === 'day') {
+                // Extract "YYYYMM" from "YYYY-MM-DD"
+                itemMonth = item.rawMonth.substring(0, 7).replace('-', '');
+            }
+
+            if (startMonth && itemMonth < startMonth) return false;
+            if (endMonth && itemMonth > endMonth) return false;
             return true;
         });
 
@@ -357,8 +433,30 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                     </h3>
                     <p className="text-slate-400 text-sm mt-1 font-medium italic">{currentLabel}</p>
                 </div>
-                <div className="flex flex-wrap gap-2 w-full xl:w-auto">
-                    {/* Date Range Selectors */}
+                <div className="flex flex-wrap gap-2 w-full xl:w-auto items-center">
+                    {/* Time Unit Toggle */}
+                    <div className="flex bg-slate-100 p-1 rounded-xl mr-2">
+                        <button
+                            onClick={() => setTimeUnit('month')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timeUnit === 'month'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            월간
+                        </button>
+                        <button
+                            onClick={() => setTimeUnit('day')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timeUnit === 'day'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            일간
+                        </button>
+                    </div>
+
+                    {/* Date Range Selectors - Visible for both Month and Day */}
                     {data.length > 0 && (
                         <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200 w-full sm:w-auto justify-between">
                             <select
@@ -366,9 +464,22 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                 onChange={(e) => setStartMonth(e.target.value)}
                                 className="bg-transparent text-xs font-bold text-slate-600 focus:outline-none p-1.5"
                             >
-                                {data.map(d => (
-                                    <option key={`start-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
-                                ))}
+                                {/* Generate monthly options even for daily data if needed, or use existing logic */}
+                                {timeUnit === 'month'
+                                    ? data.map(d => (
+                                        <option key={`start-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
+                                    ))
+                                    : Array.from(new Set(data.map(d => {
+                                        const m = d.rawMonth?.substring(0, 7).replace('-', '');
+                                        return m;
+                                    }))).sort().map(m => {
+                                        if (!m) return null;
+                                        // m format is YYYYMM (e.g. 202401)
+                                        const year = m.substring(0, 4);
+                                        const month = parseInt(m.substring(4, 6));
+                                        return <option key={`start-${m}`} value={m}>{`${year}년 ${month}월`}</option>
+                                    })
+                                }
                             </select>
                             <span className="text-slate-300">~</span>
                             <select
@@ -376,9 +487,21 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                 onChange={(e) => setEndMonth(e.target.value)}
                                 className="bg-transparent text-xs font-bold text-slate-600 focus:outline-none p-1.5"
                             >
-                                {data.map(d => (
-                                    <option key={`end-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
-                                ))}
+                                {timeUnit === 'month'
+                                    ? data.map(d => (
+                                        <option key={`end-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
+                                    ))
+                                    : Array.from(new Set(data.map(d => {
+                                        const m = d.rawMonth?.substring(0, 7).replace('-', '');
+                                        return m;
+                                    }))).sort().map(m => {
+                                        if (!m) return null;
+                                        // m format is YYYYMM (e.g. 202401)
+                                        const year = m.substring(0, 4);
+                                        const month = parseInt(m.substring(4, 6));
+                                        return <option key={`end-${m}`} value={m}>{`${year}년 ${month}월`}</option>
+                                    })
+                                }
                             </select>
                         </div>
                     )}
@@ -611,19 +734,21 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                 name={viewMode === 'growth' ? "증감율" : (viewMode === 'daily' || viewMode === 'dailyProfitRate' ? "일평균 매출" : "매출액")}
                                 stroke="#8b5cf6"
                                 strokeWidth={3}
-                                dot={{ fill: "#8b5cf6", r: 4 }}
+                                dot={timeUnit === 'day' ? false : { fill: "#8b5cf6", r: 4 }}
                                 activeDot={{ r: 6 }}
                                 isAnimationActive={false}
                             >
-                                <LabelList
-                                    dataKey={viewMode === 'growth' ? "growth" : "value"}
-                                    content={
-                                        <CustomLabel
-                                            fill="#8b5cf6"
-                                            formatter={labelFormatter}
-                                        />
-                                    }
-                                />
+                                {timeUnit === 'month' && (
+                                    <LabelList
+                                        dataKey={viewMode === 'growth' ? "growth" : "value"}
+                                        content={
+                                            <CustomLabel
+                                                fill="#8b5cf6"
+                                                formatter={labelFormatter}
+                                            />
+                                        }
+                                    />
+                                )}
                             </Line>
                             {isCombination && (
                                 <Line
@@ -633,19 +758,21 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                     name="이익률"
                                     stroke="#ec4899"
                                     strokeWidth={3}
-                                    dot={{ fill: "#ec4899", r: 4 }}
+                                    dot={timeUnit === 'day' ? false : { fill: "#ec4899", r: 4 }}
                                     activeDot={{ r: 6 }}
                                     isAnimationActive={false}
                                 >
-                                    <LabelList
-                                        dataKey="profitRate"
-                                        content={
-                                            <CustomLabel
-                                                fill="#ec4899"
-                                                formatter={formatPercent}
-                                            />
-                                        }
-                                    />
+                                    {timeUnit === 'month' && (
+                                        <LabelList
+                                            dataKey="profitRate"
+                                            content={
+                                                <CustomLabel
+                                                    fill="#ec4899"
+                                                    formatter={formatPercent}
+                                                />
+                                            }
+                                        />
+                                    )}
                                 </Line>
                             )}
                         </ComposedChart>

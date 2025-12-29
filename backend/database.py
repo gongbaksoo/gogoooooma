@@ -12,7 +12,11 @@ if DATABASE_URL:
     host = DATABASE_URL.split('@')[-1] if '@' in DATABASE_URL else "local/unknown"
     logging.info(f"Database URL detected. Host suffix: ...@{host}")
 else:
-    logging.warning("DATABASE_URL NOT FOUND in os.getenv")
+    logging.warning("DATABASE_URL NOT FOUND. Using SQLite fallback.")
+    if os.environ.get('VERCEL'):
+        DATABASE_URL = "sqlite:////tmp/metadata.db"
+    else:
+        DATABASE_URL = "sqlite:///./metadata.db"
 
 # Fix for Railway PostgreSQL URL (postgres:// -> postgresql://)
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
@@ -39,7 +43,8 @@ def init_db():
     global engine, SessionLocal
     
     if not DATABASE_URL:
-        logging.warning("DATABASE_URL not set, database features disabled")
+        # Fallback to local sqlite if not set (should be handled above, but double check)
+        logging.warning("DATABASE_URL not set, disabled?")
         return False
     
     try:

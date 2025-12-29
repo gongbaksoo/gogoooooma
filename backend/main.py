@@ -37,11 +37,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Use absolute path for Railway Volume
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# Use absolute path for Railway Volume or Vercel /tmp
+if os.environ.get('VERCEL'):
+    UPLOAD_DIR = "/tmp/uploads"
+    CHAT_HISTORY_DIR = "/tmp/chat_history"
+else:
+    UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+    CHAT_HISTORY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chat_history")
 
-CHAT_HISTORY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chat_history")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(CHAT_HISTORY_DIR, exist_ok=True)
 
 @app.on_event("startup")

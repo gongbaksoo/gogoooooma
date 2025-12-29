@@ -26,7 +26,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+        "http://localhost:3000",
         "https://sales-analysis-site.vercel.app",
+        "https://gogoooooma.vercel.app",
         "https://api.gongbaksoo.com",
         "*"  # Allow all for development
     ],

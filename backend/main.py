@@ -704,3 +704,27 @@ def get_dashboard_summary(filename: str):
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"요약 데이터 처리 실패: {str(e)}")
+
+@app.get("/api/dashboard/alerts")
+def get_dashboard_alerts(filename: str):
+    try:
+        ensure_file_on_disk(filename)
+        from dashboard import analyze_sales_performance
+        result = analyze_sales_performance(filename)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"알림 분석 실패: {str(e)}")
+
+@app.get("/api/dashboard/ecommerce-details")
+def get_dashboard_ecommerce_details(filename: str):
+    try:
+        ensure_file_on_disk(filename)
+        from dashboard import get_ecommerce_details
+        result = get_ecommerce_details(filename)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"상세 데이터 처리 실패: {str(e)}")

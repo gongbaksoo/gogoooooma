@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 import calendar
 import logging
@@ -762,3 +763,424 @@ def get_monthly_summary(filename):
         }
         
     return results
+
+def analyze_sales_performance(filename):
+    df = get_dataframe(filename)
+    if df.empty:
+        return []
+
+    # Column Cleaning: Remove trailing tabs and spaces
+    df.columns = [str(c).strip() for c in df.columns]
+    
+    # Required columns mapping
+    # Note: '거래쳐명' might be '거래처명' or have other chars. Using filtering.
+    customer_col = next((c for c in df.columns if '거래쳐명' in c or '거래처명' in c), '거래쳐명')
+    
+    cols = {
+        'date': '일별',
+        'sales': '판매액',
+        'profit': '이익',
+        'channel': '파트구분',
+        'sub_channel': '채널구분',
+        'brand': '품목그룹1',
+        'customer': customer_col,
+        'main_channel': '주력 채널',
+        'product_cat1': '품목 구분',
+        'product_cat2': '품목 구분_2'
+    }
+
+    # Date Parsing (Robust)
+    if not pd.api.types.is_datetime64_any_dtype(df[cols['date']]):
+        numeric_dates = pd.to_numeric(df[cols['date']], errors='coerce')
+        date_series = pd.to_datetime(numeric_dates, unit='D', origin='1899-12-30')
+        mask = date_series.isna() & df[cols['date']].notna()
+        if mask.any():
+            try:
+                date_series.loc[mask] = pd.to_datetime(df.loc[mask, cols['date']], errors='coerce')
+            except: pass
+        df[cols['date']] = date_series
+    
+    df = df.dropna(subset=[cols['date']])
+    df['Month'] = df[cols['date']].dt.to_period('M')
+
+    # Latest Month (Target)
+    unique_months = sorted(df['Month'].unique())
+    if not unique_months: return []
+    
+    curr_month = unique_months[-1]
+    prev_month = unique_months[-2] if len(unique_months) >= 2 else None
+    
+    # 3-Month Average (Excluding current)
+    last_3_months = unique_months[-4:-1] if len(unique_months) >= 4 else []
+    
+    # Same Month Last Year
+    yoy_month = curr_month - 12 if len(unique_months) >= 13 else None 
+
+    alerts = []
+
+    def get_period_stats(sub_df, period_months):
+        if not period_months: return None
+        if isinstance(period_months, pd.Period): period_months = [period_months]
+        
+        target_data = sub_df[sub_df['Month'].isin(period_months)]
+        if target_data.empty: return None
+        
+        sales = target_data[cols['sales']].sum()
+        profit = target_data[cols['profit']].sum()
+        days = target_data[cols['date']].nunique()
+        
+        daily_sales = sales / days if days > 0 else 0
+        profit_margin = (profit / sales * 100) if sales != 0 else 0
+        
+        return {'daily_sales': daily_sales, 'profit_margin': profit_margin}
+
+    def generate_report(context, sub_df, display_name=None):
+        if sub_df.empty: return
+        
+        # Determine display name
+        name = display_name if display_name else context
+
+        curr = get_period_stats(sub_df, curr_month)
+        if not curr: return
+
+        comparisons = [
+            ('전월', prev_month),
+            ('3개월 평균', last_3_months),
+            ('전년 동월', yoy_month)
+        ]
+
+        for label, period in comparisons:
+            base = get_period_stats(sub_df, period)
+            
+            # If base data is missing, we still might want to show it with 0 or skip? 
+            # User said "fixed", so let's try to show it even if 0, but if period is None (e.g. no YoY data), skip.
+            if not period and label == '전년 동월': continue 
+            
+            base_sales = base['daily_sales'] if base else 0
+            base_margin = base['profit_margin'] if base else 0
+            
+            sales_diff_pct = 0
+            if base_sales > 0:
+                sales_diff_pct = ((curr['daily_sales'] - base_sales) / base_sales * 100)
+            
+            margin_diff_p = curr['profit_margin'] - base_margin
+            
+            # Status Logic (Simplified for reporting)
+            # We want to see EVERYTHING. But color code it.
+            status = "neutral" 
+            if sales_diff_pct > 0: status = "good"
+            elif sales_diff_pct < 0: status = "bad"
+            
+            # Construct distinct message finding
+            msgs = []
+            if abs(sales_diff_pct) > 0.1:
+                direction = "증가" if sales_diff_pct > 0 else "감소"
+                msgs.append(f"일평균 매출 {abs(sales_diff_pct):.1f}% {direction}")
+            else:
+                msgs.append("일평균 매출 동일")
+
+            if abs(margin_diff_p) > 0.1:
+                direction = "개선" if margin_diff_p > 0 else "하락"
+                msgs.append(f"이익률 {abs(margin_diff_p):.1f}%p {direction}")
+            
+            alerts.append({
+                "context": name,
+                "target": label,
+                "status": status,
+                "message": ", ".join(msgs),
+                "metrics": {
+                    "curr_sales": int(curr['daily_sales']),
+                    "curr_margin": round(curr['profit_margin'], 1),
+                    "base_sales": int(base_sales),
+                    "base_margin": round(base_margin, 1)
+                }
+            })
+
+    # --- E-commerce Section Analysis ---
+    ecommerce_df = df[df[cols['channel']] == '이커머스']
+    if not ecommerce_df.empty:
+        # 1. Overall E-commerce
+        generate_report("이커머스 - 전체", ecommerce_df)
+
+        # 2. Main Channels (주력) - Excluding Coupang
+        main_mask = ecommerce_df[cols['main_channel']] == '주력'
+        main_df = ecommerce_df[main_mask]
+        generate_report("이커머스 - 주력 채널 (쿠팡 제외)", main_df)
+
+        # 3. Specific Accounts
+        target_accounts = [
+            '쿠팡(로켓)', 
+            '스팜(제제지크)', 
+            '스팜(쏭레브)', 
+            '11st', 
+            '이베이', 
+            '카카오', 
+            'CJ', 
+            '베이비빌리(주식회사 빌리지베이비)'
+        ]
+        
+        for account in target_accounts:
+            # Flexible matching for accounts might be needed, but user said exact match.
+            # Let's try exact first.
+            acc_df = ecommerce_df[ecommerce_df[cols['customer']] == account]
+            if not acc_df.empty:
+                generate_report(f"이커머스 - {account}", acc_df)
+
+    # 4. Overseas (Before Offline)
+    overseas_df = df[df[cols['sub_channel']] == '해외']
+    if not overseas_df.empty:
+        generate_report("해외", overseas_df)
+
+    # --- Offline Section Analysis ---
+    offline_df = df[df[cols['channel']] == '오프라인']
+    if not offline_df.empty:
+        generate_report("오프라인", offline_df)
+
+    # 5. Offline Key Accounts (After Offline)
+    # E-Mart
+    emart_df = df[df[cols['customer']] == '이마트']
+    if not emart_df.empty:
+        generate_report("이마트", emart_df)
+    
+    # Lotte Mart
+    lotte_df = df[df[cols['customer']] == '롯데마트']
+    if not lotte_df.empty:
+        generate_report("롯데마트", lotte_df)
+
+    # Daiso
+    daiso_df = df[df[cols['customer']] == '다이소']
+    if not daiso_df.empty:
+        generate_report("다이소", daiso_df)
+
+    # Offline Agency
+    agency_df = df[df[cols['sub_channel']] == '오프라인 대리점']
+    if not agency_df.empty:
+        generate_report("오프라인 대리점", agency_df)
+
+    return alerts
+
+def get_ecommerce_details(filename):
+    df = get_dataframe(filename)
+    if df.empty: return {}
+
+    # Column Mapping (Local)
+    df.columns = [str(c).strip() for c in df.columns]
+    date_col = '일별'
+    sales_col = '판매액'
+    channel_col = '파트구분'
+    
+    # Fix for missing 'cols' definition
+    cols = {'customer': '거래처명'}
+    
+    # Date Parsing
+    if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
+        numeric_dates = pd.to_numeric(df[date_col], errors='coerce')
+        date_series = pd.to_datetime(numeric_dates, unit='D', origin='1899-12-30')
+        mask = date_series.isna() & df[date_col].notna()
+        if mask.any():
+             try: date_series.loc[mask] = pd.to_datetime(df.loc[mask, date_col], errors='coerce')
+             except: pass
+        df[date_col] = date_series
+    
+    df = df.dropna(subset=[date_col])
+    
+    # Function to get monthly and daily stats for a specific filter
+    def get_stats(filtered_df):
+        if filtered_df.empty: return {"monthly": [], "daily": []}
+        
+        # 1. Monthly
+        f_df = filtered_df.copy()
+        f_df['MonthPeriod'] = f_df[date_col].dt.to_period('M')
+        monthly_stats = []
+        for p in sorted(f_df['MonthPeriod'].unique()):
+            m_df = f_df[f_df['MonthPeriod'] == p]
+            sales = m_df[sales_col].sum()
+            profit = m_df['이익'].sum()
+            unique_days = m_df[date_col].nunique()
+            days_in_month = calendar.monthrange(p.year, p.month)[1]
+            divisor = days_in_month if unique_days == 1 else unique_days
+            daily_avg = int(sales / divisor) if divisor > 0 else 0
+            margin = round(profit / sales * 100, 1) if sales != 0 else 0
+            monthly_stats.append({"Month": str(p), "판매액": sales, "이익률": margin, "일평균매출": daily_avg})
+        
+        # 2. Daily (Last 6 Months)
+        max_d = f_df[date_col].max()
+        six_m = max_d - pd.DateOffset(months=6)
+        d_df = f_df[f_df[date_col] >= six_m].copy()
+        d_df['Date'] = d_df[date_col].dt.strftime('%Y-%m-%d')
+        daily_g = d_df.groupby('Date').agg({sales_col: 'sum', '이익': 'sum'}).reset_index()
+        
+        # Robust Margin calculation for Daily data
+        with np.errstate(divide='ignore', invalid='ignore'):
+            daily_g['이익률'] = (daily_g['이익'] / daily_g[sales_col] * 100)
+            daily_g['이익률'] = daily_g['이익률'].replace([np.inf, -np.inf], np.nan).fillna(0).round(1)
+        
+        return {"monthly": monthly_stats, "daily": daily_g.to_dict('records')}
+
+    # E-commerce (Existing)
+    ecommerce_df = df[df[channel_col] == '이커머스']
+    ecommerce_data = get_stats(ecommerce_df)
+
+    # Offline
+    offline_df = df[df[channel_col] == '오프라인']
+    offline_data = get_stats(offline_df)
+
+    # Brands
+    brand_col = '품목그룹1' # Brand column
+    myb_data = get_stats(df[df[brand_col] == '마이비'])
+    nubi_data = get_stats(df[df[brand_col] == '누비'])
+    sonreve_data = get_stats(df[df[brand_col] == '쏭레브'])
+    
+    # Specific Intersection: Ecommerce + MyB
+    ecommerce_myb_df = df[(df[channel_col] == '이커머스') & (df[brand_col] == '마이비')]
+    ecommerce_myb_data = get_stats(ecommerce_myb_df)
+
+    # Specific Intersection: Ecommerce + Nubi
+    ecommerce_nubi_df = df[(df[channel_col] == '이커머스') & (df[brand_col] == '누비')]
+    ecommerce_nubi_data = get_stats(ecommerce_nubi_df)
+
+    # Specific Intersection: Ecommerce + Sonreve
+    ecommerce_sonreve_df = df[(df[channel_col] == '이커머스') & (df[brand_col] == '쏭레브')]
+    ecommerce_sonreve_data = get_stats(ecommerce_sonreve_df)
+
+    # Specific Intersection: Offline + MyB
+    offline_myb_df = df[(df[channel_col] == '오프라인') & (df[brand_col] == '마이비')]
+    offline_myb_data = get_stats(offline_myb_df)
+
+    # Specific Intersection: Offline + Nubi
+    offline_nubi_df = df[(df[channel_col] == '오프라인') & (df[brand_col] == '누비')]
+    offline_nubi_data = get_stats(offline_nubi_df)
+
+    # Specific Intersection: Offline + Sonreve
+    offline_sonreve_df = df[(df[channel_col] == '오프라인') & (df[brand_col] == '쏭레브')]
+    offline_sonreve_data = get_stats(offline_sonreve_df)
+
+    # Specific Intersection: Main Channels (Excluding Coupang)
+    main_ex_coupang_df = df[(df[channel_col] == '이커머스') & (df['주력 채널'] == '주력')]
+    main_overall_data = get_stats(main_ex_coupang_df)
+    main_myb_data = get_stats(main_ex_coupang_df[main_ex_coupang_df[brand_col] == '마이비'])
+    main_nubi_data = get_stats(main_ex_coupang_df[main_ex_coupang_df[brand_col] == '누비'])
+    main_sonreve_data = get_stats(main_ex_coupang_df[main_ex_coupang_df[brand_col] == '쏭레브'])
+
+    # Specific Category: Stain Remover (얼룩제거제)
+    product_type_col = '품목 구분'
+    stain_remover_ecommerce_df = ecommerce_df[ecommerce_df[product_type_col] == '얼룩제거제']
+    stain_remover_offline_df = offline_df[offline_df[product_type_col] == '얼룩제거제']
+    stain_remover_main_df = main_ex_coupang_df[main_ex_coupang_df[product_type_col] == '얼룩제거제']
+
+    stain_ecommerce_data = get_stats(stain_remover_ecommerce_df)
+    stain_offline_data = get_stats(stain_remover_offline_df)
+    stain_main_data = get_stats(stain_remover_main_df)
+
+    # Bulk extraction for categories
+    categories_to_extract = {
+        'stain': '얼룩제거제',
+        "mild": "순한라인",
+        "boil": "삶기세제",
+        "dryer": "건조기시트",
+        "capsule": "캡슐세제",
+        "fluoride": "비건 고불소 치약",
+        "oral": "구강티슈",
+        "pad": "수유패드",
+        "bath": "욕조클리너",
+        # Nubi Categories
+        'nubi_longhandle': '롱핸들',
+        'nubi_stainless': '스텐 물병',
+        'nubi_jungle': '정글 물병',
+        'nubi_spoon': '3스텝 스푼',
+        'nubi_2in1': '2in1 컵',
+        'nubi_ladybug': '무당벌레 빨대컵',
+        'nubi_pacifier': '실리콘노리개',
+        # Sonreve Categories
+        'sonreve_toneup': '톤업 크림',
+        'sonreve_shampoo': '키즈 샴푸',
+        'sonreve_cleanser': '키즈 페이셜클렌저',
+        'sonreve_lotion': '키즈 페이셜로션'
+    }
+    
+    cat_results = {}
+    for key, cat_name in categories_to_extract.items():
+        cat_results[f"{key}_ecommerce"] = get_stats(ecommerce_df[ecommerce_df[product_type_col] == cat_name])
+        cat_results[f"{key}_offline"] = get_stats(offline_df[offline_df[product_type_col] == cat_name])
+        cat_results[f"{key}_main"] = get_stats(main_ex_coupang_df[main_ex_coupang_df[product_type_col] == cat_name])
+    
+    # Account-Specific Analysis
+    target_accounts = {
+        'coupang': '쿠팡(로켓)',
+        'naver_zeze': '스팜(제제지크)',
+        'naver_sonreve': '스팜(쏭레브)',
+        '11st': '11st',
+        'ebay': '이베이',
+        'kakao': '카카오',
+        'cj': 'CJ',
+        'babybilly': '베이비빌리(주식회사 빌리지베이비)'
+    }
+
+    account_results = {}
+    for key, account_name in target_accounts.items():
+        # Filter for specific account
+        acc_df = ecommerce_df[ecommerce_df[cols['customer']] == account_name]
+        
+        # Overall Account Data
+        account_results[key] = get_stats(acc_df)
+        
+        # Account + Brand Data
+        account_results[f"{key}_myb"] = get_stats(acc_df[acc_df[brand_col] == '마이비'])
+        account_results[f"{key}_nubi"] = get_stats(acc_df[acc_df[brand_col] == '누비'])
+        account_results[f"{key}_sonreve"] = get_stats(acc_df[acc_df[brand_col] == '쏭레브'])
+        
+        # Account + Category Data (Reuse defined categories)
+        for cat_key, cat_name in categories_to_extract.items():
+            account_results[f"{cat_key}_{key}"] = get_stats(acc_df[acc_df[product_type_col] == cat_name])
+
+    # New Segments: Channel-Based (Overseas, Agency)
+    new_channel_segments = {
+        'overseas': '해외',
+        'agency': '오프라인 대리점'
+    }
+    for key, channel_name in new_channel_segments.items():
+        c_df = df[df[channel_col] == channel_name]
+        account_results[key] = get_stats(c_df)
+        account_results[f"{key}_myb"] = get_stats(c_df[c_df[brand_col] == '마이비'])
+        account_results[f"{key}_nubi"] = get_stats(c_df[c_df[brand_col] == '누비'])
+        account_results[f"{key}_sonreve"] = get_stats(c_df[c_df[brand_col] == '쏭레브'])
+        for cat_key, cat_name in categories_to_extract.items():
+            account_results[f"{cat_key}_{key}"] = get_stats(c_df[c_df[product_type_col] == cat_name])
+
+    # New Segments: Customer-Based (E-Mart, Lotte, Daiso)
+    new_customer_segments = {
+        'emart': '이마트',
+        'lotte': '롯데마트',
+        'daiso': '다이소'
+    }
+    for key, customer_name in new_customer_segments.items():
+        c_df = df[df[cols['customer']] == customer_name]
+        account_results[key] = get_stats(c_df)
+        account_results[f"{key}_myb"] = get_stats(c_df[c_df[brand_col] == '마이비'])
+        account_results[f"{key}_nubi"] = get_stats(c_df[c_df[brand_col] == '누비'])
+        account_results[f"{key}_sonreve"] = get_stats(c_df[c_df[brand_col] == '쏭레브'])
+        for cat_key, cat_name in categories_to_extract.items():
+            account_results[f"{cat_key}_{key}"] = get_stats(c_df[c_df[product_type_col] == cat_name])
+
+    return {
+        "ecommerce": ecommerce_data,
+        "offline": offline_data,
+        "myb": myb_data,
+        "nubi": nubi_data,
+        "sonreve": sonreve_data,
+        "ecommerce_myb": ecommerce_myb_data,
+        "ecommerce_nubi": ecommerce_nubi_data,
+        "ecommerce_sonreve": ecommerce_sonreve_data,
+        "offline_myb": offline_myb_data,
+        "offline_nubi": offline_nubi_data,
+        "offline_sonreve": offline_sonreve_data,
+        "main_overall": main_overall_data,
+        "main_myb": main_myb_data,
+        "main_nubi": main_nubi_data,
+        "main_sonreve": main_sonreve_data,
+        "stain_ecommerce": stain_ecommerce_data,
+        "stain_offline": stain_offline_data,
+        "stain_main": stain_main_data,
+        **cat_results,
+        **account_results
+    }

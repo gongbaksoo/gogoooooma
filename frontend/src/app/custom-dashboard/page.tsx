@@ -14,6 +14,7 @@ import ChannelSalesChartNew from "@/components/ChannelSalesChartNew";
 import ProductGroupChartNew from "@/components/ProductGroupChartNew";
 import DetailedSalesChartNew from "@/components/DetailedSalesChartNew";
 import SalesSummary from "@/components/SalesSummary";
+import SalesAlerts from "@/components/SalesAlerts";
 import { ArrowLeft, Settings, BookOpen } from "lucide-react";
 
 export default function CustomDashboard() {
@@ -128,6 +129,11 @@ export default function CustomDashboard() {
                 {/* Sales Summary Text - NEW */}
                 <div className="mb-8">
                     <SalesSummary filename={selectedFile || filename} />
+                </div>
+
+                {/* Sales Alerts - NEW */}
+                <div className="mb-8">
+                    <SalesAlerts filename={selectedFile || filename} />
                 </div>
 
                 {/* Sales Chart - 채널별 */}

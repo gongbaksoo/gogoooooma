@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
@@ -176,7 +176,7 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
     );
 };
 
-export default function ComprehensiveDetailsPage() {
+function DetailsContent() {
     const searchParams = useSearchParams();
     const filename = searchParams.get('filename');
     const [data, setData] = useState<ComprehensiveData | null>(null);
@@ -451,5 +451,17 @@ export default function ComprehensiveDetailsPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function ComprehensiveDetailsPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+            </div>
+        }>
+            <DetailsContent />
+        </Suspense>
     );
 }

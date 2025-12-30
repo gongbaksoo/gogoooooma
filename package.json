@@ -1,0 +1,17 @@
+{
+    "name": "sales-analysis-site",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "dev": "npm run dev --prefix frontend",
+        "build": "cd frontend && npm install && npm run build",
+        "start": "npm run start --prefix frontend",
+        "lint": "npm run lint --prefix frontend"
+    },
+    "workspaces": [
+        "frontend"
+    ],
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}

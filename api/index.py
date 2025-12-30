@@ -10,14 +10,11 @@ load_dotenv()
 from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-# from analysis import analyze_sales_data
-# from chat import process_chat_query
 from database import (
     init_db, save_file_to_db, get_file_from_db, 
     list_files_in_db, delete_file_from_db, 
     cleanup_old_files_in_db, get_file_count
 )
-# from dashboard import clear_df_cache
 
 app = FastAPI(title="Sales Analysis API")
 router = APIRouter()
@@ -26,7 +23,6 @@ router = APIRouter()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
         "http://localhost:3000",
         "https://sales-analysis-site.vercel.app",
         "https://gogoooooma.vercel.app",
@@ -77,10 +73,6 @@ def ensure_file_on_disk(filename: str):
 @router.get("/")
 def read_root():
     return {"message": "매출 분석 API가 실행 중입니다."}
-
-# from analysis import analyze_sales_data
-# from chat import process_chat_query
-from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
     filename: str
@@ -352,20 +344,6 @@ def upload_file(file: UploadFile = File(...)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"파일 처리 실패: {str(e)}")
-        
-    from fastapi.encoders import jsonable_encoder
-    import json
-    try:
-        encoded_result = jsonable_encoder(result)
-        # Debug: Check if it serializes to string okay
-        json_str = json.dumps(encoded_result, default=str)
-        print(f"Serialized JSON size: {len(json_str)} chars")
-        return {"filename": file.filename, "data": result}
-    except Exception as e:
-        import traceback
-        with open("error.log", "a") as f:
-            f.write(f"\n=== Upload Error ===\n{traceback.format_exc()}\n")
-        raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================
 # Schema Alias Management Endpoints
@@ -437,9 +415,6 @@ def save_instructions(request: InstructionsRequest):
 
 @router.get("/api/dashboard/monthly-sales")
 def get_dashboard_monthly_sales(filename: str):
-    """
-    월별 채널별 매출 데이터 반환 (이커머스 vs 오프라인)
-    """
     try:
         ensure_file_on_disk(filename)
         from dashboard import get_monthly_sales_by_channel
@@ -452,9 +427,6 @@ def get_dashboard_monthly_sales(filename: str):
 
 @router.get("/api/dashboard/product-group-sales")
 def get_dashboard_product_group_sales(filename: str):
-    """
-    월별 품목그룹별 매출 데이터 반환
-    """
     try:
         ensure_file_on_disk(filename)
         from dashboard import get_monthly_sales_by_product_group
@@ -467,9 +439,6 @@ def get_dashboard_product_group_sales(filename: str):
 
 @router.get("/api/dashboard/options")
 def get_dashboard_options(filename: str):
-    """
-    품목그룹 > 품목 구분 > 품목 구분_2 계층 구조 옵션 반환
-    """
     try:
         ensure_file_on_disk(filename)
         from dashboard import get_hierarchical_options
@@ -490,9 +459,6 @@ def get_dashboard_hierarchical_sales(
     channel: str = None,
     account: str = None
 ):
-    """
-    조건(품목 그룹 + 채널 세그먼트)에 따른 월별 매출 데이터 반환
-    """
     try:
         ensure_file_on_disk(filename)
         from dashboard import get_filtered_monthly_sales
@@ -502,16 +468,9 @@ def get_dashboard_hierarchical_sales(
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
 
 @router.get("/api/dashboard/channel-options")
 def get_dashboard_channel_options(filename: str):
-    """
-    파트구분 > 채널구분 > 거래처명 계층 구조 옵션 반환
-    """
     try:
         ensure_file_on_disk(filename)
         from dashboard import get_channel_layer_options
@@ -532,9 +491,6 @@ def get_dashboard_channel_sales(
     category: str = None,
     sub_category: str = None
 ):
-    """
-    조건(채널 세그먼트 + 품목 그룹)에 따른 월별 매출 데이터 반환
-    """
     try:
         ensure_file_on_disk(filename)
         from dashboard import get_channel_layer_sales
@@ -547,7 +503,6 @@ def get_dashboard_channel_sales(
 
 @router.delete("/custom/aliases/{column}")
 def delete_column_aliases(column: str):
-    """특정 컬럼의 모든 별칭 삭제"""
     try:
         aliases = load_schema_aliases()
         if column in aliases:
@@ -563,26 +518,19 @@ def delete_column_aliases(column: str):
 
 @router.get("/logs/")
 def get_logs():
-    """
-    Returns the last 200 lines of error.log and chat_debug.log
-    """
     logs = {}
-    
     for log_file in ["error.log", "chat_debug.log"]:
         if os.path.exists(log_file):
             try:
                 with open(log_file, "r", encoding="utf-8") as f:
                     lines = f.readlines()
-                    # Get last 200 lines
                     logs[log_file] = "".join(lines[-200:])
             except Exception as e:
                 logs[log_file] = f"Error reading log: {str(e)}"
         else:
             logs[log_file] = "No log file found."
-            
     return logs
 
-# Chat History Models and Endpoints
 class ChatHistoryItem(BaseModel):
     id: str
     filename: str
@@ -598,8 +546,6 @@ def save_chat_history(history: ChatHistoryItem):
     import time
     
     filepath = os.path.join(CHAT_HISTORY_DIR, f"{history.id}.json")
-    
-    # Update timestamp
     history.updated_at = time.time()
     
     try:
@@ -613,7 +559,6 @@ def save_chat_history(history: ChatHistoryItem):
 def list_chat_history():
     """Get list of saved chats"""
     import json
-    
     chats = []
     try:
         for filename in os.listdir(CHAT_HISTORY_DIR):
@@ -633,11 +578,7 @@ def list_chat_history():
                 except Exception as e:
                     print(f"Error loading chat {filename}: {e}")
                     continue
-        
-        # Sort by updated time (newest first)
         chats.sort(key=lambda x: x["updated_at"], reverse=True)
-        
-        # Return 10 most recent
         return {"chats": chats[:10], "count": len(chats)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list chats: {str(e)}")
@@ -646,12 +587,9 @@ def list_chat_history():
 def get_chat_history(chat_id: str):
     """Get specific chat conversation"""
     import json
-    
     filepath = os.path.join(CHAT_HISTORY_DIR, f"{chat_id}.json")
-    
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Chat not found")
-    
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -662,10 +600,8 @@ def get_chat_history(chat_id: str):
 def delete_chat_history(chat_id: str):
     """Delete chat conversation"""
     filepath = os.path.join(CHAT_HISTORY_DIR, f"{chat_id}.json")
-    
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Chat not found")
-    
     try:
         os.remove(filepath)
         return {"message": "Chat deleted", "id": chat_id}
@@ -682,9 +618,6 @@ def get_dashboard_daily_hierarchical_sales(
     channel: str = None,
     account: str = None
 ):
-    """
-    일별 품목 계층별 매출 데이터 조회
-    """
     try:
         ensure_file_on_disk(filename)
         from dashboard import get_daily_hierarchical_sales
@@ -739,6 +672,6 @@ def get_dashboard_ecommerce_details(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"상세 데이터 처리 실패: {str(e)}")
 
-# Mount the router both at root and at /api to ensure Vercel routing works regardless of strip_prefix
+# Mount the router both at root and at /api to ensure Vercel routing works
 app.include_router(router)
 app.include_router(router, prefix="/api")

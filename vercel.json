@@ -1,0 +1,32 @@
+{
+    "rewrites": [
+        {
+            "source": "/api/:path*",
+            "destination": "/api/index.py"
+        },
+        {
+            "source": "/files/:path*",
+            "destination": "/api/index.py"
+        },
+        {
+            "source": "/upload/:path*",
+            "destination": "/api/index.py"
+        },
+        {
+            "source": "/chat/:path*",
+            "destination": "/api/index.py"
+        },
+        {
+            "source": "/custom/:path*",
+            "destination": "/api/index.py"
+        },
+        {
+            "source": "/admin/:path*",
+            "destination": "/api/index.py"
+        },
+        {
+            "source": "/logs/:path*",
+            "destination": "/api/index.py"
+        }
+    ]
+}

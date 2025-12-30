@@ -1,32 +1,42 @@
 {
-    "rewrites": [
+    "builds": [
         {
-            "source": "/api/:path*",
-            "destination": "/api/:path*"
+            "src": "backend/main.py",
+            "use": "@vercel/python"
         },
         {
-            "source": "/files/:path*",
-            "destination": "/api/files/:path*"
+            "src": "frontend/package.json",
+            "use": "@vercel/next"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/api/(.*)",
+            "dest": "backend/main.py"
         },
         {
-            "source": "/upload/:path*",
-            "destination": "/api/upload/:path*"
+            "src": "/files/(.*)",
+            "dest": "backend/main.py"
         },
         {
-            "source": "/chat/:path*",
-            "destination": "/api/chat/:path*"
+            "src": "/upload/(.*)",
+            "dest": "backend/main.py"
         },
         {
-            "source": "/custom/:path*",
-            "destination": "/api/custom/:path*"
+            "src": "/chat/(.*)",
+            "dest": "backend/main.py"
         },
         {
-            "source": "/admin/:path*",
-            "destination": "/api/admin/:path*"
+            "src": "/custom/(.*)",
+            "dest": "backend/main.py"
         },
         {
-            "source": "/logs/:path*",
-            "destination": "/api/logs/:path*"
+            "src": "/admin/(.*)",
+            "dest": "backend/main.py"
+        },
+        {
+            "src": "/logs/(.*)",
+            "dest": "backend/main.py"
         }
     ]
 }

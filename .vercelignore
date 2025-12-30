@@ -1,0 +1,18 @@
+# Backend files (deployed to Railway)
+api/
+requirements.txt
+runtime.txt
+Procfile
+railway.toml
+.railwayignore
+
+# Python
+*.py
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Local development
+start.sh
+start_backend.sh

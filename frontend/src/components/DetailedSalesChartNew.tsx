@@ -709,7 +709,7 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                 />
                             )}
                             <Tooltip
-                                formatter={(value: number, name: string, props: any) => {
+                                formatter={(value: any, name: any, props: any) => {
                                     if (name === '이익률') return [formatPercent(value), name];
                                     if (viewMode === 'sales' || viewMode === 'salesProfitRate') return [formatMillions(value) + '원', '매출액'];
                                     if (viewMode === 'daily' || viewMode === 'dailyProfitRate') {

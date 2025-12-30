@@ -10,14 +10,14 @@ load_dotenv()
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from analysis import analyze_sales_data
-from chat import process_chat_query
+# from analysis import analyze_sales_data
+# from chat import process_chat_query
 from database import (
     init_db, save_file_to_db, get_file_from_db, 
     list_files_in_db, delete_file_from_db, 
     cleanup_old_files_in_db, get_file_count
 )
-from dashboard import clear_df_cache
+# from dashboard import clear_df_cache
 
 app = FastAPI(title="Sales Analysis API")
 
@@ -77,8 +77,8 @@ def ensure_file_on_disk(filename: str):
 def read_root():
     return {"message": "매출 분석 API가 실행 중입니다."}
 
-from analysis import analyze_sales_data
-from chat import process_chat_query
+# from analysis import analyze_sales_data
+# from chat import process_chat_query
 from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
@@ -199,6 +199,7 @@ def chat_endpoint(request: ChatRequest):
             raise HTTPException(status_code=400, detail="API Key가 설정되지 않았습니다. 관리자에게 문의하세요.")
 
     try:
+        from chat import process_chat_query
         response = process_chat_query(file_path, request.query, final_api_key, request.history)
         return {"response": response}
     except Exception as e:
@@ -270,6 +271,7 @@ def delete_file(filename: str):
             os.remove(file_path)
             logging.info(f"Deleted local cache for {filename}")
             # Also clear memory cache
+            from dashboard import clear_df_cache
             clear_df_cache(filename)
         except Exception as e:
             logging.error(f"Failed to delete local cache for {filename}: {e}")
@@ -312,6 +314,7 @@ def upload_file(file: UploadFile = File(...)):
             cleanup_old_files()
         
         # Clear memory cache if it was already there
+        from dashboard import clear_df_cache
         clear_df_cache(file.filename)
         
         # Write to temp file for analysis

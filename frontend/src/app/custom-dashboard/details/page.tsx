@@ -295,7 +295,7 @@ function DetailsContent() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                                 <XAxis dataKey="Month" tickFormatter={formatXAxisTick} stroke="#94a3b8" style={{ fontSize: '10px', fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} />
                                 <YAxis stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatMillions} axisLine={false} tickLine={false} />
-                                <Tooltip formatter={(val: number) => [formatMillions(val), '매출액']} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }} />
+                                <Tooltip formatter={(val: any) => [formatMillions(val), '매출액']} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }} />
                                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
                                 <Line type="monotone" dataKey={`${isMain ? "주력채널" : typeLabel} 전체`} stroke="#8b5cf6" strokeWidth={3} dot={{ fill: "#8b5cf6", r: 4 }} activeDot={{ r: 6 }} />
                                 <Line type="monotone" dataKey="마이비" stroke="#3b82f6" strokeWidth={2} dot={{ fill: "#3b82f6", r: 3 }} />

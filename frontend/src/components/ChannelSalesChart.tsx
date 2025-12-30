@@ -303,7 +303,7 @@ const ChannelSalesChart: React.FC<ChannelSalesChartProps> = ({ filename }) => {
                                 label={{ value: yAxisLabel, angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#666' } }}
                             />
                             <Tooltip
-                                formatter={(value: number) => {
+                                formatter={(value: any) => {
                                     if (viewMode === 'sales') return [formatMillions(value), '매출액'];
                                     if (viewMode === 'daily') return [formatMillions(value), '일평균 매출'];
                                     return [value.toFixed(1) + '%', '증감율'];

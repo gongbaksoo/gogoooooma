@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 # from analysis import analyze_sales_data
@@ -20,6 +20,7 @@ from database import (
 # from dashboard import clear_df_cache
 
 app = FastAPI(title="Sales Analysis API")
+router = APIRouter()
 
 # Configure CORS
 app.add_middleware(
@@ -73,7 +74,7 @@ def ensure_file_on_disk(filename: str):
     
     return False
 
-@app.get("/")
+@router.get("/")
 def read_root():
     return {"message": "매출 분석 API가 실행 중입니다."}
 
@@ -163,7 +164,7 @@ def load_server_api_key():
 class AdminKeyRequest(BaseModel):
     api_key: str
 
-@app.post("/admin/api-key")
+@router.post("/admin/api-key")
 def set_admin_api_key(request: AdminKeyRequest):
     import json
     try:
@@ -173,12 +174,12 @@ def set_admin_api_key(request: AdminKeyRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/admin/api-key-status")
+@router.get("/admin/api-key-status")
 def get_admin_api_key_status():
     key = load_server_api_key()
     return {"is_set": bool(key)}
 
-@app.post("/chat/")
+@router.post("/chat/")
 def chat_endpoint(request: ChatRequest):
     print(f"Chat request for {request.filename}: {request.query}")
     
@@ -230,7 +231,7 @@ def cleanup_old_files(max_files: int = 5):
         except Exception as e:
             print(f"Failed to remove {oldest_file}: {e}")
 
-@app.get("/files/")
+@router.get("/files/")
 def list_files(t: str = None):
     """게시된 파일 목록 가져오기 (Database with disk fallback)"""
     # Try database first
@@ -259,7 +260,7 @@ def list_files(t: str = None):
     
     return {"files": files, "count": len(files), "max": max_files}
 
-@app.delete("/files/{filename}")
+@router.delete("/files/{filename}")
 def delete_file(filename: str):
     """특정 파일 삭제 (Database and Local Disk)"""
     success = delete_file_from_db(filename)
@@ -288,7 +289,7 @@ def delete_file(filename: str):
     
     return {"message": f"{filename} 삭제 완료"}
 
-@app.post("/upload/")
+@router.post("/upload/")
 def upload_file(file: UploadFile = File(...)):
     logging.info(f"Uploading file: {file.filename}")
     
@@ -370,7 +371,7 @@ def upload_file(file: UploadFile = File(...)):
 # Schema Alias Management Endpoints
 # ============================================
 
-@app.get("/custom/aliases/")
+@router.get("/custom/aliases/")
 def get_schema_aliases():
     """전체 스키마 별칭 목록 조회"""
     try:
@@ -379,7 +380,7 @@ def get_schema_aliases():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"별칭 조회 실패: {str(e)}")
 
-@app.post("/custom/aliases/")
+@router.post("/custom/aliases/")
 def save_alias(request: AliasRequest):
     """특정 컬럼의 별칭 저장"""
     try:
@@ -390,7 +391,7 @@ def save_alias(request: AliasRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"별칭 저장 실패: {str(e)}")
 
-@app.delete("/custom/aliases/{column}/{alias}")
+@router.delete("/custom/aliases/{column}/{alias}")
 def delete_alias(column: str, alias: str):
     """특정 컬럼의 특정 별칭 삭제"""
     try:
@@ -412,7 +413,7 @@ def delete_alias(column: str, alias: str):
 # AI Instructions Management Endpoints
 # ============================================
 
-@app.get("/custom/instructions/")
+@router.get("/custom/instructions/")
 def get_ai_instructions():
     """AI 지침 목록 조회"""
     try:
@@ -421,7 +422,7 @@ def get_ai_instructions():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"지침 조회 실패: {str(e)}")
 
-@app.post("/custom/instructions/")
+@router.post("/custom/instructions/")
 def save_instructions(request: InstructionsRequest):
     """AI 지침 저장"""
     try:
@@ -434,7 +435,7 @@ def save_instructions(request: InstructionsRequest):
 # Dashboard Endpoints
 # ============================================
 
-@app.get("/api/dashboard/monthly-sales")
+@router.get("/api/dashboard/monthly-sales")
 def get_dashboard_monthly_sales(filename: str):
     """
     월별 채널별 매출 데이터 반환 (이커머스 vs 오프라인)
@@ -449,7 +450,7 @@ def get_dashboard_monthly_sales(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
 
-@app.get("/api/dashboard/product-group-sales")
+@router.get("/api/dashboard/product-group-sales")
 def get_dashboard_product_group_sales(filename: str):
     """
     월별 품목그룹별 매출 데이터 반환
@@ -464,7 +465,7 @@ def get_dashboard_product_group_sales(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
 
-@app.get("/api/dashboard/options")
+@router.get("/api/dashboard/options")
 def get_dashboard_options(filename: str):
     """
     품목그룹 > 품목 구분 > 품목 구분_2 계층 구조 옵션 반환
@@ -479,7 +480,7 @@ def get_dashboard_options(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"옵션 데이터 처리 실패: {str(e)}")
 
-@app.get("/api/dashboard/hierarchical-sales")
+@router.get("/api/dashboard/hierarchical-sales")
 def get_dashboard_hierarchical_sales(
     filename: str, 
     group: str = None, 
@@ -506,7 +507,7 @@ def get_dashboard_hierarchical_sales(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
 
-@app.get("/api/dashboard/channel-options")
+@router.get("/api/dashboard/channel-options")
 def get_dashboard_channel_options(filename: str):
     """
     파트구분 > 채널구분 > 거래처명 계층 구조 옵션 반환
@@ -521,7 +522,7 @@ def get_dashboard_channel_options(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"옵션 데이터 처리 실패: {str(e)}")
 
-@app.get("/api/dashboard/channel-sales")
+@router.get("/api/dashboard/channel-sales")
 def get_dashboard_channel_sales(
     filename: str, 
     part: str = None, 
@@ -544,7 +545,7 @@ def get_dashboard_channel_sales(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
 
-@app.delete("/custom/aliases/{column}")
+@router.delete("/custom/aliases/{column}")
 def delete_column_aliases(column: str):
     """특정 컬럼의 모든 별칭 삭제"""
     try:
@@ -560,7 +561,7 @@ def delete_column_aliases(column: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"별칭 삭제 실패: {str(e)}")
 
-@app.get("/logs/")
+@router.get("/logs/")
 def get_logs():
     """
     Returns the last 200 lines of error.log and chat_debug.log
@@ -590,7 +591,7 @@ class ChatHistoryItem(BaseModel):
     created_at: float
     updated_at: float
 
-@app.post("/chat/save")
+@router.post("/chat/save")
 def save_chat_history(history: ChatHistoryItem):
     """Save chat conversation"""
     import json
@@ -608,7 +609,7 @@ def save_chat_history(history: ChatHistoryItem):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save chat: {str(e)}")
 
-@app.get("/chat/list")
+@router.get("/chat/list")
 def list_chat_history():
     """Get list of saved chats"""
     import json
@@ -641,7 +642,7 @@ def list_chat_history():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list chats: {str(e)}")
 
-@app.get("/chat/{chat_id}")
+@router.get("/chat/{chat_id}")
 def get_chat_history(chat_id: str):
     """Get specific chat conversation"""
     import json
@@ -657,7 +658,7 @@ def get_chat_history(chat_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load chat: {str(e)}")
 
-@app.delete("/chat/{chat_id}")
+@router.delete("/chat/{chat_id}")
 def delete_chat_history(chat_id: str):
     """Delete chat conversation"""
     filepath = os.path.join(CHAT_HISTORY_DIR, f"{chat_id}.json")
@@ -671,7 +672,7 @@ def delete_chat_history(chat_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete chat: {str(e)}")
 
-@app.get("/api/dashboard/daily-hierarchical-sales")
+@router.get("/api/dashboard/daily-hierarchical-sales")
 def get_dashboard_daily_hierarchical_sales(
     filename: str, 
     group: str = None, 
@@ -702,7 +703,7 @@ def get_dashboard_daily_hierarchical_sales(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"데이터 처리 실패: {str(e)}")
 
-@app.get("/api/dashboard/summary")
+@router.get("/api/dashboard/summary")
 def get_dashboard_summary(filename: str):
     try:
         ensure_file_on_disk(filename)
@@ -714,7 +715,7 @@ def get_dashboard_summary(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"요약 데이터 처리 실패: {str(e)}")
 
-@app.get("/api/dashboard/alerts")
+@router.get("/api/dashboard/alerts")
 def get_dashboard_alerts(filename: str):
     try:
         ensure_file_on_disk(filename)
@@ -726,7 +727,7 @@ def get_dashboard_alerts(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"알림 분석 실패: {str(e)}")
 
-@app.get("/api/dashboard/ecommerce-details")
+@router.get("/api/dashboard/ecommerce-details")
 def get_dashboard_ecommerce_details(filename: str):
     try:
         ensure_file_on_disk(filename)
@@ -737,3 +738,7 @@ def get_dashboard_ecommerce_details(filename: str):
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"상세 데이터 처리 실패: {str(e)}")
+
+# Mount the router both at root and at /api to ensure Vercel routing works regardless of strip_prefix
+app.include_router(router)
+app.include_router(router, prefix="/api")

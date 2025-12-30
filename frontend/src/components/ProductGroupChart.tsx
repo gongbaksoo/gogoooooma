@@ -218,8 +218,8 @@ const ProductGroupChart: React.FC<ProductGroupChartProps> = ({ filename }) => {
 
     const chartData = getChartData();
     const tooltipFormatter = viewMode === 'growth'
-        ? (value: number) => [value.toFixed(1) + '%', '']
-        : (value: number) => [formatCurrency(value) + (viewMode === 'daily' ? '' : '원'), ''];
+        ? (value: any) => [value.toFixed(1) + '%', '']
+        : (value: any) => [formatCurrency(value) + (viewMode === 'daily' ? '' : '원'), ''];
     const chartTitle = viewMode === 'sales'
         ? '📦 품목그룹별 월별 매출 추이'
         : viewMode === 'daily'

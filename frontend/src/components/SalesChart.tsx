@@ -170,7 +170,7 @@ const SalesChart: React.FC<SalesChartProps> = ({ filename }) => {
 
     const chartData = getChartData();
     const yAxisFormatter = viewMode === 'growth' ? formatPercent : formatMillions;
-    const tooltipFormatter = (value: number) => {
+    const tooltipFormatter = (value: any) => {
         if (viewMode === 'growth') {
             return [formatPercent(value), ''];
         } else {

@@ -258,7 +258,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
     }
 
     const chartData = getChartData();
-    const tooltipFormatter = (value: number, name: string, props: any) => {
+    const tooltipFormatter = (value: any, name: any, props: any) => {
         if (viewMode === 'growth' || viewMode === 'profitRate') {
             return [formatPercent(value), name];
         } else {

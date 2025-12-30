@@ -139,7 +139,7 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                         />
                         <YAxis yAxisId="left" stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatMillions} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="right" orientation="right" stroke="#ec4899" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatPercent} axisLine={false} tickLine={false} />
-                        <Tooltip formatter={(val: number, name: string) => name === '이익률' ? [formatPercent(val), name] : [formatMillions(val), name]} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }} />
+                        <Tooltip formatter={(val: any, name: string) => name === '이익률' ? [formatPercent(val), name] : [formatMillions(val), name]} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }} />
                         <Legend wrapperStyle={{ paddingTop: '20px' }} />
 
                         <Line

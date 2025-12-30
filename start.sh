@@ -6,9 +6,11 @@ lsof -ti:3000 | xargs kill -9 2>/dev/null
 
 # Start Backend
 echo "Starting Backend..."
-cd backend
-source .venv/bin/activate
-uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
+# Start Backend
+echo "Starting Backend..."
+cd api
+source venv/bin/activate 2>/dev/null || source .venv/bin/activate
+uvicorn index:app --reload --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 cd ..
 

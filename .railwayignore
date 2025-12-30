@@ -1,0 +1,20 @@
+# Frontend files (not needed for backend deployment)
+frontend/
+node_modules/
+.next/
+.vercel/
+
+# Development files
+.git/
+.vscode/
+.idea/
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+*.test.py
+*.test.js
+__pycache__/
+.pytest_cache/

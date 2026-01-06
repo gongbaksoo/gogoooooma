@@ -58,9 +58,10 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
         formData.append("file", file);
 
         try {
-            // Revert to using proxy 
+            // Revert to using proxy with extended timeout for large files
             const response = await api.post("/upload/", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
+                timeout: 120000, // 120 seconds for large CSV files
             });
             console.log("Analyze Response:", response.data);
             onUploadSuccess(response.data); // Pass full response to get filename

@@ -972,14 +972,16 @@ def get_ecommerce_details(filename):
     # Fix for missing 'cols' definition
     cols = {'customer': '거래처명'}
     
-    # Date Parsing
+    # Date Parsing - Expect YYYY-MM-DD format (e.g., "2025-01-01")
     if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
-        numeric_dates = pd.to_numeric(df[date_col], errors='coerce')
-        date_series = pd.to_datetime(numeric_dates, unit='D', origin='1899-12-30')
-        mask = date_series.isna() & df[date_col].notna()
-        if mask.any():
-             try: date_series.loc[mask] = pd.to_datetime(df.loc[mask, date_col], errors='coerce')
-             except: pass
+        # Try parsing as YYYY-MM-DD string format first
+        date_series = pd.to_datetime(df[date_col], format='%Y-%m-%d', errors='coerce')
+        
+        # If that fails, try Excel serial number as fallback
+        if date_series.isna().all():
+            numeric_dates = pd.to_numeric(df[date_col], errors='coerce')
+            date_series = pd.to_datetime(numeric_dates, unit='D', origin='1899-12-30', errors='coerce')
+        
         df[date_col] = date_series
     
     df = df.dropna(subset=[date_col])

@@ -315,14 +315,29 @@ def upload_file(file: UploadFile = File(...)):
         with open(temp_path, "wb") as f:
             f.write(file_data)
         
-        # Quick validation - just check if file can be read
+        # Quick validation - check if file can be read and date format is correct
         try:
             import pandas as pd
             df = pd.read_excel(temp_path) if temp_path.endswith('.xlsx') else pd.read_csv(temp_path)
+            
+            # Clean column names
+            df.columns = df.columns.str.replace('\t', '').str.strip()
+            
+            # Validate date format
+            from validation import validate_date_format
+            is_valid, error_msg = validate_date_format(df)
+            
+            if not is_valid:
+                os.remove(temp_path)
+                raise HTTPException(status_code=400, detail=error_msg)
+            
             row_count = len(df)
             col_count = len(df.columns)
+        except HTTPException:
+            raise
         except Exception as e:
-            os.remove(temp_path)
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
             raise HTTPException(status_code=400, detail=f"파일 형식 오류: {str(e)}")
         
         # Clean up temp file

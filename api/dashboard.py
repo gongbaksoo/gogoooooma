@@ -698,13 +698,17 @@ def get_monthly_summary(filename):
     prev_month = unique_months[-2] if len(unique_months) >= 2 else None
     
     # 데이터 전체에서의 마지막 날짜 (기준일)
-    max_date = df[date_col].max().strftime('%Y-%m-%d')
+    max_date = df[date_col].max()
+    max_date_str = max_date.strftime('%Y-%m-%d')
+    
+    # 당일(최근 날짜) 데이터 필터
+    latest_day_df = df[df[date_col] == max_date]
     
     results = {
         "meta": {
             "current_month": current_month,
             "prev_month": prev_month,
-            "max_date": max_date
+            "max_date": max_date_str
         },
         "data": {}
     }
@@ -723,11 +727,15 @@ def get_monthly_summary(filename):
         
         return {"total": total_sales, "daily_avg": daily_avg, "days_count": days_count}
 
-    # Column names verification: The code uses '판매액' at line 637.
-    # But earlier analysis or other functions might use '매출금액'.
-    # I should verify which column `get_daily_hierarchical_sales` used.
-    # Viewing result says: daily_sales = df.groupby(date_col)[['판매액', '이익']].sum()  <-- Line 637
-    # So I will use '판매액'.
+    def calculate_latest_day_sales(sub_df):
+        """
+        최근 날짜(max_date)의 매출 계산
+        해당 날짜에 데이터가 없으면 0 반환
+        """
+        latest_data = sub_df[sub_df[date_col] == max_date]
+        if latest_data.empty:
+            return 0
+        return int(latest_data['판매액'].sum())
     
     categories = {
         "전체": lambda d: d,
@@ -747,6 +755,9 @@ def get_monthly_summary(filename):
         else:
             prev_stats = {"total": 0, "daily_avg": 0}
         
+        # 당일매출 계산
+        latest_day_sales = calculate_latest_day_sales(subset)
+        
         # Growth Rate (Current Daily Avg vs Prev Daily Avg)
         if prev_stats['daily_avg'] > 0:
             growth_rate = ((curr_stats['daily_avg'] - prev_stats['daily_avg']) / prev_stats['daily_avg']) * 100
@@ -757,6 +768,7 @@ def get_monthly_summary(filename):
             "current_total": int(curr_stats['total']),
             "current_daily_avg": int(curr_stats['daily_avg']),
             "current_days": curr_stats['days_count'],
+            "latest_day_sales": latest_day_sales,  # 새로 추가
             "growth_rate": round(growth_rate, 1),
             "prev_total": int(prev_stats['total']),
             "prev_daily_avg": int(prev_stats['daily_avg'])

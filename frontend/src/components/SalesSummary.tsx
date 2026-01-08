@@ -13,6 +13,7 @@ interface SummaryData {
     current_total: number;
     current_daily_avg: number;
     current_days: number;
+    latest_day_sales: number;  // 당일매출
     growth_rate: number;
     prev_total: number;
     prev_daily_avg: number;
@@ -155,7 +156,7 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
                                         </span>
                                     </div>
                                     <div className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border ${isGrowth ? 'bg-red-50 text-red-600 border-red-100' :
-                                            isDecline ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-100 text-slate-500 border-slate-200'
+                                        isDecline ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-100 text-slate-500 border-slate-200'
                                         }`}>
                                         {isGrowth ? <TrendingUp className="w-3 h-3" /> : isDecline ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
                                         {formatRate(item.growth_rate)}
@@ -201,11 +202,12 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
                     <table className="w-full">
                         <thead>
                             <tr className="bg-slate-50/80 text-xs text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                                <th className="text-left py-4 pl-8 font-semibold w-[15%]">구분</th>
-                                <th className="text-right py-4 font-semibold w-[18%]">당월 누적 매출 <span className="text-[10px] normal-case text-slate-400">(백만원)</span></th>
-                                <th className="text-right py-4 font-semibold w-[22%]">당월 일평균 <span className="text-[10px] normal-case text-slate-400">(백만원)</span></th>
-                                <th className="text-center py-4 font-semibold w-[15%]">전월 대비 추이</th>
-                                <th className="text-right py-4 pr-8 font-semibold w-[30%]">전월 데이터 <span className="text-[10px] normal-case text-slate-400">(누적 / 일평균)</span></th>
+                                <th className="text-left py-4 pl-8 font-semibold w-[12%]">구분</th>
+                                <th className="text-right py-4 font-semibold w-[15%]">당월 누적 <span className="text-[10px] normal-case text-slate-400">(백만원)</span></th>
+                                <th className="text-right py-4 font-semibold w-[15%]">당일매출 <span className="text-[10px] normal-case text-slate-400">(백만원)</span></th>
+                                <th className="text-right py-4 font-semibold w-[18%]">당월 일평균 <span className="text-[10px] normal-case text-slate-400">(백만원)</span></th>
+                                <th className="text-center py-4 font-semibold w-[13%]">전월 대비</th>
+                                <th className="text-right py-4 pr-8 font-semibold w-[27%]">전월 데이터 <span className="text-[10px] normal-case text-slate-400">(누적 / 일평균)</span></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
@@ -233,6 +235,10 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
                                             {formatMillions(item.current_total)}
                                         </td>
 
+                                        <td className="py-5 text-right font-bold text-blue-600 text-lg tabular-nums tracking-tight">
+                                            {formatMillions(item.latest_day_sales)}
+                                        </td>
+
                                         <td className="py-5 text-right">
                                             <div className="flex flex-col items-end">
                                                 <div className="flex items-center gap-2">
@@ -253,7 +259,7 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
 
                                         <td className="py-5 text-center">
                                             <div className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full w-[110px] mx-auto transition-all shadow-sm ${isGrowth ? 'bg-green-50 text-green-700 border border-green-200' :
-                                                    isDecline ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-500 border border-slate-200'
+                                                isDecline ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-500 border border-slate-200'
                                                 }`}>
                                                 {isGrowth && <TrendingUp className="w-3.5 h-3.5" />}
                                                 {isDecline && <TrendingDown className="w-3.5 h-3.5" />}

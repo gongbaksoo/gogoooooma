@@ -701,9 +701,6 @@ def get_monthly_summary(filename):
     max_date = df[date_col].max()
     max_date_str = max_date.strftime('%Y-%m-%d')
     
-    # 당일(최근 날짜) 데이터 필터
-    latest_day_df = df[df[date_col] == max_date]
-    
     results = {
         "meta": {
             "current_month": current_month,
@@ -732,10 +729,21 @@ def get_monthly_summary(filename):
         최근 날짜(max_date)의 매출 계산
         해당 날짜에 데이터가 없으면 0 반환
         """
-        latest_data = sub_df[sub_df[date_col] == max_date]
+        if sub_df.empty:
+            return 0
+        
+        # 날짜를 date로 변환하여 비교 (시간 부분 제거)
+        latest_data = sub_df[sub_df[date_col].dt.date == max_date.date()]
+        
         if latest_data.empty:
             return 0
-        return int(latest_data['판매액'].sum())
+        
+        total = latest_data['판매액'].sum()
+        # NaN 체크
+        if pd.isna(total):
+            return 0
+        
+        return int(total)
     
     categories = {
         "전체": lambda d: d,

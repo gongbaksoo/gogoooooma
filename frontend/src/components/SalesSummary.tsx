@@ -79,6 +79,7 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
     const { meta, data } = summary;
 
     const formatMillions = (val: number) => {
+        if (val === null || val === undefined || isNaN(val)) return '0';
         return Math.round(val / 1000000).toLocaleString();
     };
 

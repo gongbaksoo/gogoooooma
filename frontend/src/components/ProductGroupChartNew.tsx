@@ -185,7 +185,9 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                 groups.forEach(group => {
                     const sales = (item[group] as number) || 0;
                     const profit = (item[`${group}_profit`] as number) || 0;
-                    const rate = sales === 0 ? 0 : (profit / sales) * 100;
+                    // Calculate profit rate and cap extreme values (-1000% to 1000%)
+                    let rate = sales === 0 ? 0 : (profit / sales) * 100;
+                    rate = Math.max(-1000, Math.min(1000, rate));
                     rateData[group] = rate;
                 });
                 return rateData;

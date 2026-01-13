@@ -687,6 +687,36 @@ def get_dashboard_ecommerce_details(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"상세 데이터 처리 실패: {str(e)}")
 
+@router.get("/api/debug/check-data")
+def debug_check_data(filename: str):
+    """Debug endpoint to check data columns"""
+    try:
+        ensure_file_on_disk(filename)
+        from dashboard import get_dataframe
+        df = get_dataframe(filename)
+        
+        result = {
+            "total_rows": len(df),
+            "columns": list(df.columns)[:20],
+        }
+        
+        # Check 채널구분 values
+        if '채널구분' in df.columns:
+            result["채널구분_values"] = list(df['채널구분'].unique())
+            result["해외_count"] = len(df[df['채널구분'] == '해외'])
+        
+        # Check 거래처명 values for 다이소
+        if '거래처명' in df.columns:
+            daiso_df = df[df['거래처명'].str.contains('다이소', na=False)]
+            result["다이소_count"] = len(daiso_df)
+            if len(daiso_df) > 0:
+                result["다이소_거래처명"] = list(daiso_df['거래처명'].unique())
+        
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
 # Mount the router both at root and at /api to ensure Vercel routing works
 app.include_router(router)
 app.include_router(router, prefix="/api")
+

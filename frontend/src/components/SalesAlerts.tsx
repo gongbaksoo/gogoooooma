@@ -59,11 +59,17 @@ const SalesAlerts: React.FC<SalesAlertsProps> = ({ filename }) => {
         let targetGroup = otherAlerts;
 
         // E-commerce Logic
-        if (ctx.startsWith('이커머스') || ctx === '해외') {
+        // Checks for '이커머스' prefix or '해외' (handling potential date suffix like '해외 (25.12)')
+        if (ctx.startsWith('이커머스') || ctx.startsWith('해외')) {
             targetGroup = ecommerceAlerts;
         }
         // Offline Logic
-        else if (ctx.startsWith('오프라인') || ['이마트', '롯데마트', '다이소'].includes(ctx) || ctx.includes('대리점')) {
+        // Checks for '오프라인' prefix, or specific offline marts/agencies (handling suffixes)
+        else if (ctx.startsWith('오프라인') ||
+            ctx.startsWith('이마트') ||
+            ctx.startsWith('롯데마트') ||
+            ctx.includes('다이소') ||
+            ctx.includes('대리점')) {
             targetGroup = offlineAlerts;
         }
 
@@ -123,10 +129,10 @@ const SalesAlerts: React.FC<SalesAlertsProps> = ({ filename }) => {
             {expanded && (
                 <div className="p-6 bg-slate-50/30">
                     {/* 1. E-commerce Group */}
-                    <AlertGroupSection title="이커머스" data={ecommerceAlerts} defaultOpen={true} />
+                    <AlertGroupSection title="이커머스" data={ecommerceAlerts} defaultOpen={false} />
 
                     {/* 2. Offline Group */}
-                    <AlertGroupSection title="오프라인" data={offlineAlerts} defaultOpen={true} />
+                    <AlertGroupSection title="오프라인" data={offlineAlerts} defaultOpen={false} />
 
                     {/* 3. Others (Rendered directly or as group) */}
                     {Object.keys(otherAlerts).length > 0 && (

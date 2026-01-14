@@ -860,13 +860,38 @@ def analyze_sales_performance(filename):
         # Determine display name
         name = display_name if display_name else context
 
-        curr = get_period_stats(sub_df, curr_month)
+        # Determine 'Current' Month for this specific subset
+        # If it has data for the global curr_month, use it.
+        # Otherwise, use its own latest month.
+        sub_months = sorted(sub_df['Month'].unique())
+        if not sub_months: return
+        
+        local_curr_month = sub_months[-1]
+        
+        # If global curr_month is available and this subset has it, great.
+        # If not, we fallback to local_curr_month.
+        target_month = curr_month # Default to global
+        
+        # Check if sub_df has data for global curr_month
+        if curr_month not in sub_months:
+            target_month = local_curr_month
+            # Append month to name to indicate stale data
+            # Format: '25.12'
+            formatted_month = target_month.strftime('%y.%m')
+            name = f"{name} ({formatted_month})"
+        
+        # Recalculate comparison periods based on target_month
+        l_prev = target_month - 1
+        l_3m = [target_month - i for i in range(3, 0, -1)]
+        l_yoy = target_month - 12
+
+        curr = get_period_stats(sub_df, target_month)
         if not curr: return
 
         comparisons = [
-            ('전월', prev_month),
-            ('3개월 평균', last_3_months),
-            ('전년 동월', yoy_month)
+            ('전월', l_prev),
+            ('3개월 평균', l_3m),
+            ('전년 동월', l_yoy)
         ]
 
         for label, period in comparisons:

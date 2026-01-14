@@ -712,8 +712,13 @@ def debug_check_data(filename: str):
             if len(daiso_df) > 0:
                 result["다이소_거래처명"] = list(daiso_df['거래처명'].unique())
         
+        # Call debug tracer
+        from dashboard import debug_analyze_sales
+        result["debug_log"] = debug_analyze_sales(filename)
+        
         return result
     except Exception as e:
+
         return {"error": str(e)}
 
 # Mount the router both at root and at /api to ensure Vercel routing works

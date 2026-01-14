@@ -979,6 +979,62 @@ def analyze_sales_performance(filename):
 
     return alerts
 
+def debug_analyze_sales(filename):
+    """Debug version of analyze_sales_performance to trace execution"""
+    logs = []
+    def log(msg): logs.append(msg)
+    
+    try:
+        df = get_dataframe(filename)
+        log(f"Loaded dataframe: {len(df)} rows")
+        
+        # Column Mapping
+        df.columns = [str(c).strip() for c in df.columns]
+        log(f"Columns: {list(df.columns)}")
+        
+        customer_col = next((c for c in df.columns if '거래쳐명' in c or '거래처명' in c), '거래쳐명')
+        log(f"Mapped customer_col: {customer_col}")
+        
+        cols = {
+            'date': '일별',
+            'channel': '파트구분',
+            'sub_channel': '채널구분',
+            'customer': customer_col,
+        }
+        
+        # 1. Overseas Check
+        if cols['sub_channel'] in df.columns:
+            overseas_df = df[df[cols['sub_channel']] == '해외']
+            log(f"Overseas check: Col '{cols['sub_channel']}' exists. Found {len(overseas_df)} rows for '해외'")
+            unique_vals = df[cols['sub_channel']].unique()
+            log(f"Unique values in {cols['sub_channel']}: {list(unique_vals)[:20]}")
+        else:
+            log(f"Overseas check fail: Col '{cols['sub_channel']}' missing")
+
+        # 2. Daiso Check
+        if cols['customer'] in df.columns:
+            daiso_df = df[df[cols['customer']] == '다이소']
+            log(f"Daiso check: Col '{cols['customer']}' exists. Found {len(daiso_df)} rows for '다이소'")
+            
+            # Check contains just in case
+            contains_daiso = df[df[cols['customer']].str.contains('다이소', na=False)]
+            log(f"Daiso contains check: Found {len(contains_daiso)} rows containing '다이소'")
+            
+            unique_cust = df[cols['customer']].unique()
+            # Log only if "다" is inside just to save space, or first 20
+            daiso_alike = [c for c in unique_cust if isinstance(c, str) and '다이소' in c]
+            log(f"Customers matching '다이소': {daiso_alike}")
+        else:
+            log(f"Daiso check fail: Col '{cols['customer']}' missing")
+            
+    except Exception as e:
+        log(f"Exception during debug: {str(e)}")
+        import traceback
+        log(traceback.format_exc())
+        
+    return logs
+
+
 def get_ecommerce_details(filename):
     df = get_dataframe(filename)
     if df.empty: return {}

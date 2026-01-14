@@ -1002,32 +1002,51 @@ def debug_analyze_sales(filename):
             'customer': customer_col,
         }
         
+        # Date Parsing & Month
+        if not pd.api.types.is_datetime64_any_dtype(df[cols['date']]):
+            numeric_dates = pd.to_numeric(df[cols['date']], errors='coerce')
+            date_series = pd.to_datetime(numeric_dates, unit='D', origin='1899-12-30')
+            mask = date_series.isna() & df[cols['date']].notna()
+            if mask.any():
+                try:
+                    date_series.loc[mask] = pd.to_datetime(df.loc[mask, cols['date']], errors='coerce')
+                except: pass
+            df[cols['date']] = date_series
+
+        df = df.dropna(subset=[cols['date']])
+        df['Month'] = df[cols['date']].dt.to_period('M')
+        
+        unique_months = sorted(df['Month'].unique())
+        log(f"Global Unique Months: {[str(m) for m in unique_months]}")
+        curr_month = unique_months[-1] if unique_months else None
+        log(f"Global Current Month: {curr_month}")
+
         # 1. Overseas Check
         if cols['sub_channel'] in df.columns:
             overseas_df = df[df[cols['sub_channel']] == '해외']
-            log(f"Overseas check: Col '{cols['sub_channel']}' exists. Found {len(overseas_df)} rows for '해외'")
-            unique_vals = df[cols['sub_channel']].unique()
-            log(f"Unique values in {cols['sub_channel']}: {list(unique_vals)[:20]}")
+            log(f"Overseas check: Found {len(overseas_df)} rows")
+            if not overseas_df.empty:
+                ov_months = sorted(overseas_df['Month'].unique())
+                log(f"Overseas Months: {[str(m) for m in ov_months]}")
+                if curr_month not in ov_months:
+                    log(f"WARNING: Overseas data has no entries for current month {curr_month}")
         else:
             log(f"Overseas check fail: Col '{cols['sub_channel']}' missing")
 
         # 2. Daiso Check
         if cols['customer'] in df.columns:
             daiso_df = df[df[cols['customer']] == '다이소']
-            log(f"Daiso check: Col '{cols['customer']}' exists. Found {len(daiso_df)} rows for '다이소'")
-            
-            # Check contains just in case
-            contains_daiso = df[df[cols['customer']].str.contains('다이소', na=False)]
-            log(f"Daiso contains check: Found {len(contains_daiso)} rows containing '다이소'")
-            
-            unique_cust = df[cols['customer']].unique()
-            # Log only if "다" is inside just to save space, or first 20
-            daiso_alike = [c for c in unique_cust if isinstance(c, str) and '다이소' in c]
-            log(f"Customers matching '다이소': {daiso_alike}")
+            log(f"Daiso check: Found {len(daiso_df)} rows")
+            if not daiso_df.empty:
+                da_months = sorted(daiso_df['Month'].unique())
+                log(f"Daiso Months: {[str(m) for m in da_months]}")
+                if curr_month not in da_months:
+                    log(f"WARNING: Daiso data has no entries for current month {curr_month}")
         else:
             log(f"Daiso check fail: Col '{cols['customer']}' missing")
             
     except Exception as e:
+
         log(f"Exception during debug: {str(e)}")
         import traceback
         log(traceback.format_exc())

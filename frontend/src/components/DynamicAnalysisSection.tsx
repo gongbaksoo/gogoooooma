@@ -19,6 +19,7 @@ interface DynamicAnalysisSectionProps {
         offline: CategoryData;
     };
     defaultMode?: 'total' | 'avg' | 'daily';
+    defaultChannel?: 'total' | 'ecommerce' | 'offline';
     startMonth?: string;
     endMonth?: string;
 }
@@ -71,11 +72,12 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
     data,
     dataOptions,
     defaultMode = 'total',
+    defaultChannel = 'total',
     startMonth,
     endMonth
 }) => {
     const [mode, setMode] = useState<'total' | 'avg' | 'daily'>(defaultMode);
-    const [channel, setChannel] = useState<'total' | 'ecommerce' | 'offline'>('total');
+    const [channel, setChannel] = useState<'total' | 'ecommerce' | 'offline'>(defaultChannel);
 
     // Determine which dataset to use
     let activeData: CategoryData;

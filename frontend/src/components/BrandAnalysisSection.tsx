@@ -36,6 +36,9 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
     const [endMonth, setEndMonth] = useState<string>('');
     const [availableMonths, setAvailableMonths] = useState<string[]>([]);
 
+    // Global Channel State
+    const [globalChannel, setGlobalChannel] = useState<'total' | 'ecommerce' | 'offline'>('total');
+
     useEffect(() => {
         if (!filename) return;
 
@@ -93,6 +96,8 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                 }}
                 startMonth={startMonth}
                 endMonth={endMonth}
+                defaultChannel={globalChannel}
+                key={`${keyPrefix}-${globalChannel}`}
             />
         );
     };
@@ -110,6 +115,8 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                 }}
                 startMonth={startMonth}
                 endMonth={endMonth}
+                defaultChannel={globalChannel}
+                key={`${catKey}-${globalChannel}`}
             />
         );
     };
@@ -118,32 +125,50 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
         <div className="space-y-8 mt-12 mb-12">
 
             {/* Global Date Range Selector */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-slate-700">📅 조회 기간 설정</span>
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <span className="text-lg font-bold text-slate-700">⚙️ 통합 조회 설정</span>
                     <span className="text-sm text-slate-400 font-medium">(전체 브랜드 적용)</span>
                 </div>
 
-                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                    <select
-                        value={startMonth}
-                        onChange={(e) => setStartMonth(e.target.value)}
-                        className="bg-transparent text-sm font-bold text-slate-600 focus:outline-none p-1.5"
-                    >
-                        {availableMonths.map(m => (
-                            <option key={`start-${m}`} value={m}>{m}</option>
-                        ))}
-                    </select>
-                    <span className="text-slate-400 font-bold">~</span>
-                    <select
-                        value={endMonth}
-                        onChange={(e) => setEndMonth(e.target.value)}
-                        className="bg-transparent text-sm font-bold text-slate-600 focus:outline-none p-1.5"
-                    >
-                        {availableMonths.map(m => (
-                            <option key={`end-${m}`} value={m}>{m}</option>
-                        ))}
-                    </select>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto">
+                    {/* Global Channel Selector */}
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <span className="text-xs font-bold text-slate-500 whitespace-nowrap">기본 채널:</span>
+                        <select
+                            value={globalChannel}
+                            onChange={(e) => setGlobalChannel(e.target.value as any)}
+                            className="w-full sm:w-auto px-3 py-2 rounded-xl text-sm font-bold border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="total">전체 (통합)</option>
+                            <option value="ecommerce">이커머스</option>
+                            <option value="offline">오프라인</option>
+                        </select>
+                    </div>
+
+                    {/* Date Range Selector */}
+                    <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 w-full sm:w-auto">
+                        <span className="text-xs font-bold text-slate-500 ml-1">기간:</span>
+                        <select
+                            value={startMonth}
+                            onChange={(e) => setStartMonth(e.target.value)}
+                            className="bg-transparent text-sm font-bold text-slate-600 focus:outline-none p-1.5 grow sm:grow-0"
+                        >
+                            {availableMonths.map(m => (
+                                <option key={`start-${m}`} value={m}>{m}</option>
+                            ))}
+                        </select>
+                        <span className="text-slate-400 font-bold">~</span>
+                        <select
+                            value={endMonth}
+                            onChange={(e) => setEndMonth(e.target.value)}
+                            className="bg-transparent text-sm font-bold text-slate-600 focus:outline-none p-1.5 grow sm:grow-0"
+                        >
+                            {availableMonths.map(m => (
+                                <option key={`end-${m}`} value={m}>{m}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -177,6 +202,8 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                             }}
                             startMonth={startMonth}
                             endMonth={endMonth}
+                            defaultChannel={globalChannel}
+                            key={`myb_overall-${globalChannel}`}
                         />
 
                         {renderCategory("얼룩제거제", "✨", "stain")}
@@ -222,6 +249,8 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                             }}
                             startMonth={startMonth}
                             endMonth={endMonth}
+                            defaultChannel={globalChannel}
+                            key={`nubi_overall-${globalChannel}`}
                         />
                         {renderCategory("롱핸들", "🥄", "nubi_longhandle")}
                         {renderCategory("스텐 물병", "💧", "nubi_stainless")}
@@ -264,6 +293,8 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                             }}
                             startMonth={startMonth}
                             endMonth={endMonth}
+                            defaultChannel={globalChannel}
+                            key={`sonreve_overall-${globalChannel}`}
                         />
                         {renderCategory("톤업 크림", "✨", "sonreve_toneup")}
                         {renderCategory("키즈 샴푸", "🧴", "sonreve_shampoo")}

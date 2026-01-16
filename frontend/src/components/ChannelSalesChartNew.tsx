@@ -49,9 +49,12 @@ const CustomLabel = (props: any) => {
 const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) => {
     const [data, setData] = useState<ChartData[]>([]);
     const [daysList, setDaysList] = useState<number[]>([]);
-    const [viewMode, setViewMode] = useState<ViewMode | 'daily'>('sales');
+    const [viewMode, setViewMode] = useState<ViewMode>('sales');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Time unit state
+    const [timeUnit, setTimeUnit] = useState<'month' | 'day'>('month');
 
     // Date Range Filter State
     const [startMonth, setStartMonth] = useState<string>('');
@@ -114,7 +117,11 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
         setError(null);
 
         try {
-            const response = await axios.get(`${API_BASE_URL}/api/dashboard/channel-sales`, {
+            const endpoint = timeUnit === 'month'
+                ? `${API_BASE_URL}/api/dashboard/channel-sales`
+                : `${API_BASE_URL}/api/dashboard/daily-hierarchical-sales`;
+
+            const response = await axios.get(endpoint, {
                 params: {
                     filename,
                     part: selectedPart || 'all',
@@ -126,12 +133,24 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                 }
             });
 
-            const months = response.data.months;
-            const sales = response.data.sales;
-            const profit = response.data.profit || [];
-            const days = response.data.days_list || [];
-            setDaysList(days);
+            let months: string[] = [];
+            let sales: number[] = [];
+            let profit: number[] = [];
+            let days: number[] = [];
 
+            if (timeUnit === 'month') {
+                months = response.data.months;
+                sales = response.data.sales;
+                profit = response.data.profit || [];
+                days = response.data.days_list || [];
+            } else {
+                months = response.data.dates;
+                sales = response.data.sales;
+                profit = response.data.profit || [];
+                days = new Array(sales.length).fill(1);
+            }
+
+            setDaysList(days);
             setCurrentLabel(response.data.label);
 
             // Transform data for chart
@@ -139,18 +158,24 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                 const value = sales[index] || 0;
                 const profitValue = profit[index] || 0;
                 return {
-                    month: formatMonth(month),
+                    month: timeUnit === 'month' ? formatMonth(month) : month,
                     value,
                     profit: profitValue,
                     rawMonth: month,
-                    days: days[index] || 30
+                    days: days[index] || (timeUnit === 'month' ? 30 : 1)
                 };
             });
 
             // Initialize Date Range
-            if (months.length > 0 && !startMonth) {
+            if (months.length > 0 && !startMonth && timeUnit === 'month') {
                 setStartMonth(months[0]);
                 setEndMonth(months[months.length - 1]);
+            } else if (timeUnit === 'day' && !startMonth) {
+                const uniqueMonths = Array.from(new Set(months.map(d => d.substring(0, 7).replace('-', ''))));
+                if (uniqueMonths.length > 0) {
+                    setStartMonth(uniqueMonths[0]);
+                    setEndMonth(uniqueMonths[uniqueMonths.length - 1]);
+                }
             }
 
             // Calculate growth rates
@@ -177,6 +202,13 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
         }
     }, [filename, selectedPart]);
 
+    // Refetch when timeUnit changes
+    useEffect(() => {
+        if (filename && selectedPart) {
+            fetchData();
+        }
+    }, [timeUnit]);
+
     // Reset child filters when parent changes
     const handlePartChange = (part: string) => {
         setSelectedPart(part);
@@ -201,6 +233,13 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
     };
 
     const formatMonth = (month: string): string => {
+        if (timeUnit === 'day') {
+            if (month.length >= 10) {
+                return month.substring(5).replace('-', '.');
+            }
+            return month;
+        }
+
         if (month.length === 4) {
             const year = month.substring(0, 2);
             const monthNum = parseInt(month.substring(2, 4));
@@ -220,6 +259,17 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
     };
 
     const formatXAxisTick = (value: string, index: number) => {
+        if (timeUnit === 'day') {
+            if (!value) return value;
+            const dateParts = value.split('-');
+            if (dateParts.length === 3) {
+                const month = dateParts[1];
+                const day = dateParts[2];
+                return `${month}.${day}`;
+            }
+            return value;
+        }
+
         if (!value || value.length !== 4) return value;
         const year = value.substring(0, 2);
         const month = parseInt(value.substring(2, 4));
@@ -254,8 +304,15 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
         // Filter by Date Range
         const filteredData = data.filter(item => {
             if (!item.rawMonth) return true;
-            if (startMonth && item.rawMonth < startMonth) return false;
-            if (endMonth && item.rawMonth > endMonth) return false;
+
+            let itemMonth = item.rawMonth;
+            if (timeUnit === 'day') {
+                // Extract "YYYYMM" from "YYYY-MM-DD"
+                itemMonth = item.rawMonth.substring(0, 7).replace('-', '');
+            }
+
+            if (startMonth && itemMonth < startMonth) return false;
+            if (endMonth && itemMonth > endMonth) return false;
             return true;
         });
 
@@ -319,16 +376,16 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
     const isCombination = viewMode === 'salesProfitRate' || viewMode === 'dailyProfitRate';
 
     const chartTitle = viewMode === 'sales'
-        ? `🏢 ${currentLabel} 월별 매출 추이`
+        ? `🏢 ${currentLabel} ${timeUnit === 'month' ? '월별' : '일별'} 매출 추이`
         : viewMode === 'daily'
-            ? `🏢 ${currentLabel} 월별 일평균 매출`
+            ? `🏢 ${currentLabel} ${timeUnit === 'month' ? '월별 일평균' : '일별'} 매출`
             : viewMode === 'profitRate'
-                ? `🏢 ${currentLabel} 월별 평균 이익률`
+                ? `🏢 ${currentLabel} ${timeUnit === 'month' ? '월별' : '일별'} 평균 이익률`
                 : viewMode === 'salesProfitRate'
                     ? `💰 ${currentLabel} 매출액 + 이익률 분석`
                     : viewMode === 'dailyProfitRate'
                         ? `⏱️ ${currentLabel} 일평균 + 이익률 분석`
-                        : `📈 ${currentLabel} 월별 증감율 (전월 대비)`;
+                        : `📈 ${currentLabel} ${timeUnit === 'month' ? '월별' : '일별'} 증감율 (전기 대비)`;
 
     const yAxisLabel = isCombination
         ? (viewMode === 'salesProfitRate' ? '매출액' : '일평균 매출')
@@ -349,7 +406,29 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                     </h3>
                     <p className="text-slate-400 text-sm mt-1 font-medium italic">{currentLabel}</p>
                 </div>
-                <div className="flex flex-wrap gap-2 w-full xl:w-auto">
+                <div className="flex flex-wrap gap-2 w-full xl:w-auto items-center">
+                    {/* Time Unit Toggle */}
+                    <div className="flex bg-slate-100 p-1 rounded-xl mr-2">
+                        <button
+                            onClick={() => setTimeUnit('month')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timeUnit === 'month'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            월간
+                        </button>
+                        <button
+                            onClick={() => setTimeUnit('day')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timeUnit === 'day'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            일간
+                        </button>
+                    </div>
+
                     {/* Date Range Selectors */}
                     {data.length > 0 && (
                         <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200 w-full sm:w-auto justify-between">
@@ -358,9 +437,20 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                 onChange={(e) => setStartMonth(e.target.value)}
                                 className="bg-transparent text-xs font-bold text-slate-600 focus:outline-none p-1.5"
                             >
-                                {data.map(d => (
-                                    <option key={`start-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
-                                ))}
+                                {timeUnit === 'month'
+                                    ? data.map(d => (
+                                        <option key={`start-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
+                                    ))
+                                    : Array.from(new Set(data.map(d => {
+                                        const m = d.rawMonth?.substring(0, 7).replace('-', '');
+                                        return m;
+                                    }))).sort().map(m => {
+                                        if (!m) return null;
+                                        const year = m.substring(0, 4);
+                                        const month = parseInt(m.substring(4, 6));
+                                        return <option key={`start-${m}`} value={m}>{`${year}년 ${month}월`}</option>
+                                    })
+                                }
                             </select>
                             <span className="text-slate-300">~</span>
                             <select
@@ -368,9 +458,20 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                 onChange={(e) => setEndMonth(e.target.value)}
                                 className="bg-transparent text-xs font-bold text-slate-600 focus:outline-none p-1.5"
                             >
-                                {data.map(d => (
-                                    <option key={`end-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
-                                ))}
+                                {timeUnit === 'month'
+                                    ? data.map(d => (
+                                        <option key={`end-${d.rawMonth}`} value={d.rawMonth}>{d.month}</option>
+                                    ))
+                                    : Array.from(new Set(data.map(d => {
+                                        const m = d.rawMonth?.substring(0, 7).replace('-', '');
+                                        return m;
+                                    }))).sort().map(m => {
+                                        if (!m) return null;
+                                        const year = m.substring(0, 4);
+                                        const month = parseInt(m.substring(4, 6));
+                                        return <option key={`end-${m}`} value={m}>{`${year}년 ${month}월`}</option>
+                                    })
+                                }
                             </select>
                         </div>
                     )}
@@ -603,19 +704,21 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                 name={viewMode === 'growth' ? "증감율" : (viewMode === 'daily' || viewMode === 'dailyProfitRate' ? "일평균 매출" : "매출액")}
                                 stroke="#10b981"
                                 strokeWidth={3}
-                                dot={{ fill: "#10b981", r: 4 }}
+                                dot={timeUnit === 'day' ? false : { fill: "#10b981", r: 4 }}
                                 activeDot={{ r: 6 }}
                                 isAnimationActive={false}
                             >
-                                <LabelList
-                                    dataKey={viewMode === 'growth' ? "growth" : "value"}
-                                    content={
-                                        <CustomLabel
-                                            fill="#10b981"
-                                            formatter={labelFormatter}
-                                        />
-                                    }
-                                />
+                                {timeUnit === 'month' && (
+                                    <LabelList
+                                        dataKey={viewMode === 'growth' ? "growth" : "value"}
+                                        content={
+                                            <CustomLabel
+                                                fill="#10b981"
+                                                formatter={labelFormatter}
+                                            />
+                                        }
+                                    />
+                                )}
                             </Line>
                             {isCombination && (
                                 <Line
@@ -625,19 +728,21 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                     name="이익률"
                                     stroke="#ec4899"
                                     strokeWidth={3}
-                                    dot={{ fill: "#ec4899", r: 4 }}
+                                    dot={timeUnit === 'day' ? false : { fill: "#ec4899", r: 4 }}
                                     activeDot={{ r: 6 }}
                                     isAnimationActive={false}
                                 >
-                                    <LabelList
-                                        dataKey="profitRate"
-                                        content={
-                                            <CustomLabel
-                                                fill="#ec4899"
-                                                formatter={formatPercent}
-                                            />
-                                        }
-                                    />
+                                    {timeUnit === 'month' && (
+                                        <LabelList
+                                            dataKey="profitRate"
+                                            content={
+                                                <CustomLabel
+                                                    fill="#ec4899"
+                                                    formatter={formatPercent}
+                                                />
+                                            }
+                                        />
+                                    )}
                                 </Line>
                             )}
                         </ComposedChart>

@@ -1147,6 +1147,10 @@ def get_ecommerce_details(filename):
     offline_df = df[df[channel_col] == '오프라인']
     offline_data = get_stats(offline_df)
 
+    # Total (Ecommerce + Offline)
+    total_df = df[df[channel_col].isin(['이커머스', '오프라인'])]
+    total_data = get_stats(total_df)
+
     # Brands
     brand_col = '품목그룹1' # Brand column
     myb_data = get_stats(df[df[brand_col] == '마이비'])
@@ -1176,6 +1180,11 @@ def get_ecommerce_details(filename):
     # Specific Intersection: Offline + Sonreve
     offline_sonreve_df = df[(df[channel_col] == '오프라인') & (df[brand_col] == '쏭레브')]
     offline_sonreve_data = get_stats(offline_sonreve_df)
+
+    # Specific Intersection: Total + Brands
+    total_myb_data = get_stats(total_df[total_df[brand_col] == '마이비'])
+    total_nubi_data = get_stats(total_df[total_df[brand_col] == '누비'])
+    total_sonreve_data = get_stats(total_df[total_df[brand_col] == '쏭레브'])
 
     # Specific Intersection: Main Channels (Excluding Coupang)
     main_ex_coupang_df = df[(df[channel_col] == '이커머스') & (df['주력 채널'] == '주력')]
@@ -1225,6 +1234,7 @@ def get_ecommerce_details(filename):
         cat_results[f"{key}_ecommerce"] = get_stats(ecommerce_df[ecommerce_df[product_type_col] == cat_name])
         cat_results[f"{key}_offline"] = get_stats(offline_df[offline_df[product_type_col] == cat_name])
         cat_results[f"{key}_main"] = get_stats(main_ex_coupang_df[main_ex_coupang_df[product_type_col] == cat_name])
+        cat_results[f"{key}_total"] = get_stats(total_df[total_df[product_type_col] == cat_name])
     
     # Account-Specific Analysis
     target_accounts = {
@@ -1296,6 +1306,10 @@ def get_ecommerce_details(filename):
         "offline_myb": offline_myb_data,
         "offline_nubi": offline_nubi_data,
         "offline_sonreve": offline_sonreve_data,
+        "total": total_data,
+        "total_myb": total_myb_data,
+        "total_nubi": total_nubi_data,
+        "total_sonreve": total_sonreve_data,
         "main_overall": main_overall_data,
         "main_myb": main_myb_data,
         "main_nubi": main_nubi_data,

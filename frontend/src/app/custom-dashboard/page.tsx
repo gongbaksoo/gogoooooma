@@ -13,6 +13,7 @@ import SalesChartNew from "@/components/SalesChartNew";
 import ChannelSalesChartNew from "@/components/ChannelSalesChartNew";
 import ProductGroupChartNew from "@/components/ProductGroupChartNew";
 import DetailedSalesChartNew from "@/components/DetailedSalesChartNew";
+import BrandAnalysisSection from "@/components/BrandAnalysisSection";
 import SalesSummary from "@/components/SalesSummary";
 import SalesAlerts from "@/components/SalesAlerts";
 import { ArrowLeft, Settings, BookOpen } from "lucide-react";
@@ -155,6 +156,9 @@ export default function CustomDashboard() {
                 <div className="mb-8">
                     <DetailedSalesChartNew filename={selectedFile || filename} />
                 </div>
+
+                {/* Brand Analysis Section - NEW */}
+                <BrandAnalysisSection filename={selectedFile || filename} />
 
                 {/* Chat Interface */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">

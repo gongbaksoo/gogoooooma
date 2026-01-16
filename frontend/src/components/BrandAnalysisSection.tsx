@@ -39,6 +39,19 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
     // Global Channel State
     const [globalChannel, setGlobalChannel] = useState<'total' | 'ecommerce' | 'offline'>('total');
 
+    // Handlers
+    const handleExpandAll = () => {
+        setIsMybExpanded(true);
+        setIsNubiExpanded(true);
+        setIsSonreveExpanded(true);
+    };
+
+    const handleCollapseAll = () => {
+        setIsMybExpanded(false);
+        setIsNubiExpanded(false);
+        setIsSonreveExpanded(false);
+    };
+
     useEffect(() => {
         if (!filename) return;
 
@@ -126,9 +139,26 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
 
             {/* Global Date Range Selector */}
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                    <span className="text-lg font-bold text-slate-700">⚙️ 통합 조회 설정</span>
-                    <span className="text-sm text-slate-400 font-medium">(전체 브랜드 적용)</span>
+                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold text-slate-700">⚙️ 통합 조회 설정</span>
+                        <span className="text-sm text-slate-400 font-medium">(전체 브랜드 적용)</span>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleExpandAll}
+                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg transition-colors border border-blue-100"
+                        >
+                            모두 펼치기
+                        </button>
+                        <button
+                            onClick={handleCollapseAll}
+                            className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 text-xs font-bold rounded-lg transition-colors border border-slate-200"
+                        >
+                            모두 접기
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto">

@@ -19,6 +19,8 @@ interface DynamicAnalysisSectionProps {
         offline: CategoryData;
     };
     defaultMode?: 'total' | 'avg' | 'daily';
+    startMonth?: string;
+    endMonth?: string;
 }
 
 const CustomLabel = (props: any) => {
@@ -68,7 +70,9 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
     emoji,
     data,
     dataOptions,
-    defaultMode = 'total'
+    defaultMode = 'total',
+    startMonth,
+    endMonth
 }) => {
     const [mode, setMode] = useState<'total' | 'avg' | 'daily'>(defaultMode);
     const [channel, setChannel] = useState<'total' | 'ecommerce' | 'offline'>('total');
@@ -85,8 +89,37 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
     const safeData = activeData || { monthly: [], daily: [] };
 
     const isDaily = mode === 'daily';
-    // Use last 180 days for daily mode
-    const chartData = isDaily ? safeData.daily.slice(-180) : safeData.monthly;
+
+    // Filter logic
+    let filteredDaily = safeData.daily;
+    let filteredMonthly = safeData.monthly;
+
+    if (startMonth || endMonth) {
+        if (isDaily) {
+            filteredDaily = safeData.daily.filter(item => {
+                const itemMonth = item.Date.substring(0, 7); // YYYY-MM
+                if (startMonth && itemMonth < startMonth) return false;
+                if (endMonth && itemMonth > endMonth) return false;
+                return true;
+            });
+        } else {
+            filteredMonthly = safeData.monthly.filter(item => {
+                const itemMonth = item.Month; // YYYY-MM
+                if (startMonth && itemMonth < startMonth) return false;
+                if (endMonth && itemMonth > endMonth) return false;
+                return true;
+            });
+        }
+    }
+
+    // Use filtered data. For daily mode, if no filter applies, fallback to slice logic?
+    // User requested "Date Search", implies if they set a range, they want that range.
+    // If NO range is set (initial state?), maybe keep existing logic.
+    // If startMonth/endMonth provided, use them.
+
+    const chartData = isDaily
+        ? ((startMonth || endMonth) ? filteredDaily : safeData.daily.slice(-180))
+        : filteredMonthly;
 
     return (
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60 mt-8">

@@ -31,6 +31,11 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
     const [isNubiExpanded, setIsNubiExpanded] = useState(false);
     const [isSonreveExpanded, setIsSonreveExpanded] = useState(false);
 
+    // Date Range Filter State
+    const [startMonth, setStartMonth] = useState<string>('');
+    const [endMonth, setEndMonth] = useState<string>('');
+    const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+
     useEffect(() => {
         if (!filename) return;
 
@@ -39,6 +44,20 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
             try {
                 const response = await axios.get(`${API_BASE_URL}/api/dashboard/ecommerce-details`, { params: { filename } });
                 setData(response.data);
+
+                // Extract available months from MyBee Total (assuming it has representative data)
+                // Format: YYYY-MM
+                if (response.data.total_myb && response.data.total_myb.monthly) {
+                    const months = response.data.total_myb.monthly.map((m: any) => m.Month);
+                    const uniqueMonths = Array.from(new Set(months)) as string[];
+                    uniqueMonths.sort();
+
+                    setAvailableMonths(uniqueMonths);
+                    if (uniqueMonths.length > 0) {
+                        setStartMonth(uniqueMonths[0]);
+                        setEndMonth(uniqueMonths[uniqueMonths.length - 1]);
+                    }
+                }
             } catch (err) {
                 console.error("Failed to fetch brand analysis data:", err);
             } finally {
@@ -72,6 +91,8 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                     ecommerce: data[`${keyPrefix}_ecommerce`],
                     offline: data[`${keyPrefix}_offline`]
                 }}
+                startMonth={startMonth}
+                endMonth={endMonth}
             />
         );
     };
@@ -87,12 +108,44 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                     ecommerce: data[`${catKey}_ecommerce`],
                     offline: data[`${catKey}_offline`]
                 }}
+                startMonth={startMonth}
+                endMonth={endMonth}
             />
         );
     };
 
     return (
         <div className="space-y-8 mt-12 mb-12">
+
+            {/* Global Date Range Selector */}
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-slate-700">📅 조회 기간 설정</span>
+                    <span className="text-sm text-slate-400 font-medium">(전체 브랜드 적용)</span>
+                </div>
+
+                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                    <select
+                        value={startMonth}
+                        onChange={(e) => setStartMonth(e.target.value)}
+                        className="bg-transparent text-sm font-bold text-slate-600 focus:outline-none p-1.5"
+                    >
+                        {availableMonths.map(m => (
+                            <option key={`start-${m}`} value={m}>{m}</option>
+                        ))}
+                    </select>
+                    <span className="text-slate-400 font-bold">~</span>
+                    <select
+                        value={endMonth}
+                        onChange={(e) => setEndMonth(e.target.value)}
+                        className="bg-transparent text-sm font-bold text-slate-600 focus:outline-none p-1.5"
+                    >
+                        {availableMonths.map(m => (
+                            <option key={`end-${m}`} value={m}>{m}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
 
             {/* MyBee Toggle */}
             <div className="transition-opacity duration-500 ease-in-out">
@@ -122,6 +175,8 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                                 ecommerce: data.ecommerce_myb,
                                 offline: data.offline_myb
                             }}
+                            startMonth={startMonth}
+                            endMonth={endMonth}
                         />
 
                         {renderCategory("얼룩제거제", "✨", "stain")}
@@ -165,6 +220,8 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                                 ecommerce: data.ecommerce_nubi,
                                 offline: data.offline_nubi
                             }}
+                            startMonth={startMonth}
+                            endMonth={endMonth}
                         />
                         {renderCategory("롱핸들", "🥄", "nubi_longhandle")}
                         {renderCategory("스텐 물병", "💧", "nubi_stainless")}
@@ -205,6 +262,8 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                                 ecommerce: data.ecommerce_sonreve,
                                 offline: data.offline_sonreve
                             }}
+                            startMonth={startMonth}
+                            endMonth={endMonth}
                         />
                         {renderCategory("톤업 크림", "✨", "sonreve_toneup")}
                         {renderCategory("키즈 샴푸", "🧴", "sonreve_shampoo")}

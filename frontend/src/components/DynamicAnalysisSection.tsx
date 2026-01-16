@@ -149,19 +149,19 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                             onClick={() => setMode('total')}
                             className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'total' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            월매출
+                            월매출+이익률
                         </button>
                         <button
                             onClick={() => setMode('avg')}
                             className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'avg' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            일평균
+                            일평균+이익률
                         </button>
                         <button
                             onClick={() => setMode('daily')}
                             className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'daily' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            일매출
+                            일매출+이익률
                         </button>
                     </div>
                 </div>

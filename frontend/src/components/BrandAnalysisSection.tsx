@@ -105,7 +105,9 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                 dataOptions={{
                     total: data[`${keyPrefix}_total`],
                     ecommerce: data[`${keyPrefix}_ecommerce`],
-                    offline: data[`${keyPrefix}_offline`]
+                    offline: data[`${keyPrefix}_offline`],
+                    coupang: data[`coupang_${keyPrefix}`],
+                    major: data[`main_${keyPrefix}`]
                 }}
                 startMonth={startMonth}
                 endMonth={endMonth}
@@ -124,7 +126,9 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                 dataOptions={{
                     total: data[`${catKey}_total`],
                     ecommerce: data[`${catKey}_ecommerce`],
-                    offline: data[`${catKey}_offline`]
+                    offline: data[`${catKey}_offline`],
+                    coupang: data[`${catKey}_coupang`],
+                    major: data[`${catKey}_main`]
                 }}
                 startMonth={startMonth}
                 endMonth={endMonth}
@@ -228,7 +232,9 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                             dataOptions={{
                                 total: data.total_myb,
                                 ecommerce: data.ecommerce_myb,
-                                offline: data.offline_myb
+                                offline: data.offline_myb,
+                                coupang: data.coupang_myb,
+                                major: data.main_myb
                             }}
                             startMonth={startMonth}
                             endMonth={endMonth}
@@ -275,7 +281,9 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                             dataOptions={{
                                 total: data.total_nubi,
                                 ecommerce: data.ecommerce_nubi,
-                                offline: data.offline_nubi
+                                offline: data.offline_nubi,
+                                coupang: data.coupang_nubi,
+                                major: data.main_nubi
                             }}
                             startMonth={startMonth}
                             endMonth={endMonth}
@@ -319,7 +327,9 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                             dataOptions={{
                                 total: data.total_sonreve,
                                 ecommerce: data.ecommerce_sonreve,
-                                offline: data.offline_sonreve
+                                offline: data.offline_sonreve,
+                                coupang: data.coupang_sonreve,
+                                major: data.main_sonreve
                             }}
                             startMonth={startMonth}
                             endMonth={endMonth}

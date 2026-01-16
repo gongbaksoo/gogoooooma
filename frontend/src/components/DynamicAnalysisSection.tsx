@@ -17,6 +17,8 @@ interface DynamicAnalysisSectionProps {
         total: CategoryData;
         ecommerce: CategoryData;
         offline: CategoryData;
+        coupang?: CategoryData;
+        major?: CategoryData;
     };
     defaultMode?: 'total' | 'avg' | 'daily' | 'sales_only' | 'avg_only' | 'profit_only';
     defaultChannel?: 'total' | 'ecommerce' | 'offline';
@@ -119,9 +121,59 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
     // If NO range is set (initial state?), maybe keep existing logic.
     // If startMonth/endMonth provided, use them.
 
+    // Use filtered data. For daily mode, if no filter applies, fallback to slice logic?
+    // User requested "Date Search", implies if they set a range, they want that range.
+    // If NO range is set (initial state?), maybe keep existing logic.
+    // If startMonth/endMonth provided, use them.
+
     const chartData = isDaily
         ? ((startMonth || endMonth) ? filteredDaily : safeData.daily.slice(-180))
         : filteredMonthly;
+
+    // --- Multi-Channel Data Merging for Single View Modes ---
+    let mergedChartData: any[] = [];
+    const isSingleView = ['sales_only', 'avg_only', 'profit_only'].includes(mode);
+
+    if (isSingleView && dataOptions) {
+        // Collect all unique months from all datasets
+        const allMonths = new Set<string>();
+        [dataOptions.total, dataOptions.ecommerce, dataOptions.offline, dataOptions.coupang, dataOptions.major].forEach(d => {
+            d?.monthly.forEach(m => allMonths.add(m.Month));
+        });
+
+        const sortedMonths = Array.from(allMonths).sort();
+
+        // Filter months based on range
+        const validMonths = sortedMonths.filter(m => {
+            if (startMonth && m < startMonth) return false;
+            if (endMonth && m > endMonth) return false;
+            return true;
+        });
+
+        // Create merged data points
+        mergedChartData = validMonths.map(month => {
+            const getMetric = (d?: CategoryData) => {
+                const mData = d?.monthly.find(x => x.Month === month);
+                if (!mData) return 0;
+                if (mode === 'sales_only') return mData.판매액;
+                if (mode === 'avg_only') return mData.일평균매출;
+                if (mode === 'profit_only') return mData.이익률;
+                return 0;
+            };
+
+            return {
+                Month: month,
+                val_total: getMetric(dataOptions.total),
+                val_ecom: getMetric(dataOptions.ecommerce),
+                val_offline: getMetric(dataOptions.offline),
+                val_coupang: getMetric(dataOptions.coupang),
+                val_major: getMetric(dataOptions.major)
+            };
+        });
+    } else {
+        // Fallback for combined modes: use standard processed chartData
+        mergedChartData = chartData;
+    }
 
     return (
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60 mt-8">
@@ -195,7 +247,7 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
 
             <div className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                    <ComposedChart data={mergedChartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                         <XAxis
                             dataKey={isDaily ? "Date" : "Month"}
@@ -206,41 +258,53 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                             tickLine={false}
                             dy={10}
                         />
-                        <YAxis yAxisId="left" stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatMillions} axisLine={false} tickLine={false} hide={mode === 'profit_only'} />
-                        <YAxis yAxisId="right" orientation="right" stroke="#ec4899" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatPercent} axisLine={false} tickLine={false} hide={mode === 'sales_only' || mode === 'avg_only'} />
-                        <Tooltip formatter={(val: any, name: any) => name === '이익률' ? [formatPercent(val), name] : [formatMillions(val), name]} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }} />
+                        <YAxis yAxisId="left" stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={mode === 'profit_only' ? formatPercent : formatMillions} axisLine={false} tickLine={false} />
+                        <YAxis yAxisId="right" orientation="right" stroke="#ec4899" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatPercent} axisLine={false} tickLine={false} hide={isSingleView} />
+                        <Tooltip formatter={(val: any, name: any) => (name === '이익률' || mode === 'profit_only') ? [formatPercent(val), name] : [formatMillions(val), name]} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }} />
                         <Legend wrapperStyle={{ paddingTop: '20px' }} />
 
-                        {mode !== 'profit_only' && (
-                            <Line
-                                yAxisId="left"
-                                type="monotone"
-                                dataKey="판매액"
-                                name={mode === 'total' || mode === 'sales_only' ? "월매출액" : (mode === 'daily' ? "일매출액" : "일평균 매출")}
-                                data={isDaily ? undefined : ((mode === 'avg' || mode === 'avg_only') ? chartData.map(d => ({ ...d, "판매액": (d as any).일평균매출 })) : undefined)}
-                                stroke="#8b5cf6"
-                                strokeWidth={isDaily ? 2 : 3}
-                                dot={isDaily ? false : { fill: "#8b5cf6", r: 4 }}
-                                activeDot={{ r: 6 }}
-                            >
-                                {!isDaily && <LabelList dataKey={mode === 'total' || mode === 'sales_only' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#8b5cf6" formatter={formatMillions} />} />}
-                            </Line>
-                        )}
+                        {isSingleView ? (
+                            <>
+                                <Line yAxisId="left" type="monotone" dataKey="val_total" name="전체" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4 }} />
+                                <Line yAxisId="left" type="monotone" dataKey="val_ecom" name="이커머스" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+                                <Line yAxisId="left" type="monotone" dataKey="val_offline" name="오프라인" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                                <Line yAxisId="left" type="monotone" dataKey="val_coupang" name="쿠팡(로켓)" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
+                                <Line yAxisId="left" type="monotone" dataKey="val_major" name="주력(쿠팡제외)" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3 }} />
+                            </>
+                        ) : (
+                            <>
+                                {mode !== 'profit_only' && (
+                                    <Line
+                                        yAxisId="left"
+                                        type="monotone"
+                                        dataKey="판매액"
+                                        name={mode === 'total' || mode === 'sales_only' ? "월매출액" : (mode === 'daily' ? "일매출액" : "일평균 매출")}
+                                        data={isDaily ? undefined : ((mode === 'avg' || mode === 'avg_only') ? chartData.map(d => ({ ...d, "판매액": (d as any).일평균매출 })) : undefined)}
+                                        stroke="#8b5cf6"
+                                        strokeWidth={isDaily ? 2 : 3}
+                                        dot={isDaily ? false : { fill: "#8b5cf6", r: 4 }}
+                                        activeDot={{ r: 6 }}
+                                    >
+                                        {!isDaily && <LabelList dataKey={mode === 'total' || mode === 'sales_only' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#8b5cf6" formatter={formatMillions} />} />}
+                                    </Line>
+                                )}
 
-                        {(mode === 'total' || mode === 'avg' || mode === 'daily' || mode === 'profit_only') && (
-                            <Line
-                                yAxisId="right"
-                                type="monotone"
-                                dataKey="이익률"
-                                name="이익률"
-                                stroke="#ec4899"
-                                strokeWidth={isDaily ? 2 : 3}
-                                dot={isDaily ? false : { fill: "#ec4899", r: 4 }}
-                                activeDot={{ r: 6 }}
-                                strokeDasharray={mode === 'profit_only' ? undefined : "5 5"}
-                            >
-                                {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ec4899" formatter={formatPercent} />} />}
-                            </Line>
+                                {(mode === 'total' || mode === 'avg' || mode === 'daily' || mode === 'profit_only') && (
+                                    <Line
+                                        yAxisId="right"
+                                        type="monotone"
+                                        dataKey="이익률"
+                                        name="이익률"
+                                        stroke="#ec4899"
+                                        strokeWidth={isDaily ? 2 : 3}
+                                        dot={isDaily ? false : { fill: "#ec4899", r: 4 }}
+                                        activeDot={{ r: 6 }}
+                                        strokeDasharray={mode === 'profit_only' ? undefined : "5 5"}
+                                    >
+                                        {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ec4899" formatter={formatPercent} />} />}
+                                    </Line>
+                                )}
+                            </>
                         )}
                     </ComposedChart>
                 </ResponsiveContainer>

@@ -265,11 +265,27 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
 
                         {isSingleView ? (
                             <>
-                                <Line yAxisId="left" type="monotone" dataKey="val_total" name="전체" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4 }} />
-                                <Line yAxisId="left" type="monotone" dataKey="val_ecom" name="이커머스" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
-                                <Line yAxisId="left" type="monotone" dataKey="val_offline" name="오프라인" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
-                                <Line yAxisId="left" type="monotone" dataKey="val_coupang" name="쿠팡(로켓)" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
-                                <Line yAxisId="left" type="monotone" dataKey="val_major" name="주력(쿠팡제외)" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3 }} />
+                                {(channel === 'total') && (
+                                    <>
+                                        <Line yAxisId="left" type="monotone" dataKey="val_total" name="전체" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_ecom" name="이커머스" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_offline" name="오프라인" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_coupang" name="쿠팡(로켓)" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_major" name="주력(쿠팡제외)" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3 }} />
+                                    </>
+                                )}
+                                {(channel === 'ecommerce') && (
+                                    <>
+                                        <Line yAxisId="left" type="monotone" dataKey="val_ecom" name="이커머스" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_coupang" name="쿠팡(로켓)" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_major" name="주력(쿠팡제외)" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3 }} />
+                                    </>
+                                )}
+                                {(channel === 'offline') && (
+                                    <>
+                                        <Line yAxisId="left" type="monotone" dataKey="val_offline" name="오프라인" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+                                    </>
+                                )}
                             </>
                         ) : (
                             <>

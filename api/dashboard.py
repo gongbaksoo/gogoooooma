@@ -81,6 +81,18 @@ def clear_df_cache(filename: str = None):
         df_cache = {}
         logging.info("Cleared entire DataFrame cache")
         
+def generate_yyyymm_range(start, end):
+    """Generate list of YYYYMM integers between start and end (inclusive)"""
+    if pd.isna(start) or pd.isna(end):
+        return []
+    s_s = str(int(start))
+    e_s = str(int(end))
+    try:
+        dates = pd.period_range(start=f"{s_s[:4]}-{s_s[4:]}", end=f"{e_s[:4]}-{e_s[4:]}", freq='M')
+        return [int(d.strftime('%Y%m')) for d in dates]
+    except:
+        return []
+
 def get_monthly_sales_by_channel(filename: str):
     """
     월별 이커머스 vs 오프라인 매출 데이터 반환
@@ -94,6 +106,11 @@ def get_monthly_sales_by_channel(filename: str):
         if col not in df.columns:
             raise ValueError(f"Required column '{col}' not found in data")
     
+    # Full Month Range Calculation
+    min_month = df['월구분'].min()
+    max_month = df['월구분'].max()
+    full_months = generate_yyyymm_range(min_month, max_month)
+    
     # 이커머스와 오프라인만 필터링
     df_filtered = df[df['파트구분'].isin(['이커머스', '오프라인'])].copy()
     
@@ -104,7 +121,11 @@ def get_monthly_sales_by_channel(filename: str):
     pivot_sales = monthly_sales.pivot(index='월구분', columns='파트구분', values='판매액').fillna(0)
     pivot_profit = monthly_sales.pivot(index='월구분', columns='파트구분', values='이익').fillna(0)
     
-    # 월구분 정렬
+    # Reindex with full months (Gap Filling)
+    pivot_sales = pivot_sales.reindex(full_months, fill_value=0)
+    pivot_profit = pivot_profit.reindex(full_months, fill_value=0)
+    
+    # 월구분 정렬 (Explicitly sort just in case)
     pivot_sales = pivot_sales.sort_index()
     pivot_profit = pivot_profit.sort_index()
     
@@ -331,6 +352,14 @@ def get_monthly_sales_by_product_group(filename: str):
     pivot_sales = monthly_sales.pivot(index='월구분', columns='품목그룹1', values='판매액').fillna(0)
     pivot_profit = monthly_sales.pivot(index='월구분', columns='품목그룹1', values='이익').fillna(0)
     
+    # Gap Filling
+    min_m = df['월구분'].min()
+    max_m = df['월구분'].max()
+    full_months = generate_yyyymm_range(min_m, max_m)
+    
+    pivot_sales = pivot_sales.reindex(full_months, fill_value=0)
+    pivot_profit = pivot_profit.reindex(full_months, fill_value=0)
+    
     # 월구분 정렬
     pivot_sales = pivot_sales.sort_index()
     pivot_profit = pivot_profit.sort_index()
@@ -417,7 +446,9 @@ def get_filtered_monthly_sales(
     df = get_dataframe(filename)
     
     # 1. 월별 전체 데이터를 먼저 구해서 모든 월 리스트 확보
-    all_months = sorted(df['월구분'].unique())
+    min_m = df['월구분'].min()
+    max_m = df['월구분'].max()
+    all_months = generate_yyyymm_range(min_m, max_m)
     days_list, debug_logs = calculate_days_list(df, all_months)
     
     # 2. 필터링
@@ -527,7 +558,9 @@ def get_channel_layer_sales(
     
     df = get_dataframe(filename)
     
-    all_months = sorted(df['월구분'].unique())
+    min_m = df['월구분'].min()
+    max_m = df['월구분'].max()
+    all_months = generate_yyyymm_range(min_m, max_m)
     days_list, debug_logs = calculate_days_list(df, all_months)
     
     df_filtered = df.copy()
@@ -589,64 +622,61 @@ def get_daily_hierarchical_sales(
     """
     df = get_dataframe(filename)
     
-    # 1. 필터링 로직 (get_filtered_monthly_sales와 동일)
-    if group and group != 'all':
-        df = df[df['품목그룹1'] == group]
-    if category and category != 'all':
-        df = df[df['품목 구분'] == category]
-    if sub_category and sub_category != 'all':
-        df = df[df['품목 구분_2'] == sub_category]
-        
-    if part and part != 'all':
-        df = df[df['파트구분'] == part]
-    if channel and channel != 'all':
-        df = df[df['채널구분'] == channel]
-    if account and account != 'all':
-        df = df[df['거래처명'] == account]
-        
-    # 2. 일자별 그룹화
-    # 컬럼명 '일별' 사용
+    # 0. Date Processing (Global)
     date_col = '일별'
     
-    # 혼합된 타입 처리 (숫자인 엑셀 시리얼과 문자열 날짜가 섞여있음)
-    
-    # 이미 datetime 형식이면 변환 불필요
+    # Check if date parsing is needed
     if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
-        # 1) 먼저 숫자로 변환 가능한 부분(엑셀 시리얼 날짜) 처리
-        # 주의: datetime 컬럼에 to_numeric을 쓰면 나노초로 변환되므로 위에서 타입 체크 필수
         numeric_dates = pd.to_numeric(df[date_col], errors='coerce')
-        
-        # 2) 날짜로 변환 (숫자인 경우)
-        # 엑셀 시리얼 날짜는 1900년 1월 1일 이전 등을 제외하고 통상적으로 아래와 같이 변환
         date_series = pd.to_datetime(numeric_dates, unit='D', origin='1899-12-30')
-        
-        # 3) 숫자가 아니어서 NaT로 된 부분은 문자열로 간주하고 다시 파싱 시도
         mask = date_series.isna() & df[date_col].notna()
         if mask.any():
             try:
-                # 문자열 날짜 파싱 (예: 2025/12/01)
                 date_series.loc[mask] = pd.to_datetime(df.loc[mask, date_col], errors='coerce')
             except Exception as e:
                 print(f"Date conversion error: {e}")
-                
         df[date_col] = date_series
 
-    # 유효한 일자만 필터링
-    df = df.dropna(subset=[date_col])
+    # 1. Filtering Logic
+    df_filtered = df.copy()
+    if group and group != 'all':
+        df_filtered = df_filtered[df_filtered['품목그룹1'] == group]
+    if category and category != 'all':
+        df_filtered = df_filtered[df_filtered['품목 구분'] == category]
+    if sub_category and sub_category != 'all':
+        df_filtered = df_filtered[df_filtered['품목 구분_2'] == sub_category]
+        
+    if part and part != 'all':
+        df_filtered = df_filtered[df_filtered['파트구분'] == part]
+    if channel and channel != 'all':
+        df_filtered = df_filtered[df_filtered['채널구분'] == channel]
+    if account and account != 'all':
+        df_filtered = df_filtered[df_filtered['거래처명'] == account]
+        
+    # 2. Reindexing for Gap Filling
+    df_filtered = df_filtered.dropna(subset=[date_col])
+    
+    if not df_filtered.empty:
+        min_d = df_filtered[date_col].min()
+        max_d = df_filtered[date_col].max()
+        full_range = pd.date_range(start=min_d, end=max_d, freq='D')
+        
+        daily_sales = df_filtered.groupby(date_col)[['판매액', '이익']].sum().reindex(full_range, fill_value=0)
+        daily_sales.index.name = date_col
+        daily_sales = daily_sales.reset_index()
+    else:
+        daily_sales = pd.DataFrame(columns=[date_col, '판매액', '이익'])
 
-    # 일자별 집계
-    daily_sales = df.groupby(date_col)[['판매액', '이익']].sum().reset_index()
-    
-    # 일자 정렬
-    daily_sales = daily_sales.sort_values(date_col)
-    
-    # 날짜 포맷팅 (YYYY-MM-DD -> MM/DD or str)
-    # 프론트엔드에서 처리하기 쉽도록 ISO 문자열로 반환
-    dates = daily_sales[date_col].dt.strftime('%Y-%m-%d').tolist()
+    # Formatting
+    if not daily_sales.empty:
+        dates = daily_sales[date_col].dt.strftime('%Y-%m-%d').tolist()
+    else:
+        dates = []
+        
     sales = daily_sales['판매액'].tolist()
     profit = daily_sales['이익'].tolist()
     
-    # 레이블 생성 (필터 조건에 따라)
+    # Label Generation
     label_parts = []
     if part and part != 'all': label_parts.append(part)
     if channel and channel != 'all': label_parts.append(channel)
@@ -657,7 +687,6 @@ def get_daily_hierarchical_sales(
     
     label = " > ".join(label_parts) if label_parts else "전체"
     
-    # 결과 반환
     return {
         "dates": dates,
         "sales": sales,
@@ -1106,38 +1135,86 @@ def get_ecommerce_details(filename):
     
     df = df.dropna(subset=[date_col])
     
+    # Calculate Global Date Range from the FULL dataframe
+    global_min_date = df[date_col].min()
+    global_max_date = df[date_col].max()
+    
+    # Pre-calculate full month range
+    if pd.notna(global_min_date) and pd.notna(global_max_date):
+        full_period_range = pd.period_range(start=global_min_date, end=global_max_date, freq='M')
+    else:
+        full_period_range = []
+
     # Function to get monthly and daily stats for a specific filter
     def get_stats(filtered_df):
-        if filtered_df.empty: return {"monthly": [], "daily": []}
+        if filtered_df.empty and len(full_period_range) == 0: return {"monthly": [], "daily": []}
         
-        # 1. Monthly
+        # 1. Monthly (Gap Filling Rule: Use Global Range)
         f_df = filtered_df.copy()
-        f_df['MonthPeriod'] = f_df[date_col].dt.to_period('M')
+        
+        if not f_df.empty:
+            f_df['MonthPeriod'] = f_df[date_col].dt.to_period('M')
+            grouped = f_df.groupby('MonthPeriod')[['판매액', '이익']].sum()
+            # Count unique days with sales or raw unique days? Using raw unique days for consistency
+            grouped_days = f_df.groupby('MonthPeriod')[date_col].nunique()
+        else:
+            grouped = pd.DataFrame(columns=['판매액', '이익'])
+            grouped_days = pd.Series(dtype=int)
+
+        # Reindex to full range
+        grouped = grouped.reindex(full_period_range, fill_value=0)
+        grouped_days = grouped_days.reindex(full_period_range, fill_value=0)
+
         monthly_stats = []
-        for p in sorted(f_df['MonthPeriod'].unique()):
-            m_df = f_df[f_df['MonthPeriod'] == p]
-            sales = m_df[sales_col].sum()
-            profit = m_df['이익'].sum()
-            unique_days = m_df[date_col].nunique()
+        for p in full_period_range:
+            sales = grouped.loc[p, '판매액']
+            profit = grouped.loc[p, '이익']
+            unique_days = grouped_days.loc[p]
+            
             days_in_month = calendar.monthrange(p.year, p.month)[1]
-            divisor = days_in_month if unique_days == 1 else unique_days
+            divisor = days_in_month if unique_days <= 1 else unique_days
             daily_avg = int(sales / divisor) if divisor > 0 else 0
             margin = round(profit / sales * 100, 1) if sales != 0 else 0
-            monthly_stats.append({"Month": str(p), "판매액": sales, "이익률": margin, "일평균매출": daily_avg})
+            
+            monthly_stats.append({
+                "Month": str(p), 
+                "판매액": int(sales), 
+                "이익률": margin, 
+                "일평균매출": daily_avg
+            })
         
-        # 2. Daily (Last 6 Months)
-        max_d = f_df[date_col].max()
-        six_m = max_d - pd.DateOffset(months=6)
-        d_df = f_df[f_df[date_col] >= six_m].copy()
-        d_df['Date'] = d_df[date_col].dt.strftime('%Y-%m-%d')
-        daily_g = d_df.groupby('Date').agg({sales_col: 'sum', '이익': 'sum'}).reset_index()
+        # 2. Daily (Last 6 Months from Global Max)
+        if pd.notna(global_max_date):
+            six_m_ago = global_max_date - pd.DateOffset(months=6)
+            
+            # Create full date range for last 6 months
+            full_date_range = pd.date_range(start=six_m_ago, end=global_max_date, freq='D')
+            
+            # Filter data
+            if not f_df.empty:
+                d_df = f_df[f_df[date_col] >= six_m_ago].copy()
+                d_df['Date'] = d_df[date_col].dt.strftime('%Y-%m-%d')
+                daily_grouped = d_df.groupby('Date').agg({sales_col: 'sum', '이익': 'sum'})
+                
+                # Reindex
+                str_date_range = full_date_range.strftime('%Y-%m-%d')
+                daily_grouped = daily_grouped.reindex(str_date_range, fill_value=0)
+                daily_grouped.index.name = 'Date'
+                daily_g = daily_grouped.reset_index()
+            else:
+                 daily_g = pd.DataFrame({'Date': full_date_range.strftime('%Y-%m-%d'), sales_col: 0, '이익': 0})
+
+            # Calculate metrics
+            # Robust Margin calculation for Daily data
+            with np.errstate(divide='ignore', invalid='ignore'):
+                 daily_g['이익률'] = (daily_g['이익'] / daily_g[sales_col] * 100)
+                 daily_g['이익률'] = daily_g['이익률'].replace([np.inf, -np.inf], np.nan).fillna(0).round(1)
+            
+            daily_list = daily_g.to_dict('records')
+        else:
+            daily_list = []
         
-        # Robust Margin calculation for Daily data
-        with np.errstate(divide='ignore', invalid='ignore'):
-            daily_g['이익률'] = (daily_g['이익'] / daily_g[sales_col] * 100)
-            daily_g['이익률'] = daily_g['이익률'].replace([np.inf, -np.inf], np.nan).fillna(0).round(1)
-        
-        return {"monthly": monthly_stats, "daily": daily_g.to_dict('records')}
+        return {"monthly": monthly_stats, "daily": daily_list}
 
     # E-commerce (Existing)
     ecommerce_df = df[df[channel_col] == '이커머스']

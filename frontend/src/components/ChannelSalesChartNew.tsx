@@ -139,7 +139,7 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
             let days: number[] = [];
 
             if (timeUnit === 'month') {
-                months = response.data.months;
+                months = (response.data.months || []).map(String);
                 sales = response.data.sales;
                 profit = response.data.profit || [];
                 days = response.data.days_list || [];
@@ -204,6 +204,10 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
 
     // Refetch when timeUnit changes
     useEffect(() => {
+        // Reset Date Filters when switching time unit
+        setStartMonth('');
+        setEndMonth('');
+
         if (filename && selectedPart) {
             fetchData();
         }

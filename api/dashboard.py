@@ -87,10 +87,28 @@ def generate_yyyymm_range(start, end):
         return []
     s_s = str(int(start))
     e_s = str(int(end))
+    
+    # Detect format (4 digits vs 6 digits)
+    is_4_digit = len(s_s) == 4
+    
     try:
-        dates = pd.period_range(start=f"{s_s[:4]}-{s_s[4:]}", end=f"{e_s[:4]}-{e_s[4:]}", freq='M')
-        return [int(d.strftime('%Y%m')) for d in dates]
-    except:
+        if is_4_digit:
+             # Convert YYMM to YYYY-MM for Period calculation
+             # Assume 20xx
+             s_norm = f"20{s_s}"
+             e_norm = f"20{e_s}"
+        else:
+             s_norm = s_s
+             e_norm = e_s
+
+        dates = pd.period_range(start=f"{s_norm[:4]}-{s_norm[4:]}", end=f"{e_norm[:4]}-{e_norm[4:]}", freq='M')
+        
+        if is_4_digit:
+            return [int(d.strftime('%y%m')) for d in dates]
+        else:
+            return [int(d.strftime('%Y%m')) for d in dates]
+    except Exception as e:
+        print(f"Error generating range: {e}")
         return []
 
 def get_monthly_sales_by_channel(filename: str):

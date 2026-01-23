@@ -1,174 +1,90 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import FileUpload from "@/components/FileUpload";
-import { getLogs } from "@/lib/api";
-import ChatInterface from "@/components/ChatInterface";
-import FileSelector from "@/components/FileSelector";
-import ChatHistoryList from "@/components/ChatHistoryList";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, BarChart3, ShoppingCart, Settings } from "lucide-react";
 
 export default function Home() {
-    const [data, setData] = useState<any>(null);
-    const [filename, setFilename] = useState<string | null>(null);
-    const [selectedFile, setSelectedFile] = useState<string | null>(null);
-    const [showLogs, setShowLogs] = useState(false);
-    const [logs, setLogs] = useState<any>(null);
-    const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-
-    const handleUploadSuccess = (responseData: any) => {
-        setData(responseData.data);
-        const uploadedFilename = responseData.filename;
-        setFilename(uploadedFilename);
-        setSelectedFile(uploadedFilename);
-    };
-
-    const handleShowLogs = async () => {
-        setShowLogs(true);
-        setIsLoadingLogs(true);
-        try {
-            const logData = await getLogs();
-            setLogs(logData);
-        } catch (error) {
-            console.error("Failed to load logs:", error);
-        } finally {
-            setIsLoadingLogs(false);
-        }
-    };
-
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-            <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+            <div className="max-w-4xl w-full">
+                <div className="text-center mb-12">
+                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 mb-4">
+                        <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                            Vibe Management Portal
+                        </span>
+                    </h1>
+                    <p className="text-slate-500 text-lg">
+                        통합 비즈니스 관리 및 분석 플랫폼
+                    </p>
+                </div>
 
-                <div className="mb-8">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <div className="grid md:grid-cols-2 gap-6">
+                    {/* Card 1: Sales Analysis */}
+                    <Link
+                        href="/custom-dashboard"
+                        className="group relative bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden"
+                    >
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110" />
+
+                        <div className="relative z-10">
+                            <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                <BarChart3 className="w-7 h-7" />
+                            </div>
+
+                            <h2 className="text-2xl font-bold text-slate-800 mb-3 group-hover:text-blue-600 transition-colors">
                                 매출 분석 대시보드
-                            </h1>
-                            <p className="text-gray-600 mt-2">엑셀 파일을 업로드하여 매출 현황을 분석하세요.</p>
+                            </h2>
+                            <p className="text-slate-500 mb-6 leading-relaxed">
+                                엑셀 데이터를 기반으로 한 상세 매출 분석, 이익률 추적 및 AI 기반 인사이트 제공
+                            </p>
+
+                            <div className="flex items-center text-sm font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
+                                대시보드 이동 <ArrowRight className="w-4 h-4 ml-1" />
+                            </div>
                         </div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleShowLogs}
-                                className="px-4 py-2 text-sm bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition"
-                            >
-                                🛠️ 개발자 로그
-                            </button>
-                            <Link
-                                href="/custom-dashboard"
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition shadow-sm"
-                            >
-                                커스텀 대시보드
-                                <ArrowRight className="w-4 h-4" />
-                            </Link>
+                    </Link>
+
+                    {/* Card 2: Coupang Orders (New) */}
+                    <Link
+                        href="/coupang-orders"
+                        className="group relative bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden"
+                    >
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110" />
+
+                        <div className="relative z-10">
+                            <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center mb-6 text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                                <ShoppingCart className="w-7 h-7" />
+                            </div>
+
+                            <div className="flex items-center justify-between mb-3">
+                                <h2 className="text-2xl font-bold text-slate-800 group-hover:text-orange-600 transition-colors">
+                                    쿠팡 발주 현황
+                                </h2>
+                                <span className="px-2 py-1 bg-orange-100 text-orange-700 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                                    New
+                                </span>
+                            </div>
+
+                            <p className="text-slate-500 mb-6 leading-relaxed">
+                                쿠팡 Wing API 연동을 통한 실시간 발주 리스트 확인 및 상태 모니터링
+                            </p>
+
+                            <div className="flex items-center text-sm font-bold text-orange-600 group-hover:translate-x-1 transition-transform">
+                                발주 확인하기 <ArrowRight className="w-4 h-4 ml-1" />
+                            </div>
                         </div>
-                    </div>
+                    </Link>
                 </div>
 
-                {showLogs && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col">
-                            <div className="flex justify-between items-center p-4 border-b">
-                                <h3 className="text-lg font-bold">시스템 로그</h3>
-                                <button onClick={() => setShowLogs(false)} className="text-2xl">&times;</button>
-                            </div>
-                            <div className="flex-1 overflow-auto p-4 bg-gray-900 text-green-400 font-mono text-xs">
-                                {isLoadingLogs ? (
-                                    <div className="text-center p-10">로그를 불러오는 중...</div>
-                                ) : (
-                                    <div className="space-y-6">
-                                        <div>
-                                            <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1">🤖 AI 디버그</h4>
-                                            <pre className="whitespace-pre-wrap">{logs?.["chat_debug.log"] || "Empty"}</pre>
-                                        </div>
-                                        <div>
-                                            <h4 className="text-white font-bold mb-2 border-b border-gray-700 pb-1 mt-6">🚨 시스템 에러</h4>
-                                            <pre className="whitespace-pre-wrap text-red-300">{logs?.["error.log"] || "Empty"}</pre>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="p-4 border-t bg-gray-50 flex justify-end">
-                                <button onClick={() => setShowLogs(false)} className="px-4 py-2 bg-gray-200 rounded">닫기</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                <div className="grid gap-8 md:grid-cols-2">
-                    <div className="bg-white p-6 rounded-xl shadow-sm border">
-                        <h3 className="text-lg font-semibold mb-4">파일 업로드</h3>
-                        <FileUpload onUploadSuccess={handleUploadSuccess} />
-                    </div>
-
-                    <FileSelector selectedFile={selectedFile} onFileSelect={setSelectedFile} />
-                    <ChatHistoryList />
+                <div className="mt-12 text-center">
+                    <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors text-sm font-medium">
+                        <Settings className="w-4 h-4" />
+                        시스템 설정 (준비중)
+                    </button>
+                    <p className="mt-4 text-xs text-slate-300">
+                        © 2024 Vibe Coding Corp. All rights reserved.
+                    </p>
                 </div>
-
-                {selectedFile && (
-                    <div className="mt-8 bg-white p-6 rounded-xl shadow-sm border">
-                        <h3 className="text-lg font-semibold mb-4">AI 분석 - {selectedFile}</h3>
-                        <ChatInterface filename={selectedFile} />
-                    </div>
-                )}
-
-                {data && (
-                    <div className="mt-8 space-y-6">
-                        <div className="bg-white p-6 rounded-xl shadow-sm border">
-                            <h3 className="text-sm font-medium text-gray-500">총 데이터 행</h3>
-                            <div className="text-2xl font-bold mt-2">{data.total_rows}</div>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-xl shadow-sm border">
-                            <h3 className="text-lg font-semibold mb-4">데이터 미리보기</h3>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            {data.columns?.slice(0, 8).map((col: string) => (
-                                                <th key={col} className="px-4 py-3 text-left">{col}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {data.preview?.map((row: any, i: number) => (
-                                            <tr key={i} className="border-b">
-                                                {data.columns?.slice(0, 8).map((col: string) => (
-                                                    <td key={col} className="px-4 py-3">{row[col]}</td>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-xl shadow-sm border">
-                            <h3 className="text-lg font-semibold mb-4">기본 통계</h3>
-                            <div className="grid md:grid-cols-2 gap-4">
-                                {data.statistics && typeof data.statistics === 'object' ? (
-                                    Object.entries(data.statistics).map(([key, stats]: [string, any]) => {
-                                        if (!stats || typeof stats !== 'object') return null;
-                                        return (
-                                            <div key={key} className="border p-4 rounded-lg">
-                                                <h4 className="font-medium text-blue-600 mb-2">{key}</h4>
-                                                <ul className="space-y-1 text-sm text-gray-600">
-                                                    <li>평균: {typeof stats.mean === 'number' ? stats.mean.toFixed(2) : '-'}</li>
-                                                    <li>최소: {stats.min ?? '-'}</li>
-                                                    <li>최대: {stats.max ?? '-'}</li>
-                                                </ul>
-                                            </div>
-                                        );
-                                    })
-                                ) : (
-                                    <p className="text-gray-500">통계 데이터가 없습니다.</p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
     );

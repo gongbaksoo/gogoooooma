@@ -139,7 +139,7 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
             let days: number[] = [];
 
             if (timeUnit === 'month') {
-                months = response.data.months;
+                months = (response.data.months || []).map(String);
                 sales = response.data.sales;
                 profit = response.data.profit || [];
                 days = response.data.days_list || [];
@@ -212,6 +212,10 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
 
     // Refetch when timeUnit changes
     useEffect(() => {
+        // Reset Date Filters when switching time unit
+        setStartMonth('');
+        setEndMonth('');
+
         if (filename && selectedGroup) {
             fetchData();
         }

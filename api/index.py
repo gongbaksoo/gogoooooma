@@ -718,8 +718,31 @@ def debug_check_data(filename: str):
         
         return result
     except Exception as e:
-
         return {"error": str(e)}
+
+# ============================================
+# Coupang API Endpoints
+# ============================================
+
+@router.get("/api/coupang/orders")
+def get_coupang_orders_endpoint(days: int = 7):
+    """Get Coupang Rocket Growth Orders"""
+    try:
+        from coupang_api import get_coupang_orders
+        result = get_coupang_orders(days)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Coupang API Failed: {str(e)}")
+
+@router.get("/api/coupang/inventory")
+def get_coupang_inventory_endpoint():
+    """Get Coupang Rocket Growth Inventory Summary"""
+    try:
+        from coupang_api import get_coupang_inventory
+        result = get_coupang_inventory()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Coupang Inventory API Failed: {str(e)}")
 
 # Mount the router both at root and at /api to ensure Vercel routing works
 app.include_router(router)

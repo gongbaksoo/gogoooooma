@@ -18,11 +18,11 @@ export default function Home() {
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="flex justify-center">
                     {/* Card 1: Sales Analysis */}
                     <Link
                         href="/custom-dashboard"
-                        className="group relative bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden"
+                        className="group relative bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden max-w-xl w-full"
                     >
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110" />
 
@@ -40,37 +40,6 @@ export default function Home() {
 
                             <div className="flex items-center text-sm font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
                                 대시보드 이동 <ArrowRight className="w-4 h-4 ml-1" />
-                            </div>
-                        </div>
-                    </Link>
-
-                    {/* Card 2: Coupang Orders (New) */}
-                    <Link
-                        href="/coupang-orders"
-                        className="group relative bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden"
-                    >
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110" />
-
-                        <div className="relative z-10">
-                            <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center mb-6 text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors">
-                                <ShoppingCart className="w-7 h-7" />
-                            </div>
-
-                            <div className="flex items-center justify-between mb-3">
-                                <h2 className="text-2xl font-bold text-slate-800 group-hover:text-orange-600 transition-colors">
-                                    쿠팡 발주 현황
-                                </h2>
-                                <span className="px-2 py-1 bg-orange-100 text-orange-700 text-[10px] font-bold rounded-full uppercase tracking-wider">
-                                    New
-                                </span>
-                            </div>
-
-                            <p className="text-slate-500 mb-6 leading-relaxed">
-                                쿠팡 Wing API 연동을 통한 실시간 발주 리스트 확인 및 상태 모니터링
-                            </p>
-
-                            <div className="flex items-center text-sm font-bold text-orange-600 group-hover:translate-x-1 transition-transform">
-                                발주 확인하기 <ArrowRight className="w-4 h-4 ml-1" />
                             </div>
                         </div>
                     </Link>

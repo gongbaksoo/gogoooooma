@@ -56,12 +56,18 @@ const formatPercent = (value: any): string => {
     return `${value.toFixed(1)}%`;
 };
 
-const formatXAxisTick = (value: string) => {
+const formatXAxisTick = (value: string, index: number) => {
+    // YYYY-MM format (e.g., "2024-01")
     if (value.length === 7) {
         const year = value.substring(2, 4);
         const month = parseInt(value.substring(5, 7));
-        return `${year}' ${month}`;
+        // Show year only for January or first item
+        if (index === 0 || month === 1) {
+            return `${year}' ${month}`;
+        }
+        return `${month}`;
     }
+    // Daily format YYYY-MM-DD
     if (value.length === 10) {
         return `${value.substring(5, 7)}.${value.substring(8, 10)}`;
     }
@@ -251,7 +257,7 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                         <XAxis
                             dataKey={isDaily ? "Date" : "Month"}
-                            tickFormatter={(val) => isDaily ? val.split('-').slice(1).join('/') : formatXAxisTick(val)}
+                            tickFormatter={(val, index) => isDaily ? val.split('-').slice(1).join('/') : formatXAxisTick(val, index)}
                             stroke="#94a3b8"
                             style={{ fontSize: '10px', fontWeight: 500 }}
                             axisLine={false}

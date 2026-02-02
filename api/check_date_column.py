@@ -1,87 +1,51 @@
-#!/usr/bin/env python3
-"""
-Diagnostic script to check 일별 column for 2026-01 dates
-"""
 import pandas as pd
 import os
+import sys
+# Add api directory to sys.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from dashboard import get_dataframe
 
-def check_date_column(filename):
-    """Check what dates exist in 일별 column"""
-    file_path = os.path.join('uploads', filename)
+def check_date_column():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    uploads_dir = os.path.join(base_dir, "uploads")
     
-    if not os.path.exists(file_path):
-        return f"❌ File not found: {filename}"
+    # Find latest file
+    files = [f for f in os.listdir(uploads_dir) if f.endswith('.xlsx') or f.endswith('.csv')]
+    if not files:
+        print("No files found.")
+        return
+        
+    latest_file = max([os.path.join(uploads_dir, f) for f in files], key=os.path.getmtime)
+    filename = os.path.basename(latest_file)
+    print(f"Checking file: {filename}")
     
-    try:
-        # Read Excel file
-        df = pd.read_excel(file_path)
-        
-        # Clean column names
-        df.columns = df.columns.str.replace('\t', '').str.strip()
-        
-        date_col = '일별'
-        
-        # Check if '일별' column exists
-        if date_col not in df.columns:
-            return f"❌ {filename}: '일별' column not found. Available columns: {list(df.columns[:10])}"
-        
-        # Parse dates
-        numeric_dates = pd.to_numeric(df[date_col], errors='coerce')
-        date_series = pd.to_datetime(numeric_dates, unit='D', origin='1899-12-30', errors='coerce')
-        
-        # Also try string parsing for any non-numeric dates
-        mask = date_series.isna() & df[date_col].notna()
-        if mask.any():
-            date_series.loc[mask] = pd.to_datetime(df.loc[mask, date_col], errors='coerce')
-        
-        # Drop NaT values
-        valid_dates = date_series.dropna()
-        
-        if valid_dates.empty:
-            return f"❌ {filename}: No valid dates found in '일별' column"
-        
-        # Get min and max dates
-        min_date = valid_dates.min()
-        max_date = valid_dates.max()
-        
-        # Check for 2026 dates
-        dates_2026 = valid_dates[valid_dates.dt.year == 2026]
-        has_2026 = len(dates_2026) > 0
-        
-        result = f"\n{'='*60}\n"
-        result += f"📁 File: {filename}\n"
-        result += f"{'='*60}\n"
-        result += f"Min date: {min_date.strftime('%Y-%m-%d')}\n"
-        result += f"Max date: {max_date.strftime('%Y-%m-%d')}\n"
-        result += f"Total date records: {len(valid_dates)}\n"
-        result += f"Contains 2026 data: {'✅ YES' if has_2026 else '❌ NO'}\n"
-        
-        if has_2026:
-            result += f"\n2026 dates found: {len(dates_2026)} records\n"
-            result += f"First 2026 date: {dates_2026.min().strftime('%Y-%m-%d')}\n"
-            result += f"Last 2026 date: {dates_2026.max().strftime('%Y-%m-%d')}\n"
+    df = get_dataframe(filename)
+    date_col = '일별'
+    
+    if date_col in df.columns:
+        print(f"Column '{date_col}' Type: {df[date_col].dtype}")
+        print(f"Sample values (head): {df[date_col].head().tolist()}")
+        # Check for numeric range if numeric
+        if pd.api.types.is_numeric_dtype(df[date_col]):
+             min_val = df[date_col].min()
+             max_val = df[date_col].max()
+             print(f"Min Value: {min_val}, Max Value: {max_val}")
+             
+        # Check standard casting behavior
+        print("--- Parsing Test ---")
+        sample = df[date_col].iloc[0]
+        try:
+             # Just force numeric
+             as_num = pd.to_numeric(sample, errors='coerce')
+             print(f"As numeric: {as_num}")
+             if not pd.isna(as_num):
+                 as_date_excel = pd.to_datetime(as_num, unit='D', origin='1899-12-30')
+                 print(f"Interpreted as Excel Serial: {as_date_excel}")
+        except Exception as e:
+             print(f"Parsing test error: {e}")
             
-            # Show unique 2026 year-months
-            months_2026 = dates_2026.dt.to_period('M').unique()
-            result += f"\n2026 months:\n"
-            for m in sorted(months_2026):
-                result += f"  - {m}\n"
-        
-        return result
-        
-    except Exception as e:
-        return f"❌ Error reading {filename}: {str(e)}"
+    else:
+        print(f"Column '{date_col}' NOT found.")
 
 if __name__ == "__main__":
-    print("🔍 Checking '일별' column for 2026 dates...\n")
-    
-    files_to_check = [
-        'avk_1.xlsx',
-        '251219-1.xlsx'
-    ]
-    
-    for filename in files_to_check:
-        print(check_date_column(filename))
-    
-    print("\n" + "="*60)
-    print("✅ Analysis complete")
+    check_date_column()

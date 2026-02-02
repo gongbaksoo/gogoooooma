@@ -17,6 +17,11 @@ from database import (
 )
 
 app = FastAPI(title="Sales Analysis API")
+
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "message": "API is running"}
+
 router = APIRouter()
 
 # Configure CORS

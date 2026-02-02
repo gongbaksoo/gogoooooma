@@ -323,7 +323,19 @@ def upload_file(file: UploadFile = File(...)):
         # Quick validation - check if file can be read and date format is correct
         try:
             import pandas as pd
-            df = pd.read_excel(temp_path) if temp_path.endswith('.xlsx') else pd.read_csv(temp_path)
+            if temp_path.endswith('.xlsx'):
+                df = pd.read_excel(temp_path)
+            else:
+                # Try multiple encodings for CSV files
+                df = None
+                for encoding in ['utf-8', 'utf-8-sig', 'cp949', 'euc-kr']:
+                    try:
+                        df = pd.read_csv(temp_path, encoding=encoding)
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                if df is None:
+                    raise ValueError("파일 인코딩을 인식할 수 없습니다. UTF-8 또는 EUC-KR로 저장해주세요.")
             
             # Clean column names
             df.columns = df.columns.str.replace('\t', '').str.strip()

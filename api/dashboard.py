@@ -48,7 +48,15 @@ def get_dataframe(filename: str):
     if file_path.endswith('.xlsx'):
         df = pd.read_excel(file_path)
     else:
-        df = pd.read_csv(file_path)
+        # Try multiple encodings for CSV files
+        for encoding in ['utf-8', 'utf-8-sig', 'cp949', 'euc-kr']:
+            try:
+                df = pd.read_csv(file_path, encoding=encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            raise ValueError("파일 인코딩을 인식할 수 없습니다. UTF-8 또는 EUC-KR로 저장해주세요.")
     
     end_time = time.time()
     logging.info(f"Loaded {filename} in {end_time - start_time:.2f}s")

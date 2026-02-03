@@ -61,9 +61,9 @@ const formatXAxisTick = (value: string, index: number) => {
     if (value.length === 7) {
         const year = value.substring(2, 4);
         const month = parseInt(value.substring(5, 7));
-        // Show year only for January or first item
+        // Show year only for January or first item (공백 제거)
         if (index === 0 || month === 1) {
-            return `${year}' ${month}`;
+            return `${year}'${month}`;
         }
         return `${month}`;
     }
@@ -259,11 +259,14 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                             dataKey={isDaily ? "Date" : "Month"}
                             tickFormatter={(val, index) => isDaily ? val.split('-').slice(1).join('/') : formatXAxisTick(val, index)}
                             stroke="#94a3b8"
-                            style={{ fontSize: '10px', fontWeight: 500 }}
+                            style={{ fontSize: '9px', fontWeight: 500 }}
                             axisLine={false}
                             tickLine={false}
                             dy={10}
                             interval={0}
+                            angle={-45}
+                            textAnchor="end"
+                            height={60}
                         />
                         <YAxis yAxisId="left" stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={mode === 'profit_only' ? formatPercent : formatMillions} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="right" orientation="right" stroke="#ec4899" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatPercent} axisLine={false} tickLine={false} hide={isSingleView} />

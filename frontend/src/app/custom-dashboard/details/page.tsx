@@ -78,9 +78,9 @@ const formatXAxisTick = (value: string, index: number) => {
     if (value.length === 7) {
         const year = value.substring(2, 4);
         const month = parseInt(value.substring(5, 7));
-        // Show year only for January or first item
+        // Show year only for January or first item (공백 제거)
         if (index === 0 || month === 1) {
-            return `${year}' ${month}`;
+            return `${year}'${month}`;
         }
         return `${month}`;
     }
@@ -138,11 +138,14 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             dataKey={isDaily ? "Date" : "Month"}
                             tickFormatter={(val, index) => isDaily ? val.split('-').slice(1).join('/') : formatXAxisTick(val, index)}
                             stroke="#94a3b8"
-                            style={{ fontSize: '10px', fontWeight: 500 }}
+                            style={{ fontSize: '9px', fontWeight: 500 }}
                             axisLine={false}
                             tickLine={false}
                             dy={10}
                             interval={0}
+                            angle={-45}
+                            textAnchor="end"
+                            height={60}
                         />
                         <YAxis yAxisId="left" stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatMillions} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="right" orientation="right" stroke="#ec4899" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatPercent} axisLine={false} tickLine={false} />
@@ -300,7 +303,7 @@ function DetailsContent() {
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={comparisonData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                                <XAxis dataKey="Month" tickFormatter={formatXAxisTick} stroke="#94a3b8" style={{ fontSize: '10px', fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} interval={0} />
+                                <XAxis dataKey="Month" tickFormatter={formatXAxisTick} stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} interval={0} angle={-45} textAnchor="end" height={60} />
                                 <YAxis stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatMillions} axisLine={false} tickLine={false} />
                                 <Tooltip formatter={(val: any) => [formatMillions(val), '매출액']} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }} />
                                 <Legend wrapperStyle={{ paddingTop: '20px' }} />

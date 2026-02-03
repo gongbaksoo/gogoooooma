@@ -278,9 +278,9 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
         const year = value.substring(0, 2);
         const month = parseInt(value.substring(2, 4));
 
-        // 첫 번째 데이터이거나 1월인 경우에만 연도 표시 ("24' 1" 형식)
+        // 첫 번째 데이터이거나 1월인 경우에만 연도 표시 ("24'1" 형식 - 공백 제거)
         if (index === 0 || month === 1) {
-            return `${year}' ${month}`;
+            return `${year}'${month}`;
         }
         return `${month}`;
     };
@@ -658,11 +658,14 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                 dataKey="rawMonth"
                                 tickFormatter={formatXAxisTick}
                                 stroke="#94a3b8"
-                                style={{ fontSize: '10px', fontWeight: 500 }}
+                                style={{ fontSize: '9px', fontWeight: 500 }}
                                 tickLine={false}
                                 axisLine={false}
                                 dy={10}
                                 interval={0}
+                                angle={-45}
+                                textAnchor="end"
+                                height={60}
                             />
                             <YAxis
                                 yAxisId="left"

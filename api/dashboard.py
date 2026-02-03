@@ -348,17 +348,8 @@ def get_monthly_sales_by_product_group(filename: str):
     """
     월별 품목그룹별 매출 데이터 반환
     """
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(base_dir, "uploads", filename)
-    
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {filename}")
-    
-    # 데이터 로드
-    df = pd.read_excel(file_path) if file_path.endswith('.xlsx') else pd.read_csv(file_path)
-    
-    # 컬럼명 클리닝
-    df.columns = df.columns.str.replace('\t', '').str.strip()
+    # Use get_dataframe which handles encoding properly
+    df = get_dataframe(filename)
     
     if '거래쳐명' in df.columns:
         df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)

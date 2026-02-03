@@ -662,6 +662,8 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                 tickLine={false}
                                 axisLine={false}
                                 dy={10}
+                                interval="preserveStartEnd"
+                                minTickGap={5}
                             />
                             <YAxis
                                 yAxisId="left"

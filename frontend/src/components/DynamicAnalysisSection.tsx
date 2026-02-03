@@ -263,8 +263,7 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                             axisLine={false}
                             tickLine={false}
                             dy={10}
-                            interval="preserveStartEnd"
-                            minTickGap={5}
+                            interval={0}
                         />
                         <YAxis yAxisId="left" stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={mode === 'profit_only' ? formatPercent : formatMillions} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="right" orientation="right" stroke="#ec4899" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatPercent} axisLine={false} tickLine={false} hide={isSingleView} />

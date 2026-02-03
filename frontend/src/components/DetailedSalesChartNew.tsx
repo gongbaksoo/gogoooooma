@@ -692,8 +692,7 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                 tickLine={false}
                                 axisLine={false}
                                 dy={10}
-                                interval="preserveStartEnd"
-                                minTickGap={5}
+                                interval={0}
                             />
                             <YAxis
                                 yAxisId="left"

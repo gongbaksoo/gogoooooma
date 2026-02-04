@@ -80,6 +80,9 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
             if (!filename) {
                 setOptions({});
                 setProductOptions({});
+                setStartMonth('');
+                setEndMonth('');
+                setData([]);
                 return;
             }
 

@@ -466,23 +466,21 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                     </ComposedChart>
                 </ResponsiveContainer>
 
-                {/* Debug Info Section */}
-                {
-                    debugLogs.length > 0 && (
-                        <details className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs font-mono text-slate-600">
-                            <summary className="cursor-pointer font-bold mb-2 select-none hover:text-slate-900">
-                                🔍 Calculation Debug Info (Click to expand)
-                            </summary>
-                            <div className="max-h-60 overflow-y-auto whitespace-pre-wrap">
-                                {debugLogs.map((log, i) => (
-                                    <div key={i} className="py-0.5 border-b border-slate-100 last:border-0">
-                                        {log}
-                                    </div>
-                                ))}
-                            </div>
-                        </details>
-                    )
-                }
+                {/* Debug Info Section - Only visible in development */}
+                {process.env.NODE_ENV === 'development' && debugLogs.length > 0 && (
+                    <details className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs font-mono text-slate-600">
+                        <summary className="cursor-pointer font-bold mb-2 select-none hover:text-slate-900">
+                            🔍 Calculation Debug Info (Click to expand)
+                        </summary>
+                        <div className="max-h-60 overflow-y-auto whitespace-pre-wrap">
+                            {debugLogs.map((log, i) => (
+                                <div key={i} className="py-0.5 border-b border-slate-100 last:border-0">
+                                    {log}
+                                </div>
+                            ))}
+                        </div>
+                    </details>
+                )}
             </div>
         </div>
     );

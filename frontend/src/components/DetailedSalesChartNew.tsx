@@ -79,9 +79,6 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
             if (!filename) {
                 setOptions({});
                 setChannelOptions({});
-                setStartMonth('');
-                setEndMonth('');
-                setData([]);
                 return;
             }
 

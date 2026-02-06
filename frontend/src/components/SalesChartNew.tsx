@@ -54,16 +54,11 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
         const fetchData = async () => {
             if (!filename) {
                 setData(null);
-                setStartMonth('');
-                setEndMonth('');
                 return;
             }
 
             setLoading(true);
             setError(null);
-            // Reset date range immediately on file change
-            setStartMonth('');
-            setEndMonth('');
 
             try {
                 const response = await axios.get(`${API_BASE_URL}/api/dashboard/monthly-sales`, {

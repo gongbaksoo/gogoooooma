@@ -51,16 +51,11 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                 setData([]);
                 setGroups([]);
                 setSelectedGroups([]);
-                setStartMonth('');
-                setEndMonth('');
                 return;
             }
 
             setLoading(true);
             setError(null);
-            // Reset date range immediately on file change to prevent stale dropdown options
-            setStartMonth('');
-            setEndMonth('');
 
             try {
                 const response = await axios.get(`${API_BASE_URL}/api/dashboard/product-group-sales`, {

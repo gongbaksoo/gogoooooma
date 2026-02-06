@@ -237,13 +237,25 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
     const formatXAxisTick = (value: string, index: number) => {
         if (!value) return '';
         if (timeUnit === 'day') {
-            const d = new Date(value);
-            if (index === 0 || d.getDate() === 1) {
-                return `${d.getMonth() + 1}/${d.getDate()}`;
+            const dateParts = value.split('-');
+            if (dateParts.length === 3) {
+                const month = dateParts[1];
+                const day = dateParts[2];
+                return `${month}.${day}`;
             }
-            return d.getDate().toString();
+            return value;
         }
-        return formatMonth(value);
+
+        // Monthly format: Same as other charts - show year only for first data or January
+        if (!value || value.length !== 4) return value;
+        const year = value.substring(0, 2);
+        const month = parseInt(value.substring(2, 4));
+
+        // 첫 번째 데이터이거나 1월인 경우에만 연도 표시 (\"24'1\" 형식)
+        if (index === 0 || month === 1) {
+            return `${year}'${month}`;
+        }
+        return `${month}`;
     };
 
     const formatPercent = (value: any): string => {

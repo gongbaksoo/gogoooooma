@@ -1414,3 +1414,193 @@ def get_ecommerce_details(filename):
         **cat_results,
         **account_results
     }
+
+
+def get_product_search_sales(
+    filename: str,
+    keyword: str,
+    part: str = None,
+    channel: str = None,
+    account: str = None
+):
+    """
+    상품명 키워드 검색을 통한 월별 매출 데이터 반환
+    - keyword: 품목명[규격]에서 검색할 키워드
+    - 채널 필터 (파트구분/채널구분/거래처) 지원
+    """
+    df = get_dataframe(filename)
+    
+    # 월 범위 확보
+    min_m = df['월구분'].min()
+    max_m = df['월구분'].max()
+    all_months = generate_yyyymm_range(min_m, max_m)
+    days_list, debug_logs = calculate_days_list(df, all_months)
+    
+    # 필터링 시작
+    df_filtered = df.copy()
+    labels = []
+    
+    # 키워드 필터링 (품목명[규격])
+    product_name_col = '품목명[규격]'
+    product_code_col = '품목코드'
+    
+    if product_name_col not in df.columns:
+        return {
+            "error": f"Column '{product_name_col}' not found",
+            "months": [],
+            "sales": [],
+            "profit": [],
+            "matched_products": [],
+            "label": "Error"
+        }
+    
+    if keyword and keyword.strip():
+        keyword = keyword.strip()
+        # 대소문자 무시 검색
+        mask = df_filtered[product_name_col].astype(str).str.contains(keyword, case=False, na=False)
+        df_filtered = df_filtered[mask]
+        labels.append(f"검색: {keyword}")
+    
+    # 채널 필터링
+    if part and part != 'all':
+        df_filtered = df_filtered[df_filtered['파트구분'] == part]
+        labels.append(part)
+    
+    if channel and channel != 'all':
+        df_filtered = df_filtered[df_filtered['채널구분'] == channel]
+        labels.append(channel)
+    
+    if account and account != 'all':
+        df_filtered = df_filtered[df_filtered['거래처명'] == account]
+        labels.append(account)
+    
+    # 매칭된 상품 목록 (품목코드 + 품목명[규격])
+    matched_products = []
+    if not df_filtered.empty and product_code_col in df_filtered.columns:
+        unique_products = df_filtered[[product_code_col, product_name_col]].drop_duplicates()
+        for _, row in unique_products.iterrows():
+            matched_products.append({
+                "code": str(row[product_code_col]),
+                "name": str(row[product_name_col])
+            })
+    
+    # 월별 매출 및 이익 집계
+    monthly_sales = df_filtered.groupby('월구분')['판매액'].sum().reindex(all_months, fill_value=0)
+    monthly_profit = df_filtered.groupby('월구분')['이익'].sum().reindex(all_months, fill_value=0)
+    
+    # 라벨 생성
+    product_count = len(matched_products)
+    if labels:
+        current_label = " > ".join(labels) + f" ({product_count}건)"
+    else:
+        current_label = f"전체 ({product_count}건)"
+    
+    result = {
+        "months": [str(int(month)) for month in all_months],
+        "sales": monthly_sales.values.tolist(),
+        "profit": monthly_profit.values.tolist(),
+        "matched_products": matched_products,
+        "label": current_label,
+        "days_list": days_list,
+        "debug_logs": debug_logs
+    }
+    
+    return result
+
+
+def get_daily_product_search_sales(
+    filename: str,
+    keyword: str,
+    part: str = None,
+    channel: str = None,
+    account: str = None
+):
+    """
+    상품명 키워드 검색을 통한 일별 매출 데이터 반환
+    """
+    df = get_dataframe(filename)
+    
+    # Date Processing
+    date_col = '일별'
+    if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
+        numeric_dates = pd.to_numeric(df[date_col], errors='coerce')
+        date_series = pd.to_datetime(numeric_dates, unit='D', origin='1899-12-30')
+        mask = date_series.isna() & df[date_col].notna()
+        if mask.any():
+            try:
+                date_series.loc[mask] = pd.to_datetime(df.loc[mask, date_col], errors='coerce')
+            except Exception:
+                pass
+        df[date_col] = date_series
+    
+    # 필터링 시작
+    df_filtered = df.copy()
+    labels = []
+    
+    # 키워드 필터링
+    product_name_col = '품목명[규격]'
+    product_code_col = '품목코드'
+    
+    if keyword and keyword.strip():
+        keyword = keyword.strip()
+        mask = df_filtered[product_name_col].astype(str).str.contains(keyword, case=False, na=False)
+        df_filtered = df_filtered[mask]
+        labels.append(f"검색: {keyword}")
+    
+    # 채널 필터링
+    if part and part != 'all':
+        df_filtered = df_filtered[df_filtered['파트구분'] == part]
+        labels.append(part)
+    
+    if channel and channel != 'all':
+        df_filtered = df_filtered[df_filtered['채널구분'] == channel]
+        labels.append(channel)
+    
+    if account and account != 'all':
+        df_filtered = df_filtered[df_filtered['거래처명'] == account]
+        labels.append(account)
+    
+    # 매칭된 상품 목록
+    matched_products = []
+    if not df_filtered.empty and product_code_col in df_filtered.columns:
+        unique_products = df_filtered[[product_code_col, product_name_col]].drop_duplicates()
+        for _, row in unique_products.iterrows():
+            matched_products.append({
+                "code": str(row[product_code_col]),
+                "name": str(row[product_name_col])
+            })
+    
+    # Gap Filling
+    df_filtered = df_filtered.dropna(subset=[date_col])
+    
+    if not df_filtered.empty:
+        min_d = df_filtered[date_col].min()
+        max_d = df_filtered[date_col].max()
+        full_range = pd.date_range(start=min_d, end=max_d, freq='D')
+        
+        daily_sales = df_filtered.groupby(date_col)[['판매액', '이익']].sum().reindex(full_range, fill_value=0)
+        daily_sales.index.name = date_col
+        daily_sales = daily_sales.reset_index()
+        dates = daily_sales[date_col].dt.strftime('%Y-%m-%d').tolist()
+        sales = daily_sales['판매액'].tolist()
+        profit = daily_sales['이익'].tolist()
+    else:
+        dates = []
+        sales = []
+        profit = []
+    
+    # 라벨 생성
+    product_count = len(matched_products)
+    if labels:
+        current_label = " > ".join(labels) + f" ({product_count}건)"
+    else:
+        current_label = f"전체 ({product_count}건)"
+    
+    return {
+        "dates": dates,
+        "sales": sales,
+        "profit": profit,
+        "matched_products": matched_products,
+        "label": current_label
+    }
+

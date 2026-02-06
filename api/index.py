@@ -704,6 +704,42 @@ def get_dashboard_ecommerce_details(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"상세 데이터 처리 실패: {str(e)}")
 
+@router.get("/api/dashboard/product-search-sales")
+def get_dashboard_product_search_sales(
+    filename: str,
+    keyword: str = "",
+    part: str = None,
+    channel: str = None,
+    account: str = None
+):
+    try:
+        ensure_file_on_disk(filename)
+        from dashboard import get_product_search_sales
+        result = get_product_search_sales(filename, keyword, part, channel, account)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"상품 검색 실패: {str(e)}")
+
+@router.get("/api/dashboard/daily-product-search-sales")
+def get_dashboard_daily_product_search_sales(
+    filename: str,
+    keyword: str = "",
+    part: str = None,
+    channel: str = None,
+    account: str = None
+):
+    try:
+        ensure_file_on_disk(filename)
+        from dashboard import get_daily_product_search_sales
+        result = get_daily_product_search_sales(filename, keyword, part, channel, account)
+        return result
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"일별 상품 검색 실패: {str(e)}")
+
 @router.get("/api/debug/check-data")
 def debug_check_data(filename: str):
     """Debug endpoint to check data columns"""

@@ -13,6 +13,7 @@ import SalesChartNew from "@/components/SalesChartNew";
 import ChannelSalesChartNew from "@/components/ChannelSalesChartNew";
 import ProductGroupChartNew from "@/components/ProductGroupChartNew";
 import DetailedSalesChartNew from "@/components/DetailedSalesChartNew";
+import ProductSearchChart from "@/components/ProductSearchChart";
 import BrandAnalysisSection from "@/components/BrandAnalysisSection";
 import SalesSummary from "@/components/SalesSummary";
 import SalesAlerts from "@/components/SalesAlerts";
@@ -155,6 +156,11 @@ export default function CustomDashboard() {
                 {/* Detailed Sales Chart - 3단계 필터 */}
                 <div className="mb-8">
                     <DetailedSalesChartNew filename={selectedFile || filename} />
+                </div>
+
+                {/* Product Search Chart - 상품명 검색 */}
+                <div className="mb-8">
+                    <ProductSearchChart filename={selectedFile || filename} />
                 </div>
 
                 {/* Brand Analysis Section - NEW */}

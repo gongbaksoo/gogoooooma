@@ -78,6 +78,10 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
     const [matchedProducts, setMatchedProducts] = useState<MatchedProduct[]>([]);
     const [showProducts, setShowProducts] = useState(false);
 
+    // Selected products for checkbox filtering
+    const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+    const [filteredData, setFilteredData] = useState<ChartData[]>([]);
+
     const [currentLabel, setCurrentLabel] = useState<string>('검색어를 입력하세요');
 
     // Load channel options on file change
@@ -145,7 +149,11 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
 
             setDaysList(days);
             setCurrentLabel(response.data.label);
-            setMatchedProducts(response.data.matched_products || []);
+            const products = response.data.matched_products || [];
+            setMatchedProducts(products);
+
+            // Initialize all products as selected
+            setSelectedProducts(new Set(products.map((p: MatchedProduct) => p.code)));
 
             // Transform data for chart
             const chartData: ChartData[] = months.map((month: string, index: number) => {
@@ -184,6 +192,83 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
         } catch (err: any) {
             console.error('Product search chart error:', err);
             const errorMessage = err.response?.data?.detail || err.message || '데이터를 불러오는데 실패했습니다';
+            setError(errorMessage);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Fetch data with selected product codes only (for checkbox filtering)
+    const fetchFilteredData = async () => {
+        if (!filename || selectedProducts.size === 0) return;
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const productCodesParam = Array.from(selectedProducts).join(',');
+            const endpoint = timeUnit === 'month'
+                ? `${API_BASE_URL}/api/dashboard/product-search-sales`
+                : `${API_BASE_URL}/api/dashboard/daily-product-search-sales`;
+
+            const response = await axios.get(endpoint, {
+                params: {
+                    filename,
+                    keyword: searchKeyword,
+                    part: selectedPart || 'all',
+                    channel: selectedChannel || 'all',
+                    account: selectedAccount || 'all',
+                    product_codes: productCodesParam
+                }
+            });
+
+            let months: string[] = [];
+            let sales: number[] = [];
+            let profit: number[] = [];
+            let days: number[] = [];
+
+            if (timeUnit === 'month') {
+                months = (response.data.months || []).map(String);
+                sales = response.data.sales;
+                profit = response.data.profit || [];
+                days = response.data.days_list || [];
+            } else {
+                months = response.data.dates;
+                sales = response.data.sales;
+                profit = response.data.profit || [];
+                days = new Array(sales.length).fill(1);
+            }
+
+            setDaysList(days);
+            setCurrentLabel(response.data.label);
+            // NOTE: Do NOT update matchedProducts or selectedProducts here
+            // to preserve the checkbox state
+
+            // Transform data for chart
+            const chartData: ChartData[] = months.map((month: string, index: number) => {
+                const value = sales[index] || 0;
+                const profitValue = profit[index] || 0;
+                return {
+                    month: timeUnit === 'month' ? formatMonth(month) : month,
+                    value,
+                    profit: profitValue,
+                    rawMonth: month,
+                    days: days[index] || (timeUnit === 'month' ? 30 : 1)
+                };
+            });
+
+            // Calculate growth rates
+            const chartDataWithGrowth = chartData.map((item, index) => {
+                if (index === 0) return { ...item, growth: 0 };
+                const prevValue = chartData[index - 1].value;
+                const growth = prevValue === 0 ? 0 : ((item.value - prevValue) / prevValue) * 100;
+                return { ...item, growth };
+            });
+
+            setData(chartDataWithGrowth);
+        } catch (err: any) {
+            console.error('Filtered data fetch error:', err);
+            const errorMessage = err.response?.data?.detail || err.message || '선택 항목 데이터 조회 실패';
             setError(errorMessage);
         } finally {
             setLoading(false);
@@ -498,28 +583,94 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                 </div>
             </div>
 
-            {/* Matched Products Table */}
+            {/* Matched Products Table with Checkboxes */}
             {matchedProducts.length > 0 && (
                 <div className="mb-8">
-                    <button
-                        onClick={() => setShowProducts(!showProducts)}
-                        className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-blue-600 mb-3"
-                    >
-                        <span>📦 검색된 상품 목록 ({matchedProducts.length}건)</span>
-                        <span className={`transform transition-transform ${showProducts ? 'rotate-180' : ''}`}>▼</span>
-                    </button>
+                    <div className="flex items-center justify-between mb-3">
+                        <button
+                            onClick={() => setShowProducts(!showProducts)}
+                            className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-blue-600"
+                        >
+                            <span>📦 검색된 상품 목록 ({matchedProducts.length}건)</span>
+                            <span className={`transform transition-transform ${showProducts ? 'rotate-180' : ''}`}>▼</span>
+                        </button>
+                        {showProducts && (
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                                    ✓ {selectedProducts.size}개 선택됨
+                                </span>
+                                <button
+                                    onClick={() => {
+                                        // Filter chart data based on selected products
+                                        if (selectedProducts.size === 0) {
+                                            alert('최소 1개 이상의 상품을 선택해주세요.');
+                                            return;
+                                        }
+                                        // Re-fetch with only selected product codes
+                                        fetchFilteredData();
+                                    }}
+                                    className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-4 py-1.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95"
+                                >
+                                    🔍 선택 항목 조회
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     {showProducts && (
                         <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-xl">
                             <table className="w-full text-xs">
                                 <thead className="bg-slate-100 sticky top-0">
                                     <tr>
+                                        <th className="px-3 py-2 text-center font-bold text-slate-600 w-10">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedProducts.size === matchedProducts.length && matchedProducts.length > 0}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedProducts(new Set(matchedProducts.map(p => p.code)));
+                                                    } else {
+                                                        setSelectedProducts(new Set());
+                                                    }
+                                                }}
+                                                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                            />
+                                        </th>
                                         <th className="px-4 py-2 text-left font-bold text-slate-600">품목코드</th>
                                         <th className="px-4 py-2 text-left font-bold text-slate-600">품목명[규격]</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {matchedProducts.map((product, idx) => (
-                                        <tr key={idx} className="border-t border-slate-100 hover:bg-slate-50">
+                                        <tr
+                                            key={idx}
+                                            className={`border-t border-slate-100 hover:bg-slate-50 cursor-pointer ${selectedProducts.has(product.code) ? 'bg-blue-50/50' : ''}`}
+                                            onClick={() => {
+                                                const newSelected = new Set(selectedProducts);
+                                                if (newSelected.has(product.code)) {
+                                                    newSelected.delete(product.code);
+                                                } else {
+                                                    newSelected.add(product.code);
+                                                }
+                                                setSelectedProducts(newSelected);
+                                            }}
+                                        >
+                                            <td className="px-3 py-2 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedProducts.has(product.code)}
+                                                    onChange={(e) => {
+                                                        e.stopPropagation();
+                                                        const newSelected = new Set(selectedProducts);
+                                                        if (e.target.checked) {
+                                                            newSelected.add(product.code);
+                                                        } else {
+                                                            newSelected.delete(product.code);
+                                                        }
+                                                        setSelectedProducts(newSelected);
+                                                    }}
+                                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                />
+                                            </td>
                                             <td className="px-4 py-2 text-slate-700 font-mono">{product.code}</td>
                                             <td className="px-4 py-2 text-slate-700">{product.name}</td>
                                         </tr>

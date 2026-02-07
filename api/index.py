@@ -710,12 +710,13 @@ def get_dashboard_product_search_sales(
     keyword: str = "",
     part: str = None,
     channel: str = None,
-    account: str = None
+    account: str = None,
+    product_codes: str = None
 ):
     try:
         ensure_file_on_disk(filename)
         from dashboard import get_product_search_sales
-        result = get_product_search_sales(filename, keyword, part, channel, account)
+        result = get_product_search_sales(filename, keyword, part, channel, account, product_codes)
         return result
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")

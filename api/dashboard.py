@@ -1447,7 +1447,8 @@ def get_product_search_sales(
     keyword: str,
     part: str = None,
     channel: str = None,
-    account: str = None
+    account: str = None,
+    product_codes: str = None  # Comma-separated product codes for filtering
 ):
     """
     상품명 키워드 검색을 통한 월별 매출 데이터 반환
@@ -1509,6 +1510,13 @@ def get_product_search_sales(
                 "code": str(row[product_code_col]),
                 "name": str(row[product_name_col])
             })
+    
+    # 특정 품목코드로 추가 필터링 (체크박스 선택용)
+    if product_codes and product_codes.strip():
+        code_list = [c.strip() for c in product_codes.split(',') if c.strip()]
+        if code_list:
+            df_filtered = df_filtered[df_filtered[product_code_col].astype(str).isin(code_list)]
+            labels.append(f"선택 {len(code_list)}개")
     
     # 월별 매출 및 이익 집계
     monthly_sales = df_filtered.groupby('월구분')['판매액'].sum().reindex(all_months, fill_value=0)

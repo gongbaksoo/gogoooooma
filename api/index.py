@@ -797,6 +797,41 @@ def debug_check_data(filename: str):
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=f"Coupang Inventory API Failed: {str(e)}")
 
+@router.post("/api/cache/clear")
+def clear_cache_endpoint(filename: str = None):
+    """Clear cache for a specific file or all files"""
+    try:
+        from dashboard import clear_df_cache
+        import os
+        
+        cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads", "cache")
+        
+        if filename:
+            # Clear specific file cache
+            clear_df_cache(filename)
+            
+            # Also delete parquet cache file
+            parquet_path = os.path.join(cache_dir, f"{filename}.parquet")
+            if os.path.exists(parquet_path):
+                os.remove(parquet_path)
+                logging.info(f"Deleted parquet cache: {parquet_path}")
+            
+            return {"message": f"Cache cleared for {filename}"}
+        else:
+            # Clear all cache
+            clear_df_cache()
+            
+            # Delete all parquet files
+            if os.path.exists(cache_dir):
+                for f in os.listdir(cache_dir):
+                    if f.endswith('.parquet'):
+                        os.remove(os.path.join(cache_dir, f))
+                        logging.info(f"Deleted parquet cache: {f}")
+            
+            return {"message": "All cache cleared"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cache clear failed: {str(e)}")
+
 # Mount the router both at root and at /api to ensure Vercel routing works
 app.include_router(router)
 app.include_router(router, prefix="/api")

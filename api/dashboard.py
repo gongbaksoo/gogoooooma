@@ -799,6 +799,32 @@ def get_monthly_summary(filename):
         "쏭레브": lambda d: d[d['품목그룹1'] == '쏭레브']
     }
     
+    # 최근 3개월 목록 결정 (현재 월 포함 최근 3개월)
+    last_3_months = unique_months[-3:] if len(unique_months) >= 3 else unique_months
+    
+    # 전년 동월 계산 (예: 2026-02 -> 2025-02)
+    def get_prev_year_month(month_str):
+        year, month = month_str.split('-')
+        prev_year = int(year) - 1
+        return f"{prev_year}-{month}"
+    
+    prev_year_month = get_prev_year_month(current_month)
+    
+    def calculate_multi_month_stats(sub_df, months_list):
+        """여러 개월의 합산 통계 계산"""
+        if sub_df.empty or not months_list:
+            return {"total": 0, "daily_avg": 0, "days_count": 0}
+        
+        multi_month_data = sub_df[sub_df['Month'].isin(months_list)]
+        if multi_month_data.empty:
+            return {"total": 0, "daily_avg": 0, "days_count": 0}
+        
+        total_sales = multi_month_data['판매액'].sum()
+        days_count = multi_month_data[date_col].nunique()
+        daily_avg = total_sales / days_count if days_count > 0 else 0
+        
+        return {"total": total_sales, "daily_avg": daily_avg, "days_count": days_count}
+    
     for key, filter_func in categories.items():
         subset = filter_func(df)
         curr_stats = calculate_stats(subset, current_month)
@@ -811,6 +837,12 @@ def get_monthly_summary(filename):
         # 당일매출 계산
         latest_day_sales = calculate_latest_day_sales(subset)
         
+        # 최근 3개월 통계
+        last_3_stats = calculate_multi_month_stats(subset, last_3_months)
+        
+        # 전년 동월 통계
+        prev_year_stats = calculate_stats(subset, prev_year_month)
+        
         # Growth Rate (Current Daily Avg vs Prev Daily Avg)
         if prev_stats['daily_avg'] > 0:
             growth_rate = ((curr_stats['daily_avg'] - prev_stats['daily_avg']) / prev_stats['daily_avg']) * 100
@@ -821,10 +853,17 @@ def get_monthly_summary(filename):
             "current_total": int(curr_stats['total']),
             "current_daily_avg": int(curr_stats['daily_avg']),
             "current_days": curr_stats['days_count'],
-            "latest_day_sales": latest_day_sales,  # 새로 추가
+            "latest_day_sales": latest_day_sales,
             "growth_rate": round(growth_rate, 1),
             "prev_total": int(prev_stats['total']),
-            "prev_daily_avg": int(prev_stats['daily_avg'])
+            "prev_daily_avg": int(prev_stats['daily_avg']),
+            # 새로 추가: 최근 3개월 데이터
+            "last_3months_total": int(last_3_stats['total']),
+            "last_3months_daily_avg": int(last_3_stats['daily_avg']),
+            "last_3months_days": last_3_stats['days_count'],
+            # 새로 추가: 전년 동월 데이터
+            "prev_year_total": int(prev_year_stats['total']),
+            "prev_year_daily_avg": int(prev_year_stats['daily_avg'])
         }
         
     return results

@@ -17,6 +17,13 @@ interface SummaryData {
     growth_rate: number;
     prev_total: number;
     prev_daily_avg: number;
+    // 새로 추가: 최근 3개월
+    last_3months_total: number;
+    last_3months_daily_avg: number;
+    last_3months_days: number;
+    // 새로 추가: 전년 동월
+    prev_year_total: number;
+    prev_year_daily_avg: number;
 }
 
 interface SummaryResponse {
@@ -203,12 +210,14 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
                     <table className="w-full">
                         <thead>
                             <tr className="bg-slate-50/80 text-xs text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                                <th className="text-left py-4 pl-8 font-semibold w-[12%]">구분</th>
-                                <th className="text-right py-4 font-semibold w-[15%]">당월 누적 <span className="text-[10px] normal-case text-slate-400">(백만원)</span></th>
-                                <th className="text-right py-4 font-semibold w-[15%]">당일매출 <span className="text-[10px] normal-case text-slate-400">(백만원)</span></th>
-                                <th className="text-right py-4 font-semibold w-[18%]">당월 일평균 <span className="text-[10px] normal-case text-slate-400">(백만원)</span></th>
-                                <th className="text-center py-4 font-semibold w-[13%]">전월 대비</th>
-                                <th className="text-right py-4 pr-8 font-semibold w-[27%]">전월 데이터 <span className="text-[10px] normal-case text-slate-400">(누적 / 일평균)</span></th>
+                                <th className="text-left py-4 pl-6 font-semibold w-[9%]">구분</th>
+                                <th className="text-right py-4 font-semibold w-[9%]">당월 누적 <span className="text-[10px] normal-case text-slate-400">(백만)</span></th>
+                                <th className="text-right py-4 font-semibold w-[8%]">당일매출 <span className="text-[10px] normal-case text-slate-400">(백만)</span></th>
+                                <th className="text-right py-4 font-semibold w-[12%]">당월 일평균 <span className="text-[10px] normal-case text-slate-400">(백만)</span></th>
+                                <th className="text-center py-4 font-semibold w-[10%]">전월 대비</th>
+                                <th className="text-right py-4 font-semibold w-[13%]">전월 <span className="text-[10px] normal-case text-slate-400">(누적/일평균)</span></th>
+                                <th className="text-right py-4 font-semibold w-[16%] bg-blue-50/50">최근 3개월 <span className="text-[10px] normal-case text-slate-400">(누적/일평균)</span></th>
+                                <th className="text-right py-4 pr-6 font-semibold w-[13%] bg-amber-50/50">전년 동월 <span className="text-[10px] normal-case text-slate-400">(누적/일평균)</span></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
@@ -223,64 +232,95 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
 
                                 return (
                                     <tr key={cat.key} className={`group transition-colors hover:bg-slate-50 ${isTotal ? 'bg-slate-50/50' : ''}`}>
-                                        <td className="py-5 pl-8">
-                                            <div className={`flex items-center gap-3 ${isTotal ? 'pl-2' : ''}`}>
-                                                {isTotal && <div className="w-1.5 h-8 bg-blue-600 rounded-full shadow-sm shadow-blue-200"></div>}
-                                                <span className={`font-bold text-base ${isTotal ? 'text-slate-900' : 'text-slate-600'}`}>
+                                        <td className="py-5 pl-6">
+                                            <div className={`flex items-center gap-2 ${isTotal ? 'pl-2' : ''}`}>
+                                                {isTotal && <div className="w-1 h-6 bg-blue-600 rounded-full shadow-sm shadow-blue-200"></div>}
+                                                <span className={`font-bold text-sm ${isTotal ? 'text-slate-900' : 'text-slate-600'}`}>
                                                     {cat.label}
                                                 </span>
                                             </div>
                                         </td>
 
-                                        <td className="py-5 text-right font-bold text-slate-800 text-lg tabular-nums tracking-tight">
+                                        <td className="py-4 text-right font-bold text-slate-800 text-base tabular-nums tracking-tight">
                                             {formatMillions(item.current_total)}
                                         </td>
 
-                                        <td className="py-5 text-right font-bold text-blue-600 text-lg tabular-nums tracking-tight">
+                                        <td className="py-4 text-right font-bold text-blue-600 text-base tabular-nums tracking-tight">
                                             {formatMillions(item.latest_day_sales)}
                                         </td>
 
-                                        <td className="py-5 text-right">
+                                        <td className="py-4 text-right">
                                             <div className="flex flex-col items-end">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-lg font-bold text-slate-600 tabular-nums tracking-tight">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-base font-bold text-slate-600 tabular-nums tracking-tight">
                                                         {formatMillions(item.current_daily_avg)}
                                                     </span>
-                                                    <div className="group relative">
-                                                        <span className="cursor-help text-[10px] text-blue-500 font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-0.5">
-                                                            {item.current_days}일 기준
-                                                        </span>
-                                                    </div>
+                                                    <span className="text-[9px] text-blue-500 font-bold bg-blue-50 px-1 py-0.5 rounded border border-blue-100">
+                                                        {item.current_days}일
+                                                    </span>
                                                 </div>
-                                                <span className="text-[10px] text-slate-400 mt-1 mr-1">
-                                                    (누적 ÷ {item.current_days}일)
-                                                </span>
                                             </div>
                                         </td>
 
-                                        <td className="py-5 text-center">
-                                            <div className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full w-[110px] mx-auto transition-all shadow-sm ${isGrowth ? 'bg-green-50 text-green-700 border border-green-200' :
+                                        <td className="py-4 text-center">
+                                            <div className={`inline-flex items-center justify-center gap-1 px-2 py-1 rounded-full w-[90px] mx-auto transition-all shadow-sm ${isGrowth ? 'bg-green-50 text-green-700 border border-green-200' :
                                                 isDecline ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-500 border border-slate-200'
                                                 }`}>
-                                                {isGrowth && <TrendingUp className="w-3.5 h-3.5" />}
-                                                {isDecline && <TrendingDown className="w-3.5 h-3.5" />}
-                                                {isZero && <Minus className="w-3.5 h-3.5" />}
-                                                <span className="font-bold text-sm tabular-nums">{formatRate(item.growth_rate)}</span>
+                                                {isGrowth && <TrendingUp className="w-3 h-3" />}
+                                                {isDecline && <TrendingDown className="w-3 h-3" />}
+                                                {isZero && <Minus className="w-3 h-3" />}
+                                                <span className="font-bold text-xs tabular-nums">{formatRate(item.growth_rate)}</span>
                                             </div>
                                         </td>
 
-                                        <td className="py-5 pr-8 text-right">
-                                            <div className="flex flex-col items-end gap-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 rounded">누적</span>
+                                        <td className="py-4 text-right">
+                                            <div className="flex flex-col items-end gap-0.5">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-[9px] text-slate-400 bg-slate-100 px-1 rounded">누적</span>
                                                     <span className="text-slate-500 text-sm font-medium tabular-nums">
                                                         {formatMillions(item.prev_total)}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 rounded">일평균</span>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-[9px] text-slate-400 bg-slate-100 px-1 rounded">일평균</span>
                                                     <span className="text-slate-400 text-sm tabular-nums">
                                                         {formatMillions(item.prev_daily_avg)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        {/* 새로 추가: 최근 3개월 */}
+                                        <td className="py-4 text-right bg-blue-50/30">
+                                            <div className="flex flex-col items-end gap-0.5">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-[9px] text-blue-500 bg-blue-100 px-1 rounded">누적</span>
+                                                    <span className="text-blue-700 text-sm font-bold tabular-nums">
+                                                        {formatMillions(item.last_3months_total)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-[9px] text-blue-400 bg-blue-100 px-1 rounded">{item.last_3months_days}일</span>
+                                                    <span className="text-blue-500 text-sm tabular-nums">
+                                                        {formatMillions(item.last_3months_daily_avg)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        {/* 새로 추가: 전년 동월 */}
+                                        <td className="py-4 pr-6 text-right bg-amber-50/30">
+                                            <div className="flex flex-col items-end gap-0.5">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-[9px] text-amber-600 bg-amber-100 px-1 rounded">누적</span>
+                                                    <span className="text-amber-700 text-sm font-bold tabular-nums">
+                                                        {item.prev_year_total > 0 ? formatMillions(item.prev_year_total) : '-'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-[9px] text-amber-500 bg-amber-100 px-1 rounded">일평균</span>
+                                                    <span className="text-amber-500 text-sm tabular-nums">
+                                                        {item.prev_year_daily_avg > 0 ? formatMillions(item.prev_year_daily_avg) : '-'}
                                                     </span>
                                                 </div>
                                             </div>

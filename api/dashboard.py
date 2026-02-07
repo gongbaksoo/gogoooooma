@@ -1160,6 +1160,38 @@ def get_ecommerce_details(filename):
         full_period_range = pd.period_range(start=global_min_date, end=global_max_date, freq='M')
     else:
         full_period_range = []
+    # ----------------------------------------------------------------
+    # PRE-CALCULATE GLOBAL DIVISOR MAP
+    # 일평균 계산 시 모든 채널이 동일한 divisor를 사용해야 함
+    # 규칙: 과거 월 = 달력 일수, 최근 월 = 데이터의 최대 일자
+    # ----------------------------------------------------------------
+    global_divisor_map = {}
+    
+    if len(full_period_range) > 0:
+        # Total data for calculating divisor
+        total_df_for_divisor = df[df[channel_col].isin(['이커머스', '오프라인'])].copy()
+        
+        if not total_df_for_divisor.empty:
+            total_df_for_divisor['MonthPeriod'] = total_df_for_divisor[date_col].dt.to_period('M')
+            global_grouped_days = total_df_for_divisor.groupby('MonthPeriod')[date_col].nunique()
+            global_grouped_days = global_grouped_days.reindex(full_period_range, fill_value=0)
+        else:
+            global_grouped_days = pd.Series(0, index=full_period_range)
+        
+        last_period = full_period_range[-1] if len(full_period_range) > 0 else None
+        
+        for p in full_period_range:
+            calendar_days = calendar.monthrange(p.year, p.month)[1]
+            is_last_month = (p == last_period)
+            
+            if not is_last_month:
+                # 과거 월: 달력 일수 사용
+                global_divisor_map[p] = calendar_days
+            else:
+                # 최근 월: 데이터의 실제 일수 사용
+                actual_days = int(global_grouped_days.loc[p]) if p in global_grouped_days.index else 0
+                # 데이터가 없거나 1일만 있는 경우 달력 일수 사용
+                global_divisor_map[p] = actual_days if actual_days > 1 else calendar_days
 
     # Function to get monthly and daily stats for a specific filter
     def get_stats(filtered_df):
@@ -1171,24 +1203,19 @@ def get_ecommerce_details(filename):
         if not f_df.empty:
             f_df['MonthPeriod'] = f_df[date_col].dt.to_period('M')
             grouped = f_df.groupby('MonthPeriod')[['판매액', '이익']].sum()
-            # Count unique days with sales or raw unique days? Using raw unique days for consistency
-            grouped_days = f_df.groupby('MonthPeriod')[date_col].nunique()
         else:
             grouped = pd.DataFrame(columns=['판매액', '이익'])
-            grouped_days = pd.Series(dtype=int)
 
         # Reindex to full range
         grouped = grouped.reindex(full_period_range, fill_value=0)
-        grouped_days = grouped_days.reindex(full_period_range, fill_value=0)
 
         monthly_stats = []
         for p in full_period_range:
             sales = grouped.loc[p, '판매액']
             profit = grouped.loc[p, '이익']
-            unique_days = grouped_days.loc[p]
             
-            days_in_month = calendar.monthrange(p.year, p.month)[1]
-            divisor = days_in_month if unique_days <= 1 else unique_days
+            # 전역 divisor 사용 (모든 채널 동일)
+            divisor = global_divisor_map.get(p, calendar.monthrange(p.year, p.month)[1])
             daily_avg = int(sales / divisor) if divisor > 0 else 0
             margin = round(profit / sales * 100, 1) if sales != 0 else 0
             

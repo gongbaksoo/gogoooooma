@@ -296,7 +296,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
         return filtered.map(d => ({
             ...d,
             profitRate: d.value > 0 && d.profit !== undefined ? (d.profit / d.value) * 100 : 0,
-            value: (viewMode === 'daily' || viewMode === 'dailyProfitRate') ? (d.value / (d.days || 1)) : d.value
+            value: (viewMode === 'daily' || viewMode === 'dailyProfitRate') ? (d.value / (d.days || 30)) : d.value
         }));
     };
 

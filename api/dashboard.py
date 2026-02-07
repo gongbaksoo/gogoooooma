@@ -247,36 +247,32 @@ def get_days_in_month(year, month):
 def calculate_days_list(df, months):
     """
     각 월별 나눌 일수 리스트 반환 (with debug logs)
+    
+    로직:
+    - 과거 월 (마지막 월 제외): 달력상 일수 사용 (예: 1월=31, 2월=28/29...)
+    - 최근 월 (마지막 월): 데이터에서 판매액>0인 최대 일자 사용
     """
     logs = []
     logs.append(f"Columns found: {df.columns.tolist()}")
+    
+    if not months:
+        return [], logs
+    
+    # Identify the last month in the list
+    last_month = str(months[-1])
+    logs.append(f"Last month in data: {last_month}")
     
     # Flexible column search for 'Day'
     day_col_candidates = ['일구분', '일자', '일', 'Day', 'day', 'Date', 'date']
     day_col = next((col for col in day_col_candidates if col in df.columns), None)
     
-    if not day_col:
-        logs.append(f"Day column NOT found. Candidates checked: {day_col_candidates}. Fallback to calendar days.")
-        days_list = []
-        for m_str in months:
-            year = 2024
-            if len(str(m_str)) == 6:
-                year = int(str(m_str)[:4])
-                month = int(str(m_str)[4:])
-            elif len(str(m_str)) == 4:
-                year = 2000 + int(str(m_str)[:2])
-                month = int(str(m_str)[2:])
-            else:
-                month = int(m_str)
-            days_list.append(get_days_in_month(year, month))
-        return days_list, logs
-        
-    logs.append(f"Using '{day_col}' as day column.")
-
     days_list = []
-    for m_str in months:
+    
+    for i, m_str in enumerate(months):
         m_str = str(m_str)
         year = 2024
+        
+        # Parse year and month
         if len(m_str) == 4:
             year = 2000 + int(m_str[:2])
             month = int(m_str[2:])
@@ -286,61 +282,64 @@ def calculate_days_list(df, months):
         else:
             days_list.append(30)
             continue
-
-        try:
-            # Robust filtering: Always match as string to handle mixed types
-            month_df = df[df['월구분'].astype(str) == m_str]
-            
-            if not month_df.empty:
-                # ----------------------------------------------------------------
-                # FIX: Filter for rows with Sales > 0 to ignore future placeholder dates
-                # Many excel files pre-fill days 1-31 with 0 sales.
-                # max('day_col') would be 31. We want max day WITH SALES.
-                # ----------------------------------------------------------------
-                
-                # Ensure '판매액' is numeric (handle commas if string)
-                sales_series = month_df['판매액']
-                if sales_series.dtype == 'object':
-                    # Remove commas and clean whitespace
-                    sales_series = sales_series.astype(str).str.replace(',', '').str.strip()
-                
-                month_df_valid = month_df[pd.to_numeric(sales_series, errors='coerce').fillna(0) > 0]
-                
-                if not month_df_valid.empty:
-                    max_day = month_df_valid[day_col].max()
-                    logs.append(f"Month {m_str}: Max day with sales>0 is {max_day}")
-                else:
-                    # If NO sales > 0 found (e.g. all 0), fall back to raw max or calendar?
-                    # Use raw max but log it.
-                    max_day = month_df[day_col].max()
-                    logs.append(f"Month {m_str}: No sales > 0. Using raw max {max_day}")
-
-                # Clean max_day if it's a string (e.g. "9일")
-                try:
-                    if isinstance(max_day, str):
-                        max_day = ''.join(filter(str.isdigit, max_day))
-                    
-                    max_day_int = int(max_day)
-                    
-                    # Heuristic: If only Day 1 exists, it's likely Monthly Summary data
-                    # so we should divide by full calendar days, not 1.
-                    unique_days = month_df_valid[day_col].unique()
-                    if max_day_int == 1 and len(unique_days) == 1:
-                        calendar_days = get_days_in_month(year, month)
-                        days_list.append(calendar_days)
-                        logs.append(f"Month {m_str}: Monthly Summary detected (Day 1 only). Using {calendar_days} days.")
-                    elif max_day_int > 0:
-                        days_list.append(max_day_int)
-                    else:
-                        days_list.append(get_days_in_month(year, month))
-                except:
-                     days_list.append(get_days_in_month(year, month))
+        
+        calendar_days = get_days_in_month(year, month)
+        is_last_month = (i == len(months) - 1)
+        
+        # ----------------------------------------------------------------
+        # 과거 월: 달력상 일수 사용
+        # 최근 월: 데이터의 최대 일자 사용
+        # ----------------------------------------------------------------
+        if not is_last_month:
+            # Past month: use calendar days
+            days_list.append(calendar_days)
+            logs.append(f"Month {m_str}: Past month, using calendar days = {calendar_days}")
+        else:
+            # Latest month: find max day with sales > 0
+            if not day_col:
+                logs.append(f"Month {m_str}: Day column not found. Using calendar days = {calendar_days}")
+                days_list.append(calendar_days)
             else:
-                logs.append(f"Month {m_str}: No data found in DF. Fallback.")
-                days_list.append(get_days_in_month(year, month))
-        except Exception as e:
-            logs.append(f"Month {m_str}: Error {str(e)}. Fallback.")
-            days_list.append(get_days_in_month(year, month))
+                try:
+                    month_df = df[df['월구분'].astype(str) == m_str]
+                    
+                    if not month_df.empty:
+                        # Filter for rows with Sales > 0
+                        sales_series = month_df['판매액']
+                        if sales_series.dtype == 'object':
+                            sales_series = sales_series.astype(str).str.replace(',', '').str.strip()
+                        
+                        month_df_valid = month_df[pd.to_numeric(sales_series, errors='coerce').fillna(0) > 0]
+                        
+                        if not month_df_valid.empty:
+                            max_day = month_df_valid[day_col].max()
+                            
+                            # Clean max_day if it's a string (e.g. "9일")
+                            if isinstance(max_day, str):
+                                max_day = ''.join(filter(str.isdigit, max_day))
+                            
+                            max_day_int = int(max_day)
+                            
+                            # Heuristic: If only Day 1 exists, it's likely Monthly Summary data
+                            unique_days = month_df_valid[day_col].unique()
+                            if max_day_int == 1 and len(unique_days) == 1:
+                                days_list.append(calendar_days)
+                                logs.append(f"Month {m_str}: Latest month, Monthly Summary detected. Using calendar days = {calendar_days}")
+                            elif max_day_int > 0:
+                                days_list.append(max_day_int)
+                                logs.append(f"Month {m_str}: Latest month, max day with sales = {max_day_int}")
+                            else:
+                                days_list.append(calendar_days)
+                                logs.append(f"Month {m_str}: Latest month, invalid max day. Using calendar days = {calendar_days}")
+                        else:
+                            days_list.append(calendar_days)
+                            logs.append(f"Month {m_str}: Latest month, no sales > 0. Using calendar days = {calendar_days}")
+                    else:
+                        days_list.append(calendar_days)
+                        logs.append(f"Month {m_str}: Latest month, no data found. Using calendar days = {calendar_days}")
+                except Exception as e:
+                    days_list.append(calendar_days)
+                    logs.append(f"Month {m_str}: Latest month, error {str(e)}. Using calendar days = {calendar_days}")
             
     return days_list, logs
 

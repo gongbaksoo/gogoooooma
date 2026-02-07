@@ -234,7 +234,6 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
                                     <tr key={cat.key} className={`group transition-colors hover:bg-slate-50 ${isTotal ? 'bg-slate-50/50' : ''}`}>
                                         <td className="py-5 pl-6">
                                             <div className={`flex items-center gap-2 ${isTotal ? 'pl-2' : ''}`}>
-                                                {isTotal && <div className="w-1 h-6 bg-blue-600 rounded-full shadow-sm shadow-blue-200"></div>}
                                                 <span className={`font-bold text-sm ${isTotal ? 'text-slate-900' : 'text-slate-600'}`}>
                                                     {cat.label}
                                                 </span>

@@ -755,7 +755,22 @@ def get_monthly_summary(filename):
         "data": {}
     }
     
-    def calculate_stats(sub_df, month):
+    # 월별 달력 일수 계산 함수
+    import calendar
+    def get_calendar_days(month_str):
+        """YYYY-MM 형식의 월에서 해당 월의 달력 일수 반환"""
+        try:
+            year, month = map(int, month_str.split('-'))
+            return calendar.monthrange(year, month)[1]
+        except:
+            return 30  # 기본값
+    
+    def calculate_stats(sub_df, month, use_calendar_days=False):
+        """
+        월별 통계 계산
+        use_calendar_days=True: 달력 일수로 일평균 계산 (과거 달)
+        use_calendar_days=False: 실제 데이터 일수로 계산 (당월)
+        """
         if sub_df.empty:
             return {"total": 0, "daily_avg": 0, "days_count": 0}
         
@@ -764,10 +779,18 @@ def get_monthly_summary(filename):
              return {"total": 0, "daily_avg": 0, "days_count": 0}
              
         total_sales = monthly_data['판매액'].sum()
-        days_count = monthly_data[date_col].nunique()
-        daily_avg = total_sales / days_count if days_count > 0 else 0
+        actual_days = monthly_data[date_col].nunique()
         
-        return {"total": total_sales, "daily_avg": daily_avg, "days_count": days_count}
+        if use_calendar_days:
+            # 과거 달: 달력 일수 사용
+            days_for_avg = get_calendar_days(month)
+        else:
+            # 당월: 실제 데이터 일수 사용
+            days_for_avg = actual_days
+        
+        daily_avg = total_sales / days_for_avg if days_for_avg > 0 else 0
+        
+        return {"total": total_sales, "daily_avg": daily_avg, "days_count": actual_days}
 
     def calculate_latest_day_sales(sub_df):
         """
@@ -799,8 +822,8 @@ def get_monthly_summary(filename):
         "쏭레브": lambda d: d[d['품목그룹1'] == '쏭레브']
     }
     
-    # 최근 3개월 목록 결정 (현재 월 포함 최근 3개월)
-    last_3_months = unique_months[-3:] if len(unique_months) >= 3 else unique_months
+    # 최근 3개월 목록 결정 (당월 제외, 이전 3개월)
+    last_3_months = unique_months[-4:-1] if len(unique_months) >= 4 else unique_months[:-1] if len(unique_months) > 1 else []
     
     # 전년 동월 계산 (예: 2026-02 -> 2025-02)
     def get_prev_year_month(month_str):
@@ -811,7 +834,7 @@ def get_monthly_summary(filename):
     prev_year_month = get_prev_year_month(current_month)
     
     def calculate_multi_month_stats(sub_df, months_list):
-        """여러 개월의 합산 통계 계산"""
+        """여러 개월의 합산 통계 계산 (모두 과거 달이므로 달력 일수 사용)"""
         if sub_df.empty or not months_list:
             return {"total": 0, "daily_avg": 0, "days_count": 0}
         
@@ -820,28 +843,33 @@ def get_monthly_summary(filename):
             return {"total": 0, "daily_avg": 0, "days_count": 0}
         
         total_sales = multi_month_data['판매액'].sum()
-        days_count = multi_month_data[date_col].nunique()
-        daily_avg = total_sales / days_count if days_count > 0 else 0
         
-        return {"total": total_sales, "daily_avg": daily_avg, "days_count": days_count}
+        # 달력 일수 합산
+        calendar_days_total = sum(get_calendar_days(m) for m in months_list)
+        daily_avg = total_sales / calendar_days_total if calendar_days_total > 0 else 0
+        
+        return {"total": total_sales, "daily_avg": daily_avg, "days_count": calendar_days_total}
     
     for key, filter_func in categories.items():
         subset = filter_func(df)
-        curr_stats = calculate_stats(subset, current_month)
         
+        # 당월: 실제 데이터 일수 사용
+        curr_stats = calculate_stats(subset, current_month, use_calendar_days=False)
+        
+        # 전월: 달력 일수 사용
         if prev_month:
-            prev_stats = calculate_stats(subset, prev_month)
+            prev_stats = calculate_stats(subset, prev_month, use_calendar_days=True)
         else:
-            prev_stats = {"total": 0, "daily_avg": 0}
+            prev_stats = {"total": 0, "daily_avg": 0, "days_count": 0}
         
         # 당일매출 계산
         latest_day_sales = calculate_latest_day_sales(subset)
         
-        # 최근 3개월 통계
+        # 최근 3개월 통계 (모두 과거 달 - 달력 일수 사용)
         last_3_stats = calculate_multi_month_stats(subset, last_3_months)
         
-        # 전년 동월 통계
-        prev_year_stats = calculate_stats(subset, prev_year_month)
+        # 전년 동월 통계 (과거 달 - 달력 일수 사용)
+        prev_year_stats = calculate_stats(subset, prev_year_month, use_calendar_days=True)
         
         # Growth Rate (Current Daily Avg vs Prev Daily Avg)
         if prev_stats['daily_avg'] > 0:
@@ -857,11 +885,11 @@ def get_monthly_summary(filename):
             "growth_rate": round(growth_rate, 1),
             "prev_total": int(prev_stats['total']),
             "prev_daily_avg": int(prev_stats['daily_avg']),
-            # 새로 추가: 최근 3개월 데이터
+            # 최근 3개월 데이터 (당월 제외)
             "last_3months_total": int(last_3_stats['total']),
             "last_3months_daily_avg": int(last_3_stats['daily_avg']),
             "last_3months_days": last_3_stats['days_count'],
-            # 새로 추가: 전년 동월 데이터
+            # 전년 동월 데이터
             "prev_year_total": int(prev_year_stats['total']),
             "prev_year_daily_avg": int(prev_year_stats['daily_avg'])
         }

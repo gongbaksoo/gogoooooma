@@ -885,8 +885,8 @@ def get_monthly_summary(filename):
             "growth_rate": round(growth_rate, 1),
             "prev_total": int(prev_stats['total']),
             "prev_daily_avg": int(prev_stats['daily_avg']),
-            # 최근 3개월 데이터 (당월 제외)
-            "last_3months_total": int(last_3_stats['total']),
+            # 최근 3개월 데이터 (당월 제외) - 월평균 매출
+            "last_3months_total": int(last_3_stats['total'] / 3) if len(last_3_months) == 3 else int(last_3_stats['total'] / max(len(last_3_months), 1)),
             "last_3months_daily_avg": int(last_3_stats['daily_avg']),
             "last_3months_days": last_3_stats['days_count'],
             # 전년 동월 데이터

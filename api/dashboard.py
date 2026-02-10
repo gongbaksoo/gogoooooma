@@ -959,9 +959,19 @@ def analyze_sales_performance(filename):
         
         sales = target_data[cols['sales']].sum()
         profit = target_data[cols['profit']].sum()
-        days = target_data[cols['date']].nunique()
         
-        daily_sales = sales / days if days > 0 else 0
+        # 일평균 계산: 당월은 실제 데이터 일수, 과거 달은 달력 일수
+        total_days = 0
+        for pm in period_months:
+            if pm == curr_month:
+                # 당월: 실제 데이터 일수
+                month_data = target_data[target_data['Month'] == pm]
+                total_days += month_data[cols['date']].nunique()
+            else:
+                # 과거 달: 달력 일수
+                total_days += calendar.monthrange(pm.year, pm.month)[1]
+        
+        daily_sales = sales / total_days if total_days > 0 else 0
         profit_margin = (profit / sales * 100) if sales != 0 else 0
         
         return {'daily_sales': daily_sales, 'profit_margin': profit_margin}

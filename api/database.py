@@ -1,5 +1,6 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, LargeBinary, DateTime, func
+import hashlib
+from sqlalchemy import create_engine, Column, Integer, String, LargeBinary, DateTime, func, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -26,13 +27,18 @@ Base = declarative_base()
 
 class UploadedFile(Base):
     __tablename__ = "uploaded_files"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String(255), unique=True, nullable=False, index=True)
     file_data = Column(LargeBinary, nullable=False)
     file_size = Column(Integer, nullable=False)
+    file_hash = Column(String(64), nullable=True, index=True)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+def compute_file_hash(file_data: bytes) -> str:
+    return hashlib.sha256(file_data).hexdigest()
 
 # Database engine and session
 engine = None
@@ -60,7 +66,12 @@ def init_db():
         
         # Create tables
         Base.metadata.create_all(bind=engine)
-        
+
+        # Migration: ensure file_hash column exists on pre-existing tables
+        _ensure_file_hash_column()
+        # Backfill any rows missing a hash
+        backfill_file_hashes()
+
         logging.info("Database initialized successfully")
         return True
     except Exception as e:
@@ -83,25 +94,28 @@ def save_file_to_db(filename: str, file_data: bytes) -> bool:
     db = get_db()
     if db is None:
         return False
-    
+
     try:
+        file_hash = compute_file_hash(file_data)
         # Check if file exists
         existing_file = db.query(UploadedFile).filter(UploadedFile.filename == filename).first()
-        
+
         if existing_file:
             # Update existing file
             existing_file.file_data = file_data
             existing_file.file_size = len(file_data)
+            existing_file.file_hash = file_hash
             existing_file.updated_at = datetime.utcnow()
         else:
             # Create new file
             new_file = UploadedFile(
                 filename=filename,
                 file_data=file_data,
-                file_size=len(file_data)
+                file_size=len(file_data),
+                file_hash=file_hash,
             )
             db.add(new_file)
-        
+
         db.commit()
         return True
     except Exception as e:
@@ -202,12 +216,92 @@ def get_file_count() -> int:
     db = get_db()
     if db is None:
         return 0
-    
+
     try:
         count = db.query(UploadedFile).count()
         return count
     except Exception as e:
         logging.error(f"Failed to get file count: {e}")
+        return 0
+    finally:
+        db.close()
+
+
+def get_hash_by_filename(filename: str) -> str | None:
+    """Look up the SHA256 hash currently stored for a filename."""
+    db = get_db()
+    if db is None:
+        return None
+    try:
+        row = db.query(UploadedFile).filter(UploadedFile.filename == filename).first()
+        return row.file_hash if row and row.file_hash else None
+    except Exception as e:
+        logging.error(f"Failed to look up hash for {filename}: {e}")
+        return None
+    finally:
+        db.close()
+
+
+def get_filename_by_hash(file_hash: str) -> str | None:
+    """Reverse lookup: which filename currently maps to this hash."""
+    db = get_db()
+    if db is None:
+        return None
+    try:
+        row = db.query(UploadedFile).filter(UploadedFile.file_hash == file_hash).first()
+        return row.filename if row else None
+    except Exception as e:
+        logging.error(f"Failed to look up filename for hash {file_hash}: {e}")
+        return None
+    finally:
+        db.close()
+
+
+def _ensure_file_hash_column():
+    """Add file_hash column to existing uploaded_files tables that predate this change."""
+    if engine is None:
+        return
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table("uploaded_files"):
+            return
+        cols = [c["name"] for c in inspector.get_columns("uploaded_files")]
+        if "file_hash" in cols:
+            return
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE uploaded_files ADD COLUMN file_hash VARCHAR(64)"))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_uploaded_files_file_hash "
+                "ON uploaded_files (file_hash)"
+            ))
+        logging.info("Migration: added file_hash column to uploaded_files")
+    except Exception as e:
+        logging.error(f"Failed to ensure file_hash column: {e}")
+
+
+def backfill_file_hashes() -> int:
+    """Compute file_hash for any rows missing it. Returns the number backfilled."""
+    if SessionLocal is None:
+        return 0
+    db = get_db()
+    if db is None:
+        return 0
+    try:
+        rows = db.query(UploadedFile).filter(UploadedFile.file_hash.is_(None)).all()
+        count = 0
+        for row in rows:
+            try:
+                row.file_hash = compute_file_hash(row.file_data)
+                count += 1
+            except Exception as e:
+                logging.error(f"Failed to hash file id={row.id}: {e}")
+        if count:
+            db.commit()
+            logging.info(f"Backfilled file_hash for {count} row(s)")
+        return count
+    except Exception as e:
+        db.rollback()
+        logging.error(f"Failed to backfill file hashes: {e}")
         return 0
     finally:
         db.close()

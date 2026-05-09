@@ -4,36 +4,74 @@ import os
 import calendar
 import logging
 import time
+import hashlib
 
-# In-memory cache for DataFrames
+# In-memory cache for DataFrames, keyed by content SHA256 (filename as fallback)
 df_cache = {}
+
+# filename -> SHA256 hash mapping cache (avoids repeated DB lookups)
+_filename_hash_cache = {}
+
+
+def _resolve_file_hash(filename: str, file_path: str = None):
+    """Resolve a filename to its current SHA256 hash.
+
+    Looks up the DB first (authoritative), then falls back to hashing the
+    on-disk file. Returns None only when neither source is available.
+    """
+    if filename in _filename_hash_cache:
+        return _filename_hash_cache[filename]
+
+    file_hash = None
+    try:
+        from database import get_hash_by_filename
+        file_hash = get_hash_by_filename(filename)
+    except Exception as e:
+        logging.error(f"DB hash lookup failed for {filename}: {e}")
+
+    if not file_hash and file_path and os.path.exists(file_path):
+        try:
+            with open(file_path, "rb") as fh:
+                file_hash = hashlib.sha256(fh.read()).hexdigest()
+        except Exception as e:
+            logging.error(f"Disk hash fallback failed for {filename}: {e}")
+
+    if file_hash:
+        _filename_hash_cache[filename] = file_hash
+    return file_hash
+
 
 def get_dataframe(filename: str):
     """
-    Get a DataFrame from cache, parquet fallback, or original file
+    Get a DataFrame from cache, parquet fallback, or original file.
+    Cache key is the file's SHA256 hash so same-name overwrites cannot collide.
     """
     global df_cache
-    
-    # 1. Check in-memory cache
-    if filename in df_cache:
-        logging.info(f"Cache HIT for {filename}")
-        return df_cache[filename]
-    
+
     base_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(base_dir, "uploads", filename)
-    
+
     # Cache directory for parquet files
     cache_dir = os.path.join(base_dir, "uploads", "cache")
     os.makedirs(cache_dir, exist_ok=True)
-    
-    parquet_path = os.path.join(cache_dir, f"{filename}.parquet")
-    
-    # 2. Check if parquet version exists and is newer than original
-    if os.path.exists(parquet_path) and os.path.exists(file_path) and os.path.getmtime(parquet_path) > os.path.getmtime(file_path):
+
+    file_hash = _resolve_file_hash(filename, file_path)
+    cache_key = file_hash if file_hash else filename
+    parquet_name = f"{file_hash}.parquet" if file_hash else f"{filename}.parquet"
+    parquet_path = os.path.join(cache_dir, parquet_name)
+
+    # 1. Check in-memory cache
+    if cache_key in df_cache:
+        logging.info(f"Cache HIT for {filename} (key={str(cache_key)[:12]})")
+        return df_cache[cache_key]
+
+    # 2. Parquet fallback. With hash-keyed paths content can't be stale, but we
+    # still verify the source exists before trusting it.
+    if os.path.exists(parquet_path):
         try:
             logging.info(f"Reading from Parquet: {parquet_path}")
             df = pd.read_parquet(parquet_path)
-            df_cache[filename] = df
+            df_cache[cache_key] = df
             return df
         except Exception as e:
             logging.error(f"Failed to read parquet {parquet_path}: {e}")
@@ -41,10 +79,10 @@ def get_dataframe(filename: str):
     # 3. Read from original file (Excel or CSV)
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {filename}")
-        
+
     logging.info(f"Reading from source file: {file_path}")
     start_time = time.time()
-    
+
     if file_path.endswith('.xlsx'):
         df = pd.read_excel(file_path)
     else:
@@ -57,36 +95,48 @@ def get_dataframe(filename: str):
                 continue
         else:
             raise ValueError("파일 인코딩을 인식할 수 없습니다. UTF-8 또는 EUC-KR로 저장해주세요.")
-    
+
     end_time = time.time()
     logging.info(f"Loaded {filename} in {end_time - start_time:.2f}s")
-    
+
     # Clean up column names and common types
     df.columns = df.columns.astype(str).str.replace('\t', '').str.strip()
+    # Hotfix: source export occasionally ships a typo column name. Remove this rename once upstream is fixed.
     if '거래쳐명' in df.columns:
         df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
-    
+
     df = clean_numeric_columns(df)
-    
+
     # Save to parquet for next time
     try:
         df.to_parquet(parquet_path)
         logging.info(f"Saved {filename} to Parquet for future fast loading")
     except Exception as e:
         logging.error(f"Failed to save parquet {parquet_path}: {e}")
-        
-    df_cache[filename] = df
+
+    df_cache[cache_key] = df
     return df
 
+
 def clear_df_cache(filename: str = None):
-    """Clear specific or all cache entries"""
-    global df_cache
+    """Clear specific or all cache entries.
+
+    When called with a filename we drop both the filename->hash mapping and
+    any df_cache entry keyed by that hash, so the next read picks up the
+    latest content.
+    """
+    global df_cache, _filename_hash_cache
     if filename:
+        old_hash = _filename_hash_cache.pop(filename, None)
+        if old_hash and old_hash in df_cache:
+            del df_cache[old_hash]
+            logging.info(f"Cleared cache for {filename} (hash={old_hash[:12]})")
+        # Legacy: earlier versions keyed df_cache by filename directly
         if filename in df_cache:
             del df_cache[filename]
-            logging.info(f"Cleared cache for {filename}")
     else:
         df_cache = {}
+        _filename_hash_cache = {}
         logging.info("Cleared entire DataFrame cache")
         
 def generate_yyyymm_range(start, end):

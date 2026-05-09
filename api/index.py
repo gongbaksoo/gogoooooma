@@ -1,6 +1,7 @@
 import os
 import shutil
 import logging
+import uuid
 from dotenv import load_dotenv
 
 # Configure logging and environment FIRST
@@ -11,9 +12,10 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from database import (
-    init_db, save_file_to_db, get_file_from_db, 
-    list_files_in_db, delete_file_from_db, 
-    cleanup_old_files_in_db, get_file_count
+    init_db, save_file_to_db, get_file_from_db,
+    list_files_in_db, delete_file_from_db,
+    cleanup_old_files_in_db, get_file_count,
+    get_hash_by_filename,
 )
 
 app = FastAPI(title="Sales Analysis API")
@@ -32,7 +34,6 @@ app.add_middleware(
         "https://sales-analysis-site.vercel.app",
         "https://gogoooooma.vercel.app",
         "https://api.gongbaksoo.com",
-        "*"  # Allow all for development
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -290,16 +291,23 @@ def delete_file(filename: str):
 def upload_file(file: UploadFile = File(...)):
     logging.info(f"Uploading file: {file.filename}")
     
-    if not file.filename.endswith(('.xlsx', '.csv')):
+    if not file.filename.lower().endswith(('.xlsx', '.csv')):
         raise HTTPException(status_code=400, detail="오직 .xlsx 또는 .csv 파일만 허용됩니다.")
     
     try:
         # Read file data
         file_data = file.file.read()
-        
+
+        # Capture the previous hash (if any) so we can clean its parquet later
+        old_hash = None
+        try:
+            old_hash = get_hash_by_filename(file.filename)
+        except Exception:
+            old_hash = None
+
         # Try to save to database first
         db_success = save_file_to_db(file.filename, file_data)
-        
+
         if db_success:
             logging.info("File saved to database")
             cleanup_old_files_in_db(max_files=5)
@@ -310,20 +318,34 @@ def upload_file(file: UploadFile = File(...)):
             with open(file_path, "wb") as f:
                 f.write(file_data)
             cleanup_old_files()
-        
-        # Clear memory cache if it was already there
+
+        # Clear memory cache (also drops the filename->hash mapping)
         from dashboard import clear_df_cache
         clear_df_cache(file.filename)
+
+        # Remove a stale parquet for the previous hash, if the content changed
+        try:
+            new_hash = get_hash_by_filename(file.filename)
+            if old_hash and old_hash != new_hash:
+                cache_dir = os.path.join(UPLOAD_DIR, "cache")
+                stale_parquet = os.path.join(cache_dir, f"{old_hash}.parquet")
+                if os.path.exists(stale_parquet):
+                    os.remove(stale_parquet)
+                    logging.info(f"Removed stale parquet for old hash {old_hash[:12]}")
+        except Exception as e:
+            logging.error(f"Failed to clean stale parquet on upload: {e}")
         
-        # Write to temp file for analysis
-        temp_path = f"/tmp/{file.filename}"
+        # Write to temp file for analysis. Use a UUID-based name to avoid
+        # collisions/escaping issues with non-ASCII or whitespace filenames.
+        ext = os.path.splitext(file.filename)[1].lower()
+        temp_path = f"/tmp/{uuid.uuid4().hex}{ext}"
         with open(temp_path, "wb") as f:
             f.write(file_data)
-        
+
         # Quick validation - check if file can be read and date format is correct
         try:
             import pandas as pd
-            if temp_path.endswith('.xlsx'):
+            if ext == '.xlsx':
                 df = pd.read_excel(temp_path)
             else:
                 # Try multiple encodings for CSV files
@@ -808,15 +830,26 @@ def clear_cache_endpoint(filename: str = None):
         cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads", "cache")
         
         if filename:
-            # Clear specific file cache
+            # Resolve the current hash before clearing (clear_df_cache drops the mapping)
+            file_hash = None
+            try:
+                file_hash = get_hash_by_filename(filename)
+            except Exception:
+                file_hash = None
+
+            # Clear specific file cache (memory + filename->hash mapping)
             clear_df_cache(filename)
-            
-            # Also delete parquet cache file
-            parquet_path = os.path.join(cache_dir, f"{filename}.parquet")
-            if os.path.exists(parquet_path):
-                os.remove(parquet_path)
-                logging.info(f"Deleted parquet cache: {parquet_path}")
-            
+
+            # Delete parquet cache files (hash-based, plus legacy filename-based)
+            candidates = []
+            if file_hash:
+                candidates.append(os.path.join(cache_dir, f"{file_hash}.parquet"))
+            candidates.append(os.path.join(cache_dir, f"{filename}.parquet"))  # legacy
+            for parquet_path in candidates:
+                if os.path.exists(parquet_path):
+                    os.remove(parquet_path)
+                    logging.info(f"Deleted parquet cache: {parquet_path}")
+
             return {"message": f"Cache cleared for {filename}"}
         else:
             # Clear all cache

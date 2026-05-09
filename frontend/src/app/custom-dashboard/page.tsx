@@ -30,9 +30,29 @@ export default function CustomDashboard() {
     const [showInstructionsManager, setShowInstructionsManager] = useState(false);
     const [mounted, setMounted] = useState(false);
 
+    const SELECTED_FILE_KEY = "avk_selected_file";
+
     useEffect(() => {
         setMounted(true);
+        if (typeof window !== "undefined") {
+            const stored = localStorage.getItem(SELECTED_FILE_KEY);
+            if (stored) {
+                setSelectedFile(stored);
+                setFilename(stored);
+            }
+        }
     }, []);
+
+    const persistSelectedFile = (file: string | null) => {
+        setSelectedFile(file);
+        if (typeof window !== "undefined") {
+            if (file) {
+                localStorage.setItem(SELECTED_FILE_KEY, file);
+            } else {
+                localStorage.removeItem(SELECTED_FILE_KEY);
+            }
+        }
+    };
 
     if (!mounted) {
         return <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -44,7 +64,7 @@ export default function CustomDashboard() {
         setData(responseData.data);
         const uploadedFilename = responseData.filename;
         setFilename(uploadedFilename);
-        setSelectedFile(uploadedFilename);
+        persistSelectedFile(uploadedFilename);
     };
 
     const handleShowLogs = async () => {
@@ -173,7 +193,7 @@ export default function CustomDashboard() {
                         <div className="mt-4">
                             <FileSelector
                                 selectedFile={selectedFile}
-                                onFileSelect={(file) => setSelectedFile(file)}
+                                onFileSelect={(file) => persistSelectedFile(file)}
                             />
                             <ChatHistoryList />
                         </div>

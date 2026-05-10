@@ -45,8 +45,11 @@ sales-analysis-site/
 │   │   └── components/           # React 컴포넌트들
 │   │       ├── SalesSummary.tsx           # 월간 매출 현황 보고서 테이블
 │   │       ├── ProductSearchChart.tsx     # 상품 검색 차트
-│   │       ├── ChannelSalesChart.tsx      # 채널별 매출 차트
+│   │       ├── ChannelSalesChartNew.tsx   # 채널별 매출 차트 (현행)
 │   │       ├── BrandAnalysisSection.tsx   # 브랜드 분석 섹션
+│   │       ├── SalesChartNew.tsx          # 채널별 매출 차트 (메인)
+│   │       ├── ProductGroupChartNew.tsx   # 품목그룹별 매출 차트
+│   │       ├── DetailedSalesChartNew.tsx  # 3단계 필터 매출 차트
 │   │       └── ...
 │   └── package.json
 └── README.md
@@ -136,17 +139,30 @@ sales-analysis-site/
 - "일평균" 칸: 3개월 합계 ÷ 달력 일수 합
 ```
 
-### 5.4 데이터 캐싱
+### 5.4 데이터 캐싱 (SHA256 컨텐츠 해시 기반)
 
 ```
-1. 인메모리 캐시 (df_cache): 서버 메모리에 DataFrame 저장
-2. Parquet 캐시: uploads/cache/ 폴더에 .parquet 파일 저장
-3. 캐시 클리어: POST /api/cache/clear?filename=xxx
+1. 인메모리 캐시 (df_cache): SHA256 해시를 키로 DataFrame 저장
+2. Parquet 캐시: uploads/cache/{sha256}.parquet 형태로 저장
+3. filename → hash 매핑: _filename_hash_cache (DB 조회 캐시) + DB 권위
+4. 캐시 클리어: POST /api/cache/clear?filename=xxx (filename 인터페이스 유지)
 ```
 
-> [!WARNING]
-> Parquet 캐시가 오래된 데이터를 가지고 있으면 새 CSV를 업로드해도 이전 데이터가 반환될 수 있음.
-> 이 경우 캐시 클리어 API를 호출하거나 Railway를 재배포해야 함.
+#### 캐시 키 = 컨텐츠 해시인 이유
+- 같은 파일명을 다른 내용으로 덮어쓸 때 파일명을 키로 쓰면 stale 캐시가 반환됨.
+- DB의 `uploaded_files.file_hash` 컬럼이 권위 있는 hash 출처. 업로드 시 SHA256을 계산해 저장.
+- 컨텐츠가 바뀌면 hash가 바뀌므로 캐시가 자연스럽게 분리됨 → stale 가능성 자체가 사라짐.
+- 외부 API/프론트엔드 인터페이스는 그대로 `filename`을 사용 (하이브리드 방식).
+
+#### 마이그레이션 / 백필
+- `init_db()`가 `_ensure_file_hash_column()`을 호출 → 기존 테이블에 `file_hash` 컬럼이 없으면 `ALTER TABLE ADD COLUMN` (SQLite/PostgreSQL 호환).
+- 직후 `backfill_file_hashes()`가 hash가 NULL인 row를 찾아 SHA256 계산 후 채움.
+
+#### 업로드 시 정리
+- 옛 hash의 parquet 파일이 있으면 새 hash로 바뀐 직후 `index.py:upload_file()`이 옛 parquet을 자동 삭제 → disk 누수 방지.
+
+> [!NOTE]
+> Railway 컨테이너의 디스크는 휘발성. `uploads/cache/*.parquet`은 매 배포마다 사라지므로 첫 요청에서 원본 파일을 다시 파싱한다 (정합성에는 영향 없음, 일시적 응답 지연만).
 
 ---
 

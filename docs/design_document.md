@@ -26,6 +26,12 @@
 - **브랜드 분석 섹션** (BrandAnalysisSection)
 - **상품 검색 차트** (ProductSearchChart)
 
+#### 상태 영속성 (선택 파일 유지)
+- 선택한 파일명은 `localStorage`의 `avk_selected_file` 키에 저장.
+- 마운트 직후 `useEffect`에서 읽어 `selectedFile`/`filename` 복원 → 새로고침 후에도 직전 선택 유지.
+- 파일 업로드 / FileSelector 변경 시 `persistSelectedFile()`로 동기 저장.
+- SSR 안전: `typeof window !== "undefined"` 가드.
+
 ---
 
 ## 3. SalesSummary 테이블 디자인

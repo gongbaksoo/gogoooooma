@@ -34,7 +34,6 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "https://sales-analysis-site.vercel.app",
         "https://gogoooooma.vercel.app",
-        "https://api.gongbaksoo.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],

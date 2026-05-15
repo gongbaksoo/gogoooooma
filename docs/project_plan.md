@@ -8,9 +8,9 @@
 | **목적** | 매출 CSV/XLSX 파일을 업로드하여 다양한 차트와 테이블로 매출 분석 |
 | **프로젝트 경로** | `/Users/gongbaksoo/Desktop/Vibe Coding/AVK_Sales/` |
 | **GitHub** | `https://github.com/gongbaksoo/gogoooooma.git` |
-| **배포** | Vercel (프론트엔드) + Railway (백엔드 API) |
+| **배포** | Vercel (프론트엔드) + Mac Mini + Cloudflare Tunnel (백엔드 API) |
 | **프론트 URL** | `https://gogoooooma.vercel.app` |
-| **백엔드 URL** | `https://gogoooooma-production.up.railway.app` |
+| **백엔드 URL** | `https://api.gongbaksoo.com` |
 
 ---
 
@@ -21,7 +21,7 @@
 | **프론트엔드** | Next.js, React, TypeScript, Tailwind CSS |
 | **백엔드** | Python, FastAPI, Pandas, NumPy |
 | **차트 라이브러리** | Recharts (프론트엔드) |
-| **배포** | Vercel (프론트), Railway (백엔드) |
+| **배포** | Vercel (프론트), Mac Mini + Cloudflare Tunnel (백엔드) |
 | **데이터 캐싱** | Parquet 파일 캐시 + 인메모리 캐시 (`df_cache`) |
 
 ---
@@ -162,7 +162,7 @@ sales-analysis-site/
 - 옛 hash의 parquet 파일이 있으면 새 hash로 바뀐 직후 `index.py:upload_file()`이 옛 parquet을 자동 삭제 → disk 누수 방지.
 
 > [!NOTE]
-> Railway 컨테이너의 디스크는 휘발성. `uploads/cache/*.parquet`은 매 배포마다 사라지므로 첫 요청에서 원본 파일을 다시 파싱한다 (정합성에는 영향 없음, 일시적 응답 지연만).
+> 백엔드는 Mac Mini 로컬에서 실행되므로 `uploads/cache/*.parquet`은 영구 보존된다. 재시작 후에도 캐시가 유지되어 응답 지연이 없다.
 
 ---
 
@@ -194,6 +194,21 @@ git push
 
 # 3. 자동 배포
 # - Vercel: GitHub push 시 자동 빌드/배포 (프론트엔드)
-# - Railway: GitHub push 시 자동 빌드/배포 (백엔드)
 # - 배포 완료까지 약 1-2분 소요
+
+# 4. 백엔드 (Mac Mini 로컬)
+# - Mac Mini에서 launchd로 자동 실행 (com.avk.backend)
+# - Cloudflare Tunnel을 통해 https://api.gongbaksoo.com 으로 노출
+# - 백엔드 변경 시: Mac Mini에서 직접 코드 수정 후 uvicorn 재시작
+# - 상태 확인: curl https://api.gongbaksoo.com/api/health
 ```
+
+### 백엔드 인프라 (Mac Mini)
+
+| 항목 | 내용 |
+|------|------|
+| **실행 방식** | launchd (`com.avk.backend`) — 부팅 시 자동시작 |
+| **프로세스** | uvicorn `index:app --host 127.0.0.1 --port 8000` |
+| **공개 URL** | Cloudflare Tunnel → `https://api.gongbaksoo.com` |
+| **데이터 저장** | SQLite (`api/metadata.db`) + 로컬 파일시스템 (영구 보존) |
+| **로그** | `api/uvicorn.log`, `api/uvicorn.error.log` |

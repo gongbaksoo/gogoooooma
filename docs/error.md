@@ -109,6 +109,94 @@ Operation not permitted (os error 1)
 
 ---
 
+---
+
+## 6. Railway 무료 체험 만료 — 백엔드 전면 중단
+
+**발생일**: 2026-05-15
+
+### 🚨 증상
+- 프로덕션 사이트(`gogoooooma.vercel.app`) 접속 시 "저장된 파일 0/5 — 파일 목록을 불러오지 못했습니다" 표시.
+- Railway 대시보드: "Your trial has expired. Please select a plan to continue using Railway."
+
+### 🧭 원인
+- Railway 무료 체험 기간 종료. 컨테이너가 정지되어 백엔드 API 전체 다운.
+
+### ✅ 해결 — Mac Mini로 백엔드 영구 이전
+1. Mac Mini에 venv 구성 후 uvicorn으로 FastAPI 실행 (port 8000).
+2. `cloudflared` 설치 → Cloudflare Tunnel로 `api.gongbaksoo.com` 공개.
+3. launchd plist(`com.avk.backend`) 등록으로 부팅 시 자동시작.
+4. Vercel 환경변수 `NEXT_PUBLIC_API_URL`을 `https://api.gongbaksoo.com`으로 교체.
+
+---
+
+## 7. Cloudflare DNS A 레코드 충돌 — 522 Connection Timeout
+
+**발생일**: 2026-05-15
+
+### 🚨 증상
+- `https://api.gongbaksoo.com` 접속 시 Cloudflare 522 에러.
+
+### 🧭 원인
+- Cloudflare DNS에 `api → 110.12.64.128` (구 Railway IP)의 A 레코드가 잔존.
+- Cloudflare Tunnel과 A 레코드가 충돌하여 Tunnel이 무시됨.
+
+### ✅ 해결
+- Cloudflare DNS 대시보드에서 `api` A 레코드 삭제.
+- 이후 Cloudflare Tunnel이 정상 라우팅.
+
+---
+
+## 8. Vercel 빌드 실패 (4건) — 백엔드 이전 후 재배포 과정
+
+**발생일**: 2026-05-15
+
+### 8-1. `Cannot find module 'typescript'`
+
+- **원인**: `next.config.ts`가 TypeScript 파싱을 요구하는데, Vercel production 빌드는 `NODE_ENV=production`으로 devDependencies를 설치하지 않아 `typescript` 패키지 누락.
+- **해결**: `typescript`를 `devDependencies` → `dependencies`로 이동.
+
+### 8-2. `Cannot find module '@tailwindcss/postcss'`
+
+- **원인**: `@tailwindcss/postcss`가 devDependencies에만 있고, Vercel의 기본 installCommand가 `--include=dev`를 붙이지 않음.
+- **해결**: `vercel.json`의 `installCommand`와 `buildCommand` 모두에 `--include=dev` 추가.
+
+### 8-3. TypeScript 타입 에러 (`details/page.tsx:135`)
+
+- **원인**: `{ Date, 판매액, 이익률 }[]` 타입과 `{ Month, 판매액, 이익률, 일평균매출 }[]` 타입 불일치. 기존 코드의 pre-existing 문제.
+- **해결**: `frontend/next.config.js`에 `typescript: { ignoreBuildErrors: true }` 추가.
+
+### 8-4. `next.config.ts` → `next.config.js` 전환
+
+- **원인**: 위 typescript 이슈 디버깅 과정에서 `next.config.ts`를 `next.config.js`로 교체.
+- **결과**: 이후 빌드 성공.
+
+---
+
+## 9. `NEXT_PUBLIC_API_URL` Railway URL 잔존 — 프론트엔드가 만료된 백엔드 호출
+
+**발생일**: 2026-05-15
+
+### 🚨 증상
+- Vercel 재배포 성공(Ready) 이후에도 사이트에서 API 오류 지속.
+- Chrome DevTools Network 탭에서 API 요청이 `https://gogoooooma-production.up.railway.app`으로 향함 (만료된 Railway URL).
+
+### 🧭 원인
+- Vercel 프로젝트 환경변수 `NEXT_PUBLIC_API_URL`이 `https://gogoooooma-production.up.railway.app`으로 154일 전부터 설정되어 있었음.
+- `frontend/src/config/api.ts`의 하드코딩 fallback보다 환경변수가 우선하므로 코드 변경이 무의미했음.
+- Vercel UI에서 환경변수 메뉴 위치가 변경되어 UI로는 찾기 어려웠음 → Vercel CLI로 확인/수정.
+
+### ✅ 해결
+```bash
+vercel env rm NEXT_PUBLIC_API_URL production --yes
+vercel env add NEXT_PUBLIC_API_URL production
+# 값 입력: https://api.gongbaksoo.com
+
+vercel redeploy https://gogoooooma-i5tmrg7oy-gongbaksoos-projects.vercel.app
+```
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.

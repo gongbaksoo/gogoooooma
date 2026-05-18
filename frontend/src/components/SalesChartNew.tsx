@@ -380,6 +380,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                 </div>
             </div>
             <div className="h-[350px] md:h-[450px] w-full mt-4">
+                <div key={`${viewMode}-${channelFilter}`} className="chart-fade-in">
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -464,6 +465,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                                             strokeDasharray={style.strokeDasharray}
                                             dot={{ r: style.dotR, fill: style.stroke }}
                                             activeDot={{ r: style.activeR }}
+                                            isAnimationActive={false}
                                             label={showLabel ? { position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: style.stroke, fontWeight: s.idx === 0 ? 'bold' : 'normal' } } : undefined}
                                         />
                                     );
@@ -471,6 +473,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                         })()}
                     </ComposedChart>
                 </ResponsiveContainer>
+                </div>
 
                 {/* Debug Info Section - Only visible in development */}
                 {process.env.NODE_ENV === 'development' && debugLogs.length > 0 && (

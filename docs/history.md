@@ -4,6 +4,99 @@
 
 ---
 
+## 2026-05-18 (5회차) — 월 리뷰 (Monthly Review) 페이지 Phase 1 구축
+
+### 1. 배경
+- 사용자가 `이커머스팀 영업_26년 4월 리뷰, 26년 6월 계획.pptx`를 공유 → PPT 안의 15개 차트 구조 분석.
+- 요구사항: **메인페이지에 "월 리뷰" 카드 추가 → 클릭 진입 → 파일 업로드 + 월/파트 선택 → PPT와 동일한 차트 화면 표시 + PDF 다운로드**.
+- 스코프: PPT는 "이커머스 파트" 한정 → 사용자는 **전체 / 이커머스 / 오프라인** 3 파트를 모두 보고 싶음.
+
+### 2. Phase 1 스코프 합의 (사용자 의사결정 7건)
+1. **결과물 형태**: 프론트 대시보드 페이지 + PDF 다운로드.
+2. **범위**: 종합 슬라이드(chart 1~3)만 우선 구현, 사용자가 차트 추가/제거 가능한 구조로.
+3. **월 선택**: 데이터 가용 월에서 드롭다운.
+4. **목표 데이터**: 별도 파일 업로드 방식 (`월,파트,목표` CSV).
+5. **'전체' 정의**: 파트구분 무관 전체 row 집계 (마케팅팀·공통 포함).
+6. **'주력채널' 정의**: CSV의 `주력 채널` 컬럼 == `'주력'` 그대로 사용 (할인점은 파트 필터로 자연 제외).
+7. **'쿠팡(사입)' 정의**: `주력 채널 == '주력(쿠팡)'` (CSV 검증: 100% `오픈마켓(사입) + 쿠팡_사입(AVK)`).
+
+### 3. 구현
+
+#### 신규 파일
+- `api/monthly_review.py` — 4 엔드포인트:
+  - `GET /api/monthly-review/months/?filename=` → 가용 월(YYYY-MM) 최신순
+  - `GET /api/monthly-review/summary/?filename=&month=&part=&target_file=` → chart1/2/3 데이터
+  - `GET /api/monthly-review/targets/` → 업로드된 목표 파일 리스트
+  - `POST /api/monthly-review/targets/` (multipart) → 목표 CSV 업로드 + 포맷 검증
+- `frontend/src/app/monthly-review/page.tsx` — 컨트롤(파일/월/파트) + 차트 그리드 + PDF 다운로드(`html2canvas` + `jspdf`).
+- `frontend/src/components/monthly-review/Chart1Achievement.tsx` — BarChart (사업계획/실적 + 달성률).
+- `frontend/src/components/monthly-review/Chart2YoYTrend.tsx` — LineChart (당해/전년).
+- `frontend/src/components/monthly-review/Chart3MainVsCoupang.tsx` — LineChart (주력/쿠팡사입).
+
+#### 수정 파일
+- `api/index.py` — `monthly_review.router`를 `/`와 `/api` 양쪽에 include.
+- `frontend/src/app/page.tsx` — 메인페이지에 "월 리뷰" 카드 추가 (동일 ghost 스타일).
+- `frontend/package.json` — `html2canvas@1.4.1`, `jspdf@4.2.1` 추가.
+
+#### 매핑 규약
+- 파트 필터: `all`→필터X / `ecommerce`→`파트구분=='이커머스'` / `offline`→`파트구분=='오프라인'`.
+- 월구분 ↔ 월 변환: `'2604'` ↔ `'2026-04'` (YYMM ↔ YYYY-MM).
+
+### 4. 발생 이슈 (상세는 error.md §16, §17)
+
+#### 4-1. 로컬 dev 서버가 운영 백엔드를 호출
+- `frontend/.env.local`의 `NEXT_PUBLIC_API_URL=https://api.gongbaksoo.com`이 dev fallback을 덮어씀.
+- 해결: `.env.local`을 임시로 `localhost:8000`으로 변경 + 백업 보존 + dev 재시작.
+
+#### 4-2. 업로드 파일이 "파일 없음" 404
+- 운영 백엔드는 DB-only 저장 모델인데, 신규 라우터가 `ensure_file_on_disk()` 호출을 빠뜨림.
+- 해결: `_ensure_file_on_disk()` / `_load_dataframe()` 헬퍼 추가 → 모든 데이터 로드 진입점에서 자동 동기화.
+
+### 5. Phase 1.5 — 실 운영 엑셀에서 목표 데이터 추출
+
+- 사용자가 `1) 26년 4월 리뷰 및 26년 6월 계획.xlsx` 공유 (10MB, 29시트, 전사 시트 20행×86열).
+- 전사 시트 매핑:
+  - 24년 1~12월: 실적만 (월당 1열)
+  - 25년 1~5월: 목표/실적 (월당 2열)
+  - 25년 6월~26년 12월: 목표/실적/예상실적 (월당 3열)
+- 세그먼트 매핑: `전체`→`전체`, `이커머스파트`→`이커머스`, **`세일즈파트`→`오프라인`**.
+- 1회성 추출 스크립트로 72행(24개월×3파트) CSV 생성 → 시스템에 업로드.
+- 26-02 검증: 전체 405M/721M (56%), 이커머스 356M/616M (58%), 오프라인 7M/105M (7%).
+
+### 6. Phase 1.6 — Chart 2 시간축 규약 전환
+
+- 사용자 요청: "전년비 트렌드를 당월 기준 최근 1년 데이터로 변경".
+- 변경 전: 캘린더 연도 고정 (1~12월), 대상월 이후는 0.
+- 변경 후: 대상월 기준 **trailing 12 months** (예: 26-02 → 25.03~26.02). "전년" 시리즈는 같은 X축 위치에서 1년 전 매출.
+- 백엔드: `chart2`와 `chart3`가 같은 `last12` 사용 → 두 차트 시간축 일치.
+- 프론트: `Chart2YoYTrend`의 `currentYear`/`prevYear` props 제거, X축 라벨 `YY.MM` 형식 통일.
+
+### 7. 차트 전환 인터랙션 보강 (사용자 추가 패치)
+- 모든 chart 컴포넌트에 `chart-fade-in` 클래스 래퍼 + 데이터 시그니처 기반 `key` 부여.
+- Recharts 내부 `isAnimationActive={false}` → 라인/막대 트위닝 비활성 → 깜빡임 방지, 래퍼 단일 fade로 통일된 전환.
+
+### 8. 로컬 검증 절차
+1. `api/.venv` 생성, `requirements.txt` 설치 (fastapi/uvicorn/pandas 등 60+ 패키지).
+2. `uvicorn index:app --host 127.0.0.1 --port 8000` 가동.
+3. 4개 신규 엔드포인트 curl 검증 — months(25개월), targets(POST/GET), summary(파트 3종 × 목표 매칭).
+4. `npm run build` 통과 → `/monthly-review` 라우트 컴파일 확인.
+5. `.env.local` localhost 전환 후 dev 서버에서 페이지 렌더 확인.
+
+### 9. 산출물
+- 신규 코드 (6 파일): `api/monthly_review.py`, `frontend/src/app/monthly-review/page.tsx`, `frontend/src/components/monthly-review/{Chart1Achievement, Chart2YoYTrend, Chart3MainVsCoupang}.tsx`, `api/uploads/targets/` 디렉토리.
+- 수정 코드 (3 파일): `api/index.py`, `frontend/src/app/page.tsx`, `frontend/package.json`.
+- 문서 (4 파일): `docs/{project_plan, design_document, error, history}.md`.
+- Vercel 자동 빌드 / Mac Mini는 별도 git pull + uvicorn 재시작 필요.
+
+### 10. Phase 2 후속 항목 (미구현)
+1. PPT 잔여 12개 차트 — 브랜드별 종합/상품별, 채널 유형별, 채널 이슈, 마이비/누비/쏭레브 상품 라인.
+2. 차트 추가/제거 UI (사용자가 어떤 차트를 보일지 선택).
+3. xlsx 직접 업로드 지원 — 매월 새 엑셀이 나올 때 별도 변환 없이 '전사' 시트를 백엔드가 직접 파싱.
+4. dev 전용 env 분리 (`.env.development.local`).
+5. `ensure_file_on_disk()`의 공용 모듈화.
+
+---
+
 ## 2026-05-18 (4회차) — 차트 컬러 매핑 의미 체계 전환: "위계 기반" → "데이터 종류 기반 + 8-pattern"
 
 ### 1. 배경

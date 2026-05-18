@@ -380,6 +380,59 @@ echo "NEXT_PUBLIC_API_URL=https://api.gongbaksoo.com" > frontend/.env.local
 
 ---
 
+## 16. 월 리뷰 — 로컬 dev 서버가 운영 백엔드를 호출 (Phase 1 통합 테스트)
+
+작성일: 2026-05-18
+
+### 🚨 증상
+- `npm run dev`로 띄운 로컬 프론트엔드에서 `/monthly-review` 진입 → "Not Found" 에러.
+- 파일 셀렉터에 로컬에 없는 `260210_2.csv` 같은 운영 파일명이 노출됨.
+- 콘솔 axios 에러: `Request failed with status code 404`.
+
+### 🧭 원인
+- `frontend/.env.local`에 `NEXT_PUBLIC_API_URL=https://api.gongbaksoo.com`이 박혀 있어, dev 모드에서도 운영 백엔드(Mac Mini)를 호출.
+- 새로 추가한 `/api/monthly-review/*` 엔드포인트는 운영 백엔드에 아직 없어 404.
+- `src/config/api.ts`의 dev fallback(`http://localhost:8000`)이 작동하지 않은 이유: `.env.local`은 모든 환경에 적용되므로 fallback보다 우선.
+
+### ✅ 해결
+1. `.env.local`을 `.env.local.bak`으로 백업.
+2. `.env.local`을 `NEXT_PUBLIC_API_URL=http://localhost:8000`으로 임시 변경.
+3. dev 서버 재시작 (Next.js는 env 변경 시 재시작 필요).
+4. 로컬 uvicorn(127.0.0.1:8000) 호출 정상화 확인.
+
+### 💡 향후 권장
+- **dev 전용 env 분리**: `.env.development.local`을 따로 두면 prod env는 그대로 두고 dev만 localhost로 자동 분기 가능 (Next.js는 development 모드에서 `.env.development.local`이 `.env.local`보다 우선).
+- 또는 `src/config/api.ts`에 `NODE_ENV === 'development'`이면 env var을 무시하도록 강제 분기.
+- 새 백엔드 엔드포인트는 운영 배포 전엔 로컬에서만 검증 가능하다는 점을 작업 시작 시 체크리스트에 추가.
+
+---
+
+## 17. 월 리뷰 — 업로드한 파일이 "파일 없음" 404 (DB-only 저장과 디스크 미동기화)
+
+작성일: 2026-05-18
+
+### 🚨 증상
+- `/api/upload/`로 파일 업로드 성공 후 파일 셀렉터에는 나타남.
+- 그 파일 선택 시 `/api/monthly-review/months/?filename=260210_2.csv` → **404 "파일 없음"**.
+- 동시에 디스크의 `api/uploads/` 폴더에 해당 파일이 없음 (DB에만 존재).
+
+### 🧭 원인
+- 기존 `/api/upload/` 엔드포인트는 **DB에만** 파일을 저장(`save_file_to_db`)하고 디스크 쓰기는 사용 시점으로 미루는 아키텍처.
+- 다른 dashboard 엔드포인트들은 `get_dataframe()` 호출 **전에** `ensure_file_on_disk()`로 DB→디스크 동기화 수행.
+- 새로 작성한 `api/monthly_review.py`가 이 단계를 빠뜨림 → `get_dataframe`이 디스크 source 없어 `FileNotFoundError` → 404.
+
+### ✅ 해결
+- `api/monthly_review.py`에 `_ensure_file_on_disk(filename)` 헬퍼 추가 (`index.py`의 동일 함수 로직 복제, 순환 import 회피 목적).
+- `_load_dataframe(filename)` 래퍼 정의 후 `list_months` / `get_summary` 모두 이 함수를 통해 DataFrame 로드.
+- 재현 케이스(`260210_2.csv`)로 DB→디스크 자동 동기화 확인 (83MB).
+
+### 💡 향후 권장
+- **공용 모듈로 추출**: `ensure_file_on_disk()`를 `api/utils.py` 같은 공용 모듈로 분리해 각 라우터가 import하도록 리팩토링. 향후 라우터 추가 시 같은 함정 방지.
+- 또는 `dashboard.get_dataframe()` 자체가 디스크 부재 시 DB fetch를 시도하도록 통합 — 현재는 호출자 책임이라 휴먼 에러 발생 가능.
+- 새 라우터 PR 체크리스트에 "`ensure_file_on_disk` 호출 여부 확인" 항목 추가.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.

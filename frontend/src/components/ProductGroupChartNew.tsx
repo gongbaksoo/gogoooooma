@@ -395,7 +395,8 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                 </div>
             </div>
 
-            <ResponsiveContainer width="100%" height={400}>
+            <div key={`${viewMode}-${[...selectedGroups].sort().join('|')}`} className="chart-fade-in" style={{ height: 400 }}>
+            <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis
@@ -451,6 +452,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                                     strokeDasharray={style.strokeDasharray}
                                     dot={{ fill: style.stroke, r: style.dotR }}
                                     activeDot={{ r: style.activeR }}
+                                    isAnimationActive={false}
                                     label={{
                                         position: 'top',
                                         formatter: viewMode === 'growth' || viewMode === 'profitRate' ? formatPercent : formatMillions,
@@ -462,6 +464,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                     })()}
                 </LineChart>
             </ResponsiveContainer>
+            </div>
         </div>
     );
 };

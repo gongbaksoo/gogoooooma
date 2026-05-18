@@ -187,9 +187,6 @@ export default function MonthlyReviewPage() {
     }
   };
 
-  const currentYear = month ? parseInt(month.slice(0, 4), 10) : new Date().getFullYear();
-  const prevYear = currentYear - 1;
-
   const ghostSelect =
     "border border-[#c4c4c4] bg-white text-black text-[13px] px-3 py-2 rounded hover:border-black focus:border-black focus:outline-none";
 
@@ -345,11 +342,7 @@ export default function MonthlyReviewPage() {
             className="grid grid-cols-1 lg:grid-cols-3 gap-4 bg-white"
           >
             <Chart1Achievement data={summary.chart1} month={month} />
-            <Chart2YoYTrend
-              data={summary.chart2}
-              currentYear={currentYear}
-              prevYear={prevYear}
-            />
+            <Chart2YoYTrend data={summary.chart2} />
             <Chart3MainVsCoupang data={summary.chart3} />
           </div>
         )}

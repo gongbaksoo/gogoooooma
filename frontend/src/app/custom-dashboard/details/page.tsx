@@ -131,6 +131,7 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
             </div>
 
             <div className="h-[400px]">
+                <div key={mode} className="chart-fade-in">
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
@@ -162,6 +163,7 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             strokeWidth={isDaily ? 1.5 : 2.5}
                             dot={isDaily ? false : { fill: "#000000", r: 4 }}
                             activeDot={{ r: 6 }}
+                            isAnimationActive={false}
                         >
                             {!isDaily && <LabelList dataKey={mode === 'total' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} />} />}
                         </Line>
@@ -175,11 +177,13 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             strokeWidth={1.5}
                             dot={isDaily ? false : { fill: "#ff0066", r: 3 }}
                             activeDot={{ r: 5 }}
+                            isAnimationActive={false}
                         >
                             {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ff0066" formatter={formatPercent} />} />}
                         </Line>
                     </ComposedChart>
                 </ResponsiveContainer>
+                </div>
             </div>
         </div>
     );
@@ -303,6 +307,7 @@ function DetailsContent() {
                         {typeLabel} 브랜드별 월별 매출추이
                     </h3>
                     <div className="h-[400px]">
+                        <div key={`brand-compare-${typeLabel}-${comparisonData.length}`} className="chart-fade-in">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={comparisonData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
@@ -311,12 +316,13 @@ function DetailsContent() {
                                 <Tooltip formatter={(val: any) => [formatMillions(val), '매출액']} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #c4c4c4', borderRadius: '2px', padding: '10px' }} />
                                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
                                 {/* 8-pattern: 1=전체 진함실선, 2=마이비 진함점선, 3=누비 중간실선, 4=쏭레브 중간점선 — 모두 매출 데이터 (검정 계열) */}
-                                <Line type="monotone" dataKey={`${isMain ? "주력채널" : typeLabel} 전체`} stroke="#000000" strokeWidth={2.5} dot={{ fill: "#000000", r: 4 }} activeDot={{ r: 6 }} />
-                                <Line type="monotone" dataKey="마이비" stroke="#000000" strokeWidth={1.5} strokeDasharray="4 4" dot={{ fill: "#000000", r: 3 }} activeDot={{ r: 5 }} />
-                                <Line type="monotone" dataKey="누비" stroke="#5d5d5d" strokeWidth={1.5} dot={{ fill: "#5d5d5d", r: 3 }} activeDot={{ r: 5 }} />
-                                <Line type="monotone" dataKey="쏭레브" stroke="#5d5d5d" strokeWidth={1.5} strokeDasharray="4 4" dot={{ fill: "#5d5d5d", r: 3 }} activeDot={{ r: 5 }} />
+                                <Line type="monotone" dataKey={`${isMain ? "주력채널" : typeLabel} 전체`} stroke="#000000" strokeWidth={2.5} dot={{ fill: "#000000", r: 4 }} activeDot={{ r: 6 }} isAnimationActive={false} />
+                                <Line type="monotone" dataKey="마이비" stroke="#000000" strokeWidth={1.5} strokeDasharray="4 4" dot={{ fill: "#000000", r: 3 }} activeDot={{ r: 5 }} isAnimationActive={false} />
+                                <Line type="monotone" dataKey="누비" stroke="#5d5d5d" strokeWidth={1.5} dot={{ fill: "#5d5d5d", r: 3 }} activeDot={{ r: 5 }} isAnimationActive={false} />
+                                <Line type="monotone" dataKey="쏭레브" stroke="#5d5d5d" strokeWidth={1.5} strokeDasharray="4 4" dot={{ fill: "#5d5d5d", r: 3 }} activeDot={{ r: 5 }} isAnimationActive={false} />
                             </LineChart>
                         </ResponsiveContainer>
+                        </div>
                     </div>
                 </div>
 

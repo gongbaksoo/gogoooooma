@@ -681,7 +681,8 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
             ) : (
                 <>
                     <h4 className="text-md font-semibold text-gray-600 mb-2 text-center">{chartTitle}</h4>
-                    <ResponsiveContainer width="100%" height={400}>
+                    <div key={`${viewMode}-${timeUnit}-${selectedGroup}-${selectedCategory}-${selectedSubCategory}-${selectedChannel}-${selectedAccount}`} className="chart-fade-in" style={{ height: 400 }}>
+                    <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                             <XAxis
@@ -792,6 +793,7 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                             )}
                         </ComposedChart>
                     </ResponsiveContainer>
+                    </div>
                 </>
             )}
         </div>

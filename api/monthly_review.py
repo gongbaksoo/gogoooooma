@@ -13,12 +13,46 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException, UploadFile, File, Query
 
 from dashboard import get_dataframe
+from database import get_file_from_db
 
 router = APIRouter(prefix="/monthly-review", tags=["monthly-review"])
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 TARGETS_DIR = os.path.join(BASE_DIR, "uploads", "targets")
 os.makedirs(TARGETS_DIR, exist_ok=True)
+
+
+def _ensure_file_on_disk(filename: str) -> bool:
+    """업로드 파일이 디스크에 없으면 DB에서 가져와 기록.
+
+    upload 엔드포인트는 DB에만 저장하므로 pandas로 읽기 전에 이 단계가 필요.
+    `index.py`의 ensure_file_on_disk와 동일 로직 — 순환 import 피하려고 복제.
+    """
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if os.path.exists(file_path):
+        return True
+    file_data = get_file_from_db(filename)
+    if not file_data:
+        return False
+    try:
+        with open(file_path, "wb") as f:
+            f.write(file_data)
+        logging.info(f"Synchronized {filename} from DB to disk (monthly-review)")
+        return True
+    except Exception as e:
+        logging.error(f"Failed to sync {filename} from DB: {e}")
+        return False
+
+
+def _load_dataframe(filename: str) -> pd.DataFrame:
+    """디스크 동기화 후 DataFrame 로드."""
+    if not _ensure_file_on_disk(filename):
+        raise HTTPException(status_code=404, detail=f"파일 없음: {filename}")
+    try:
+        return get_dataframe(filename)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"파일 없음: {filename}")
 
 PART_LABELS = {
     "all": None,           # 필터 없음 (전체)
@@ -111,10 +145,7 @@ def _load_targets(target_filename: Optional[str]) -> Optional[pd.DataFrame]:
 @router.get("/months/")
 def list_months(filename: str = Query(..., description="매출 CSV/XLSX 파일명")):
     """매출 파일에서 가용 월 목록을 인간 친화 포맷(YYYY-MM)으로 반환. 최신순."""
-    try:
-        df = get_dataframe(filename)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"파일 없음: {filename}")
+    df = _load_dataframe(filename)
     df = _normalize_month_column(df)
     yymm_list = sorted(df["월구분"].dropna().unique().tolist(), reverse=True)
     months = [_yymm_to_month(y) for y in yymm_list if re.match(r"^\d{4}$", str(y))]
@@ -174,13 +205,10 @@ def get_summary(
     """월 리뷰 종합 데이터 (chart 1, 2, 3).
 
     - chart1: 목표비 실적 — 목표 vs 실적 + 달성률
-    - chart2: 전년비 트렌드 — 1~12월 당해/전년
+    - chart2: 전년비 트렌드 — 대상월 기준 직전 12개월 vs 같은 기간 1년 전
     - chart3: 주력 vs 쿠팡사입 — 최근 12개월
     """
-    try:
-        df = get_dataframe(filename)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"파일 없음: {filename}")
+    df = _load_dataframe(filename)
 
     df = _normalize_month_column(df)
     if "판매액" not in df.columns:
@@ -188,8 +216,6 @@ def get_summary(
 
     df_part = _apply_part_filter(df, part)
     target_yymm = _month_to_yymm(month)
-    target_year = int(month[:4])
-    prev_year = target_year - 1
 
     # ----- chart1: 목표비 실적 -----
     actual = float(df_part[df_part["월구분"] == target_yymm]["판매액"].sum())
@@ -211,24 +237,12 @@ def get_summary(
         "achievement_rate": achievement_rate,
     }
 
-    # ----- chart2: 전년비 트렌드 (1~12월, 당해/전년) -----
+    # ----- 공통 헬퍼 -----
     def _month_total(year: int, month_num: int, frame: pd.DataFrame) -> float:
         yymm = f"{str(year)[-2:]}{str(month_num).zfill(2)}"
         return float(frame[frame["월구분"] == yymm]["판매액"].sum())
 
-    chart2 = []
-    for m in range(1, 13):
-        chart2.append({
-            "month": f"{m}월",
-            "current_year": _month_total(target_year, m, df_part),
-            "prev_year": _month_total(prev_year, m, df_part),
-        })
-
-    # ----- chart3: 주력 vs 쿠팡(사입) — 최근 12개월 -----
-    if "주력 채널" not in df.columns:
-        raise HTTPException(status_code=400, detail="CSV에 '주력 채널' 컬럼이 없습니다.")
-
-    # 대상 월부터 역순 12개월 생성
+    # 대상 월부터 역순 n개월 생성 (오래된→최근 순서로 반환)
     def _months_back(yyyymm: str, n: int):
         y, m = int(yyyymm[:4]), int(yyyymm[5:7])
         out = []
@@ -241,6 +255,19 @@ def get_summary(
         return list(reversed(out))
 
     last12 = _months_back(month, 12)
+
+    # ----- chart2: 전년비 트렌드 — 직전 12개월 vs 같은 기간 1년 전 -----
+    chart2 = []
+    for y, m in last12:
+        chart2.append({
+            "month": f"{y}-{str(m).zfill(2)}",
+            "current_year": _month_total(y, m, df_part),
+            "prev_year": _month_total(y - 1, m, df_part),
+        })
+
+    # ----- chart3: 주력 vs 쿠팡(사입) — 최근 12개월 -----
+    if "주력 채널" not in df.columns:
+        raise HTTPException(status_code=400, detail="CSV에 '주력 채널' 컬럼이 없습니다.")
 
     df_main = df_part[df_part["주력 채널"] == "주력"]
     df_coupang = df_part[df_part["주력 채널"] == "주력(쿠팡)"]

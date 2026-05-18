@@ -252,7 +252,9 @@ interface SummaryData {
 - 친근-격식 어미 (`~해요`, `~하세요`) — 코퍼레이트 `~합니다`는 법적 고지에만
 - 금지 표현: `최저가`, `긴급세일`, `오늘만`, `SHOP NOW!`, 이모지, 우르겐시 카운트다운
 
-### 8.8 적용 범위 (2026-05-18 1차 적용)
+### 8.8 적용 범위
+
+#### 1차 적용 (2026-05-18 오전)
 
 | 영역 | 파일 수 | 비고 |
 |------|---------|------|
@@ -262,12 +264,32 @@ interface SummaryData {
 | 채팅/파일/모달 | 6 | FileUpload, FileSelector, ChatHistoryList, ChatInterface, AIInstructionsManager, SchemaAliasManager |
 | 미적용 | 2 | `app/custom-dashboard/details/page.tsx` (이모지·텍스트만 정리, 카드 wrapper 미손댐), `app/coupang-orders/page.tsx` |
 
-총 19개 파일 수정. 검증: dev `/`, `/custom-dashboard` HTTP 200, hot-reload 컴파일 에러 0건.
+#### 2차 적용 (2026-05-18 오후)
+
+| 영역 | 파일 수 | 비고 |
+|------|---------|------|
+| 상세 분석 페이지 | 1 | `app/custom-dashboard/details/page.tsx` 전수 적용 (페이지 내부 자체 정의 `DynamicAnalysisSection` 포함) |
+| 카드 wrapper | 4곳 | flat `border border-[#c4c4c4]`로 통일 |
+| 모드 토글 (월매출/일평균/일매출) | 1세트 × 5인스턴스 | 검정 인버티드 + ghost |
+| 컬러 박스 + 인라인 SVG 아이콘 | 4개 제거 | indigo-600 / emerald-500 / blue-500 / pink-500 박스 모두 제거 |
+| 헤더 텍스트 내 이모지 | 2개 제거 | `🍼 누비`, `🧴 쏭레브` → 단순 텍스트 |
+| `emoji` prop | 20개 모두 `""` | ✨/🥄/💧/🌴/🥤/🐞/👶/🧴/🧼 등 |
+| 브랜드 비교 라인 차트 시리즈 | 4색 교체 | `#8b5cf6/#3b82f6/#10b981/#f59e0b` → `#000000/#5d5d5d/#c4c4c4/#ff0066` |
+| 페이지 내부 자체 차트 시리즈 | 2색 교체 | 판매액 `#8b5cf6` → `#000000`, 이익률 `#ec4899` → `#ff0066` |
+| 로딩 상태 | 3곳 | loading/no-data/Suspense fallback 모두 모노 |
+
+**누적 총 20개 파일 수정** (1차 19개 + 2차 1개). 검증: dev `/`, `/custom-dashboard`, `/custom-dashboard/details?filename=...&type=ecommerce` 모두 HTTP 200.
+
+#### 미적용 (잔여)
+
+| 영역 | 파일 수 | 비고 |
+|------|---------|------|
+| 쿠팡 주문 페이지 | 1 | `app/coupang-orders/page.tsx` — 별도 작업 |
 
 ### 8.9 알려진 한계 / 후속 항목
 
-1. **상세 페이지 미적용**: `app/custom-dashboard/details/page.tsx`와 `coupang-orders/page.tsx`는 이번 회차 범위 밖. 별도 작업 필요.
+1. **쿠팡 주문 페이지 미적용**: `app/coupang-orders/page.tsx`는 아직 미적용. 별도 작업 필요.
 2. **차트 다시리즈 가독성**: 흑백 그라데이션이 5색 이상에서 시각적 구분 약함. 패턴(점선/실선) 추가나 라벨 강화 검토 필요.
 3. **회색 인라인 hex 토큰화**: `#5d5d5d`, `#e5e5e5`, `#f5f5f5`, `#f8f8f8`이 인라인으로 흩어져 있음. globals.css에 추가 토큰 등록 권장.
-4. **`details/page.tsx` 차트 시리즈 hardcode**: 라인 310-313에 `#8b5cf6/#3b82f6/#10b981/#f59e0b`가 남아있음 (페이지 전체가 미적용 상태).
+4. **페이지 로컬 컴포넌트 정의 패턴**: `details/page.tsx`처럼 페이지 파일 내부에 컴포넌트를 직접 정의하는 패턴이 있어, 동명의 공용 컴포넌트(`components/DynamicAnalysisSection.tsx`)와 혼동을 일으킴. 향후 동명 컴포넌트는 공용으로 통합하거나 명확히 다른 이름으로 리네임 권장.
 

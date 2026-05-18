@@ -91,7 +91,7 @@ const formatXAxisTick = (value: string, index: number) => {
     return value;
 };
 
-// Reusable Dynamic Section Component
+// Reusable Dynamic Section Component (page-local)
 const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: { title: string, data: CategoryData, emoji: string, defaultMode?: 'total' | 'avg' | 'daily' }) => {
     const [mode, setMode] = useState<'total' | 'avg' | 'daily'>(defaultMode as any);
 
@@ -103,27 +103,27 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
     const chartData = isDaily ? safeData.daily.slice(-180) : safeData.monthly;
 
     return (
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60 mt-8">
+        <div className="bg-white p-4 md:p-8 border border-[#c4c4c4] mt-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8">
-                <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight">
-                    {emoji} {title} 동적 매출 분석
+                <h3 className="text-xl md:text-2xl font-bold text-black tracking-tight leading-tight">
+                    {title} 동적 매출 분석
                 </h3>
-                <div className="flex bg-slate-100 p-1 rounded-2xl">
+                <div className="flex border border-[#c4c4c4] rounded">
                     <button
                         onClick={() => setMode('total')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'total' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`px-4 py-2 text-xs font-bold transition-colors ${mode === 'total' ? 'bg-black text-white' : 'text-[#5d5d5d] hover:text-black'}`}
                     >
                         월매출 (꺾은선)
                     </button>
                     <button
                         onClick={() => setMode('avg')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'avg' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`px-4 py-2 text-xs font-bold transition-colors ${mode === 'avg' ? 'bg-black text-white' : 'text-[#5d5d5d] hover:text-black'}`}
                     >
                         일평균 (꺾은선)
                     </button>
                     <button
                         onClick={() => setMode('daily')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'daily' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                        className={`px-4 py-2 text-xs font-bold transition-colors ${mode === 'daily' ? 'bg-black text-white' : 'text-[#5d5d5d] hover:text-black'}`}
                     >
                         일매출 (꺾은선)
                     </button>
@@ -137,7 +137,7 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                         <XAxis
                             dataKey={isDaily ? "Date" : "Month"}
                             tickFormatter={(val, index) => isDaily ? val.split('-').slice(1).join('/') : formatXAxisTick(val, index)}
-                            stroke="#94a3b8"
+                            stroke="#5d5d5d"
                             style={{ fontSize: '9px', fontWeight: 500 }}
                             axisLine={false}
                             tickLine={false}
@@ -147,9 +147,9 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             textAnchor="end"
                             height={60}
                         />
-                        <YAxis yAxisId="left" stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatMillions} axisLine={false} tickLine={false} />
-                        <YAxis yAxisId="right" orientation="right" stroke="#ec4899" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatPercent} axisLine={false} tickLine={false} />
-                        <Tooltip formatter={(val: any, name: any) => name === '이익률' ? [formatPercent(val), name] : [formatMillions(val), name]} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }} />
+                        <YAxis yAxisId="left" stroke="#5d5d5d" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatMillions} axisLine={false} tickLine={false} />
+                        <YAxis yAxisId="right" orientation="right" stroke="#ff0066" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatPercent} axisLine={false} tickLine={false} />
+                        <Tooltip formatter={(val: any, name: any) => name === '이익률' ? [formatPercent(val), name] : [formatMillions(val), name]} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #c4c4c4', borderRadius: '2px', padding: '10px' }} />
                         <Legend wrapperStyle={{ paddingTop: '20px' }} />
 
                         <Line
@@ -158,12 +158,12 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             dataKey="판매액"
                             name={mode === 'total' ? "월매출액" : (mode === 'daily' ? "일매출액" : "일평균 매출")}
                             data={isDaily ? undefined : (mode === 'avg' ? chartData.map(d => ({ ...d, "판매액": (d as any).일평균매출 })) : undefined)}
-                            stroke="#8b5cf6"
+                            stroke="#000000"
                             strokeWidth={isDaily ? 2 : 3}
-                            dot={isDaily ? false : { fill: "#8b5cf6", r: 4 }}
+                            dot={isDaily ? false : { fill: "#000000", r: 4 }}
                             activeDot={{ r: 6 }}
                         >
-                            {!isDaily && <LabelList dataKey={mode === 'total' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#8b5cf6" formatter={formatMillions} />} />}
+                            {!isDaily && <LabelList dataKey={mode === 'total' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} />} />}
                         </Line>
 
                         <Line
@@ -171,13 +171,13 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             type="monotone"
                             dataKey="이익률"
                             name="이익률"
-                            stroke="#ec4899"
+                            stroke="#ff0066"
                             strokeWidth={isDaily ? 2 : 3}
-                            dot={isDaily ? false : { fill: "#ec4899", r: 4 }}
+                            dot={isDaily ? false : { fill: "#ff0066", r: 4 }}
                             activeDot={{ r: 6 }}
                             strokeDasharray="5 5"
                         >
-                            {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ec4899" formatter={formatPercent} />} />}
+                            {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ff0066" formatter={formatPercent} />} />}
                         </Line>
                     </ComposedChart>
                 </ResponsiveContainer>
@@ -210,14 +210,14 @@ function DetailsContent() {
     }, [filename]);
 
     if (loading) return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+        <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-black border-t-transparent"></div>
         </div>
     );
 
     if (!data) return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-            <div className="text-xl font-bold text-slate-600">데이터를 불러올 수 없습니다.</div>
+        <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="text-xl font-bold text-black">데이터를 불러올 수 없습니다.</div>
         </div>
     );
 
@@ -274,14 +274,18 @@ function DetailsContent() {
     });
 
     return (
-        <div className="min-h-screen bg-slate-50 p-8 pb-32">
+        <div className="min-h-screen bg-white p-8 pb-32">
             <div className="max-w-7xl mx-auto space-y-12">
                 <header className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-800">{typeLabel} 및 채널별 상세 분석 리포트</h1>
-                        <p className="text-slate-500 mt-2 font-medium italic">데이터 기반 심층 성과 대시보드</p>
+                        <h1 className="text-[30px] leading-[1.13] font-bold text-black tracking-normal">{typeLabel} 및 채널별 상세 분석 리포트</h1>
+                        <p className="mt-3 text-[15px] leading-[1.5] font-normal text-[#5d5d5d]">데이터 기반 심층 성과 대시보드</p>
                     </div>
-                    <button onClick={() => window.close()} className="px-6 py-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-slate-800 font-bold transition-all shadow-sm hover:shadow-md">
+                    <button
+                        onClick={() => window.close()}
+                        className="inline-flex items-center justify-center gap-2 bg-white text-black text-[14px] font-bold border border-solid h-[44px] px-4 transition-colors hover:border-black"
+                        style={{ borderColor: '#c4c4c4', borderRadius: 4 }}
+                    >
                         닫기
                     </button>
                 </header>
@@ -295,22 +299,22 @@ function DetailsContent() {
                 />
 
                 {/* 2. Brand Monthly Comparison (Line) */}
-                <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60">
-                    <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight mb-8">
+                <div className="bg-white p-4 md:p-8 border border-[#c4c4c4]">
+                    <h3 className="text-xl md:text-2xl font-bold text-black tracking-tight leading-tight mb-8">
                         {typeLabel} 브랜드별 월별 매출추이
                     </h3>
                     <div className="h-[400px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={comparisonData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                                <XAxis dataKey="Month" tickFormatter={formatXAxisTick} stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} interval={0} angle={-45} textAnchor="end" height={60} />
-                                <YAxis stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatMillions} axisLine={false} tickLine={false} />
-                                <Tooltip formatter={(val: any) => [formatMillions(val), '매출액']} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }} />
+                                <XAxis dataKey="Month" tickFormatter={formatXAxisTick} stroke="#5d5d5d" style={{ fontSize: '9px', fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} interval={0} angle={-45} textAnchor="end" height={60} />
+                                <YAxis stroke="#5d5d5d" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatMillions} axisLine={false} tickLine={false} />
+                                <Tooltip formatter={(val: any) => [formatMillions(val), '매출액']} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #c4c4c4', borderRadius: '2px', padding: '10px' }} />
                                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                                <Line type="monotone" dataKey={`${isMain ? "주력채널" : typeLabel} 전체`} stroke="#8b5cf6" strokeWidth={3} dot={{ fill: "#8b5cf6", r: 4 }} activeDot={{ r: 6 }} />
-                                <Line type="monotone" dataKey="마이비" stroke="#3b82f6" strokeWidth={2} dot={{ fill: "#3b82f6", r: 3 }} />
-                                <Line type="monotone" dataKey="누비" stroke="#10b981" strokeWidth={2} dot={{ fill: "#10b981", r: 3 }} />
-                                <Line type="monotone" dataKey="쏭레브" stroke="#f59e0b" strokeWidth={2} dot={{ fill: "#f59e0b", r: 3 }} />
+                                <Line type="monotone" dataKey={`${isMain ? "주력채널" : typeLabel} 전체`} stroke="#000000" strokeWidth={3} dot={{ fill: "#000000", r: 4 }} activeDot={{ r: 6 }} />
+                                <Line type="monotone" dataKey="마이비" stroke="#5d5d5d" strokeWidth={2} dot={{ fill: "#5d5d5d", r: 3 }} />
+                                <Line type="monotone" dataKey="누비" stroke="#c4c4c4" strokeWidth={2} dot={{ fill: "#c4c4c4", r: 3 }} />
+                                <Line type="monotone" dataKey="쏭레브" stroke="#ff0066" strokeWidth={2} dot={{ fill: "#ff0066", r: 3 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -318,12 +322,7 @@ function DetailsContent() {
 
                 {/* 3. Deep Analysis Section */}
                 <div className="space-y-12">
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-4">
-                        <span className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200">
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                            </svg>
-                        </span>
+                    <h2 className="text-[22px] leading-[29.92px] font-bold text-black tracking-tight">
                         채널 및 브랜드별 성과 분석
                     </h2>
 
@@ -332,19 +331,14 @@ function DetailsContent() {
                     <DynamicAnalysisSection title={`${brandPrefix} 쏭레브`} emoji="" data={getBrandData('sonreve') || mainData} />
                 </div>
 
-                <div className="pt-12 border-t border-slate-200 mt-12 transition-opacity duration-500 ease-in-out">
+                <div className="pt-12 border-t border-[#c4c4c4] mt-12">
                     <button
                         onClick={() => setIsProductAnalysisExpanded(!isProductAnalysisExpanded)}
-                        className="w-full flex items-center justify-between p-6 bg-white rounded-3xl border border-slate-200 shadow-lg hover:shadow-xl transition-all group"
+                        className="w-full flex items-center justify-between p-6 bg-white border border-[#c4c4c4] hover:border-black transition-colors group"
                     >
-                        <h2 className="text-2xl font-black text-slate-800 flex items-center gap-4">
-                            <span className="p-3 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-100 group-hover:scale-110 transition-transform">
-                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a2 2 0 00-1.96 1.414l-.477 2.387a2 2 0 00.547 1.022l1.428 1.428a2 2 0 001.022.547l2.387.477a2 2 0 001.96-1.414l.477-2.387a2 2 0 00-.547-1.022l-1.428-1.428z" />
-                                </svg>
-                            </span>
+                        <h2 className="text-2xl font-bold text-black flex items-center gap-4">
                             마이비 품목별 분석
-                            <span className="text-sm font-medium text-slate-400 ml-4 group-hover:text-emerald-500 transition-colors">
+                            <span className="text-sm font-normal text-[#5d5d5d] ml-4">
                                 {isProductAnalysisExpanded ? "접기 ▲" : "펼쳐보기 ▼"}
                             </span>
                         </h2>
@@ -354,66 +348,61 @@ function DetailsContent() {
                         <div className="mt-8 space-y-12 animate-in fade-in slide-in-from-top-4 duration-500">
                             <DynamicAnalysisSection
                                 title={`${brandPrefix} 얼룩제거제`}
-                                emoji="✨"
+                                emoji=""
                                 data={(isOffline ? (data as any).stain_offline : (isMain ? (data as any).stain_main : (data as any)[`stain_${type || 'ecommerce'}`] || (data as any).stain_ecommerce)) || mainData}
                             />
                             <DynamicAnalysisSection
                                 title={`${brandPrefix} 순한라인`}
-                                emoji="✨"
+                                emoji=""
                                 data={(isOffline ? (data as any).mild_offline : (isMain ? (data as any).mild_main : (data as any)[`mild_${type || 'ecommerce'}`] || (data as any).mild_ecommerce)) || mainData}
                             />
                             <DynamicAnalysisSection
                                 title={`${brandPrefix} 삶기세제`}
-                                emoji="✨"
+                                emoji=""
                                 data={(isOffline ? (data as any).boil_offline : (isMain ? (data as any).boil_main : (data as any)[`boil_${type || 'ecommerce'}`] || (data as any).boil_ecommerce)) || mainData}
                             />
                             <DynamicAnalysisSection
                                 title={`${brandPrefix} 건조기시트`}
-                                emoji="✨"
+                                emoji=""
                                 data={(isOffline ? (data as any).dryer_offline : (isMain ? (data as any).dryer_main : (data as any)[`dryer_${type || 'ecommerce'}`] || (data as any).dryer_ecommerce)) || mainData}
                             />
                             <DynamicAnalysisSection
                                 title={`${brandPrefix} 캡슐세제`}
-                                emoji="✨"
+                                emoji=""
                                 data={(isOffline ? (data as any).capsule_offline : (isMain ? (data as any).capsule_main : (data as any)[`capsule_${type || 'ecommerce'}`] || (data as any).capsule_ecommerce)) || mainData}
                             />
                             <DynamicAnalysisSection
                                 title={`${brandPrefix} 비건 고불소 치약`}
-                                emoji="✨"
+                                emoji=""
                                 data={(isOffline ? (data as any).fluoride_offline : (isMain ? (data as any).fluoride_main : (data as any)[`fluoride_${type || 'ecommerce'}`] || (data as any).fluoride_ecommerce)) || mainData}
                             />
                             <DynamicAnalysisSection
                                 title={`${brandPrefix} 구강티슈`}
-                                emoji="✨"
+                                emoji=""
                                 data={(isOffline ? (data as any).oral_offline : (isMain ? (data as any).oral_main : (data as any)[`oral_${type || 'ecommerce'}`] || (data as any).oral_ecommerce)) || mainData}
                             />
                             <DynamicAnalysisSection
                                 title={`${brandPrefix} 수유패드`}
-                                emoji="✨"
+                                emoji=""
                                 data={(isOffline ? (data as any).pad_offline : (isMain ? (data as any).pad_main : (data as any)[`pad_${type || 'ecommerce'}`] || (data as any).pad_ecommerce)) || mainData}
                             />
                             <DynamicAnalysisSection
                                 title={`${brandPrefix} 욕조클리너`}
-                                emoji="✨"
+                                emoji=""
                                 data={(isOffline ? (data as any).bath_offline : (isMain ? (data as any).bath_main : (data as any)[`bath_${type || 'ecommerce'}`] || (data as any).bath_ecommerce)) || mainData}
                             />
                         </div>
                     )}
                 </div>
 
-                <div className="pt-12 border-t border-slate-200 mt-12 transition-opacity duration-500 ease-in-out">
+                <div className="pt-12 border-t border-[#c4c4c4] mt-12">
                     <button
                         onClick={() => setIsNubiExpanded(!isNubiExpanded)}
-                        className="w-full flex items-center justify-between p-6 bg-white rounded-3xl border border-slate-200 shadow-lg hover:shadow-xl transition-all group"
+                        className="w-full flex items-center justify-between p-6 bg-white border border-[#c4c4c4] hover:border-black transition-colors group"
                     >
-                        <h2 className="text-2xl font-black text-slate-800 flex items-center gap-4">
-                            <span className="p-3 bg-blue-500 rounded-2xl shadow-lg shadow-blue-100 group-hover:scale-110 transition-transform">
-                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </span>
-                            🍼 누비 품목별 분석
-                            <span className="text-sm font-medium text-slate-400 ml-4 group-hover:text-blue-500 transition-colors">
+                        <h2 className="text-2xl font-bold text-black flex items-center gap-4">
+                            누비 품목별 분석
+                            <span className="text-sm font-normal text-[#5d5d5d] ml-4">
                                 {isNubiExpanded ? "접기 ▲" : "펼쳐보기 ▼"}
                             </span>
                         </h2>
@@ -421,30 +410,25 @@ function DetailsContent() {
 
                     {isNubiExpanded && (
                         <div className="mt-8 space-y-12 animate-in fade-in slide-in-from-top-4 duration-500">
-                            <DynamicAnalysisSection title={`${typeLabel} 롱핸들`} emoji="🥄" data={(isOffline ? (data as any).nubi_longhandle_offline : (isMain ? (data as any).nubi_longhandle_main : (data as any)[`nubi_longhandle_${type || 'ecommerce'}`] || (data as any).nubi_longhandle_ecommerce)) || mainData} />
-                            <DynamicAnalysisSection title={`${typeLabel} 스텐 물병`} emoji="💧" data={(isOffline ? (data as any).nubi_stainless_offline : (isMain ? (data as any).nubi_stainless_main : (data as any)[`nubi_stainless_${type || 'ecommerce'}`] || (data as any).nubi_stainless_ecommerce)) || mainData} />
-                            <DynamicAnalysisSection title={`${typeLabel} 정글 물병`} emoji="🌴" data={(isOffline ? (data as any).nubi_jungle_offline : (isMain ? (data as any).nubi_jungle_main : (data as any)[`nubi_jungle_${type || 'ecommerce'}`] || (data as any).nubi_jungle_ecommerce)) || mainData} />
-                            <DynamicAnalysisSection title={`${typeLabel} 3스텝 스푼`} emoji="🥄" data={(isOffline ? (data as any).nubi_spoon_offline : (isMain ? (data as any).nubi_spoon_main : (data as any)[`nubi_spoon_${type || 'ecommerce'}`] || (data as any).nubi_spoon_ecommerce)) || mainData} />
-                            <DynamicAnalysisSection title={`${typeLabel} 2in1 컵`} emoji="🥤" data={(isOffline ? (data as any).nubi_2in1_offline : (isMain ? (data as any).nubi_2in1_main : (data as any)[`nubi_2in1_${type || 'ecommerce'}`] || (data as any).nubi_2in1_ecommerce)) || mainData} />
-                            <DynamicAnalysisSection title={`${typeLabel} 무당벌레 빨대컵`} emoji="🐞" data={(isOffline ? (data as any).nubi_ladybug_offline : (isMain ? (data as any).nubi_ladybug_main : (data as any)[`nubi_ladybug_${type || 'ecommerce'}`] || (data as any).nubi_ladybug_ecommerce)) || mainData} />
-                            <DynamicAnalysisSection title={`${typeLabel} 실리콘노리개`} emoji="👶" data={(isOffline ? (data as any).nubi_pacifier_offline : (isMain ? (data as any).nubi_pacifier_main : (data as any)[`nubi_pacifier_${type || 'ecommerce'}`] || (data as any).nubi_pacifier_ecommerce)) || mainData} />
+                            <DynamicAnalysisSection title={`${typeLabel} 롱핸들`} emoji="" data={(isOffline ? (data as any).nubi_longhandle_offline : (isMain ? (data as any).nubi_longhandle_main : (data as any)[`nubi_longhandle_${type || 'ecommerce'}`] || (data as any).nubi_longhandle_ecommerce)) || mainData} />
+                            <DynamicAnalysisSection title={`${typeLabel} 스텐 물병`} emoji="" data={(isOffline ? (data as any).nubi_stainless_offline : (isMain ? (data as any).nubi_stainless_main : (data as any)[`nubi_stainless_${type || 'ecommerce'}`] || (data as any).nubi_stainless_ecommerce)) || mainData} />
+                            <DynamicAnalysisSection title={`${typeLabel} 정글 물병`} emoji="" data={(isOffline ? (data as any).nubi_jungle_offline : (isMain ? (data as any).nubi_jungle_main : (data as any)[`nubi_jungle_${type || 'ecommerce'}`] || (data as any).nubi_jungle_ecommerce)) || mainData} />
+                            <DynamicAnalysisSection title={`${typeLabel} 3스텝 스푼`} emoji="" data={(isOffline ? (data as any).nubi_spoon_offline : (isMain ? (data as any).nubi_spoon_main : (data as any)[`nubi_spoon_${type || 'ecommerce'}`] || (data as any).nubi_spoon_ecommerce)) || mainData} />
+                            <DynamicAnalysisSection title={`${typeLabel} 2in1 컵`} emoji="" data={(isOffline ? (data as any).nubi_2in1_offline : (isMain ? (data as any).nubi_2in1_main : (data as any)[`nubi_2in1_${type || 'ecommerce'}`] || (data as any).nubi_2in1_ecommerce)) || mainData} />
+                            <DynamicAnalysisSection title={`${typeLabel} 무당벌레 빨대컵`} emoji="" data={(isOffline ? (data as any).nubi_ladybug_offline : (isMain ? (data as any).nubi_ladybug_main : (data as any)[`nubi_ladybug_${type || 'ecommerce'}`] || (data as any).nubi_ladybug_ecommerce)) || mainData} />
+                            <DynamicAnalysisSection title={`${typeLabel} 실리콘노리개`} emoji="" data={(isOffline ? (data as any).nubi_pacifier_offline : (isMain ? (data as any).nubi_pacifier_main : (data as any)[`nubi_pacifier_${type || 'ecommerce'}`] || (data as any).nubi_pacifier_ecommerce)) || mainData} />
                         </div>
                     )}
                 </div>
 
-                <div className="pt-12 border-t border-slate-200 mt-12 transition-opacity duration-500 ease-in-out">
+                <div className="pt-12 border-t border-[#c4c4c4] mt-12">
                     <button
                         onClick={() => setIsSonreveExpanded(!isSonreveExpanded)}
-                        className="w-full flex items-center justify-between p-6 bg-white rounded-3xl border border-slate-200 shadow-lg hover:shadow-xl transition-all group"
+                        className="w-full flex items-center justify-between p-6 bg-white border border-[#c4c4c4] hover:border-black transition-colors group"
                     >
-                        <h2 className="text-2xl font-black text-slate-800 flex items-center gap-4">
-                            <span className="p-3 bg-pink-500 rounded-2xl shadow-lg shadow-pink-100 group-hover:scale-110 transition-transform">
-                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                                </svg>
-                            </span>
-                            🧴 쏭레브 품목별 분석
-                            <span className="text-sm font-medium text-slate-400 ml-4 group-hover:text-pink-500 transition-colors">
+                        <h2 className="text-2xl font-bold text-black flex items-center gap-4">
+                            쏭레브 품목별 분석
+                            <span className="text-sm font-normal text-[#5d5d5d] ml-4">
                                 {isSonreveExpanded ? "접기 ▲" : "펼쳐보기 ▼"}
                             </span>
                         </h2>
@@ -452,10 +436,10 @@ function DetailsContent() {
 
                     {isSonreveExpanded && (
                         <div className="mt-8 space-y-12 animate-in fade-in slide-in-from-top-4 duration-500">
-                            <DynamicAnalysisSection title={`${typeLabel} 톤업 크림`} emoji="✨" data={(isOffline ? (data as any).sonreve_toneup_offline : (isMain ? (data as any).sonreve_toneup_main : (data as any)[`sonreve_toneup_${type || 'ecommerce'}`] || (data as any).sonreve_toneup_ecommerce)) || mainData} />
-                            <DynamicAnalysisSection title={`${typeLabel} 키즈 샴푸`} emoji="🧴" data={(isOffline ? (data as any).sonreve_shampoo_offline : (isMain ? (data as any).sonreve_shampoo_main : (data as any)[`sonreve_shampoo_${type || 'ecommerce'}`] || (data as any).sonreve_shampoo_ecommerce)) || mainData} />
-                            <DynamicAnalysisSection title={`${typeLabel} 키즈 페이셜클렌저`} emoji="🧼" data={(isOffline ? (data as any).sonreve_cleanser_offline : (isMain ? (data as any).sonreve_cleanser_main : (data as any)[`sonreve_cleanser_${type || 'ecommerce'}`] || (data as any).sonreve_cleanser_ecommerce)) || mainData} />
-                            <DynamicAnalysisSection title={`${typeLabel} 키즈 페이셜로션`} emoji="🧴" data={(isOffline ? (data as any).sonreve_lotion_offline : (isMain ? (data as any).sonreve_lotion_main : (data as any)[`sonreve_lotion_${type || 'ecommerce'}`] || (data as any).sonreve_lotion_ecommerce)) || mainData} />
+                            <DynamicAnalysisSection title={`${typeLabel} 톤업 크림`} emoji="" data={(isOffline ? (data as any).sonreve_toneup_offline : (isMain ? (data as any).sonreve_toneup_main : (data as any)[`sonreve_toneup_${type || 'ecommerce'}`] || (data as any).sonreve_toneup_ecommerce)) || mainData} />
+                            <DynamicAnalysisSection title={`${typeLabel} 키즈 샴푸`} emoji="" data={(isOffline ? (data as any).sonreve_shampoo_offline : (isMain ? (data as any).sonreve_shampoo_main : (data as any)[`sonreve_shampoo_${type || 'ecommerce'}`] || (data as any).sonreve_shampoo_ecommerce)) || mainData} />
+                            <DynamicAnalysisSection title={`${typeLabel} 키즈 페이셜클렌저`} emoji="" data={(isOffline ? (data as any).sonreve_cleanser_offline : (isMain ? (data as any).sonreve_cleanser_main : (data as any)[`sonreve_cleanser_${type || 'ecommerce'}`] || (data as any).sonreve_cleanser_ecommerce)) || mainData} />
+                            <DynamicAnalysisSection title={`${typeLabel} 키즈 페이셜로션`} emoji="" data={(isOffline ? (data as any).sonreve_lotion_offline : (isMain ? (data as any).sonreve_lotion_main : (data as any)[`sonreve_lotion_${type || 'ecommerce'}`] || (data as any).sonreve_lotion_ecommerce)) || mainData} />
                         </div>
                     )}
                 </div>
@@ -467,8 +451,8 @@ function DetailsContent() {
 export default function ComprehensiveDetailsPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-black border-t-transparent"></div>
             </div>
         }>
             <DetailsContent />

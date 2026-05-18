@@ -4,6 +4,54 @@
 
 ---
 
+## 2026-05-18 (2회차) — 상세 분석 페이지 (`/custom-dashboard/details`) 29CM 전수 적용
+
+### 1. 배경
+- 1회차(같은 날 오전)에 19개 파일 통일 후 `details/page.tsx`만 "이모지·텍스트만 정리, 카드 wrapper 미손댐" 상태로 잔존.
+- 사용자가 prod URL(`https://gogoooooma.vercel.app/custom-dashboard/details?filename=260209.csv&type=ecommerce`)을 공유하며 "이제 여기도 수정하자" 지시.
+- 추가로 "시간 오래 걸려도 되니 한 번 더 꼼꼼하게 점검해봐" 요청 → grep 의존 줄이고 파일 전수 정독(1-477줄).
+
+### 2. 점검 단계에서 발견한 사각지대 (4건)
+1. **자체 정의 `DynamicAnalysisSection`**(라인 95-187) — 공용 `components/DynamicAnalysisSection.tsx`는 이전에 손댔지만, 이 페이지 내부에 동명의 로컬 컴포넌트가 별도로 정의되어 있어 `{emoji} {title}` 표시가 살아있었음.
+2. **`🧼` 비누 이모지**(라인 457) — 1차 grep 이모지 패턴에 없어 누락.
+3. **헤더 텍스트에 박힌 이모지** — 라인 415 `🍼 누비 품목별 분석`, 라인 446 `🧴 쏭레브 품목별 분석` — emoji prop이 아니라 텍스트라서 prop 기준 검사로 안 잡힘.
+4. **4개 컬러 박스 + 인라인 SVG** — indigo-600 / emerald-500 / blue-500 / pink-500 박스 안에 직접 작성한 SVG 아이콘(TrendingUp / Wand / Smile / Atom 류). 이전 카탈로그에 누락.
+
+### 3. 적용 내역
+
+| 영역 | 변경 |
+|------|------|
+| 헤더 | "이커머스 및 채널별 상세 분석 리포트" 30px/700 검정, italic 부제 제거, "닫기" → ghost |
+| 자체 `DynamicAnalysisSection` (5개 인스턴스) | 카드 wrapper flat, `{emoji} {title}` → `{title}`, 3개 모드 토글(월매출/일평균/일매출) → ghost+검정 인버티드, axis `#5d5d5d`, 우축 `#ff0066`, 판매액 라인 `#8b5cf6` → `#000000`, 이익률 라인 `#ec4899` → `#ff0066` |
+| 브랜드 비교 라인 차트 | wrapper flat, 4개 시리즈 `#8b5cf6/#3b82f6/#10b981/#f59e0b` → `#000000/#5d5d5d/#c4c4c4/#ff0066` (마지막만 강조) |
+| "채널 및 브랜드별 성과 분석" 섹션 헤더 | indigo-600 박스 + 인라인 SVG 제거 |
+| 마이비/누비/쏭레브 토글 헤더 3개 | wrapper flat, emerald/blue/pink 박스 + 인라인 SVG 모두 제거, `🍼`/`🧴` 이모지 텍스트 제거, 호버 → 검정 보더 |
+| `DynamicAnalysisSection` 호출 20개의 `emoji` prop | `✨/🥄/💧/🌴/🥤/🐞/👶/🧴/🧼` 등 모두 `""` |
+| 로딩 상태 3곳 | loading state / no-data / Suspense fallback 모두 모노 |
+| 구분선 3곳 | `border-slate-200` → `border-[#c4c4c4]` |
+
+### 4. 변경 방식
+- 477줄 파일을 통째로 Write로 교체 (개별 Edit 25+회 + 위치 의존성 회피).
+- 비즈니스 로직(`getBrandData`, `typeMap`, `comparisonData`, useState/useEffect/Suspense 등)은 전부 보존.
+
+### 5. 검증
+- 비-29CM 패턴(gradient, bg-blue-*, rounded-xl, italic 등) grep **0건**.
+- 이모지 grep(확장 패턴 포함) **0건**.
+- 사용 hex 색 5개로 축소: `#000000`, `#5d5d5d`, `#c4c4c4`, `#f0f0f0`, `#ff0066` (모두 29CM 토큰).
+- dev 라우트 `/custom-dashboard/details?filename=260209.csv&type=ecommerce` **HTTP 200**, 컴파일 25ms / 렌더 71ms.
+
+### 6. 산출물
+- 수정 파일: `frontend/src/app/custom-dashboard/details/page.tsx` (477줄, 통째 교체).
+- 문서 업데이트: `docs/design_document.md` (§8.8 2차 적용 표 추가, §8.9 후속 항목 갱신), `docs/error.md` (§13 추가 — 점검 사각지대 4건 + SOP 보강 5건), `docs/history.md` (본 섹션).
+
+### 7. 후속 권장 항목
+1. `app/coupang-orders/page.tsx` — 아직 미적용, 별도 라운드 필요.
+2. 페이지 로컬 동명 컴포넌트(자체 `DynamicAnalysisSection`)를 공용으로 통합 또는 리네임.
+3. 이모지 검사를 유니코드 범위 기반(`[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]`)으로 전환 — enumerate 누락 위험 제거.
+4. 회색 인라인 hex(`#5d5d5d` 등) 토큰화 — globals.css에 추가 등록 후 일괄 치환.
+
+---
+
 ## 2026-05-18 — 29CM 디자인 시스템 전면 적용
 
 ### 1. 배경

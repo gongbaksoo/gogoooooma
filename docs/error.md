@@ -285,8 +285,40 @@ echo "NEXT_PUBLIC_API_URL=https://api.gongbaksoo.com" > frontend/.env.local
 
 ---
 
+## 13. 디자인 점검 단계의 사각지대 — 같은 파일 내부 자체 정의 컴포넌트 + 이모지 grep 패턴 한계
+
+**발생일**: 2026-05-18 (오후, details 페이지 적용 라운드)
+
+### 🚨 증상 (체감)
+- "1차 적용 완료, details 페이지만 미적용"이라고 보고했지만, 사용자가 "꼼꼼하게 점검해봐"라고 요청해 재점검하니 **§12까지의 작업에서도 몇 가지 사각지대가 존재**했음을 발견:
+  1. `details/page.tsx`의 9개 `DynamicAnalysisSection` 호출(라인 357-397) emoji가 `"✨"`로 살아있음 — 사용자에게 보고한 "이모지 0건"은 페이지 wrapper 기준이었고, prop 값까지는 누락.
+  2. `🧼` 비누 이모지(라인 457)가 이전 grep 패턴에 포함되지 않아 발견 못 함.
+  3. 헤더 텍스트 자체에 박힌 `🍼 누비 품목별 분석`(라인 415), `🧴 쏭레브 품목별 분석`(라인 446) — emoji prop이 아니라 텍스트라서 "emoji prop" 기준 검사로 잡히지 않음.
+  4. **페이지 내부에 자체 정의된 `DynamicAnalysisSection`**(라인 95-187)의 존재 — 공용 `components/DynamicAnalysisSection.tsx`만 손대고, 페이지 로컬 동명 컴포넌트는 미손댐. 이 컴포넌트가 `{emoji} {title}`로 표시하기 때문에 emoji prop 값이 화면에 그대로 노출.
+
+### 🧭 원인
+1. **grep 패턴이 닫혀있음** — 이모지 유니코드는 광범위(여러 블록에 흩어짐)인데 수동으로 enumerate한 캐릭터 클래스 `[📊📈📉📦...]`로 검사하면 새 이모지가 추가될 때마다 누락 위험.
+2. **"prop 값"과 "텍스트 노출"을 같은 범주로 인지** — emoji prop을 빈 문자열로 바꾸면 표시되지 않는다고 가정했으나, 그 가정은 **공용 컴포넌트가 표시 부분을 이미 제거했을 때만** 성립. 같은 파일에 동명 페이지 로컬 컴포넌트가 있으면 가정이 깨짐.
+3. **컴포넌트 import 그래프 전수 조사 누락** — `details/page.tsx`가 사용하는 `DynamicAnalysisSection`이 외부 import인지 파일 내부 정의인지 확인 안 함.
+
+### ✅ 해결 (이번 라운드에서 적용)
+- `details/page.tsx` 전체를 처음부터 끝까지 정독 (Read tool로 1-477줄 전수). grep 의존도 낮추고 시각 검토 병행.
+- 4가지 사각지대(자체 컴포넌트 / 🧼 / 헤더 이모지 텍스트 / 4개 컬러 박스+SVG) 모두 카탈로그한 뒤 사용자 승인 후 한 번에 Write로 교체.
+- 검증 grep을 보강: 이모지 패턴에 `🧼🥄💧🌴🥤🐞👶🧴✨🍼` 추가.
+
+### 💡 향후 권장 (디자인 적용 SOP 보강)
+1. **이모지 검사는 유니코드 범위 기반으로** — `[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]` (Symbols & Pictographs + Misc Symbols/Dingbats) 같은 범위 기반 패턴 사용 시 enumerate 누락 위험 제거.
+2. **동명 컴포넌트 중복 정의 점검** — 페이지 파일 안에 동명의 로컬 컴포넌트가 있는지 `grep -rE "(const|function)\s+ComponentName" .` 로 사전 확인.
+3. **"prop=" → "표시" 가정의 검증** — emoji/icon prop 변경 시, 그 prop을 받는 컴포넌트의 표시 부분을 같이 확인.
+4. **페이지 전체 정독 옵션** — 적용 직전 raw read (`limit` 없이) 한 번. grep으로 "0건"이 나와도 시각 검토로 보완. 작은 파일(<500줄)은 비용 대비 안전.
+5. **차트 시리즈 색 hardcode 전수 패턴**: `stroke="#[0-9a-fA-F]"`, `fill:\s*'#[0-9a-fA-F]'`, `fill="#[0-9a-fA-F]"` 3종 모두 검사해야 정의 위치 모두 잡힘.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
 3. **TCC 안정 위치 권장** — 향후 작업은 `~/Projects` 등 권한 트러블이 적은 위치에서 진행.
 4. **디자인 시스템 전환 SOP** — 캡처 1대1이 아니라, ① 컴포넌트 리스트 합의 → ② 토큰 정의 → ③ grep 기반 일괄 치환 → ④ 잔여 수동 수정 → ⑤ 캡처 검증 순서로 진행하면 라운드 수 감소.
+5. **이모지 정책 lint** — pre-commit hook으로 유니코드 범위 기반 이모지 검사 추가 검토 (§13 권장 1번 참조).
+6. **페이지 로컬 동명 컴포넌트 통합** — `details/page.tsx`의 자체 `DynamicAnalysisSection`을 `components/DynamicAnalysisSection.tsx`로 통합 또는 다른 이름으로 리네임 권장 (혼동 방지).

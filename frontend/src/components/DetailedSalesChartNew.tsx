@@ -729,35 +729,42 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                 }}
                                 contentStyle={{
                                     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '8px',
+                                    border: '1px solid #c4c4c4',
+                                    borderRadius: '2px',
                                     padding: '10px'
                                 }}
                             />
                             <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                            <Line
-                                yAxisId="left"
-                                type="monotone"
-                                dataKey={viewMode === 'growth' ? "growth" : "value"}
-                                name={viewMode === 'growth' ? "증감율" : (viewMode === 'daily' || viewMode === 'dailyProfitRate' ? "일평균 매출" : "매출액")}
-                                stroke="#000000"
-                                strokeWidth={3}
-                                dot={timeUnit === 'day' ? false : { fill: "#000000", r: 4 }}
-                                activeDot={{ r: 6 }}
-                                isAnimationActive={false}
-                            >
-                                {timeUnit === 'month' && (
-                                    <LabelList
+                            {(() => {
+                                const mainColor = viewMode === 'profitRate' ? '#ff0066'
+                                    : viewMode === 'growth' ? '#065f46'
+                                    : '#000000';
+                                return (
+                                    <Line
+                                        yAxisId="left"
+                                        type="monotone"
                                         dataKey={viewMode === 'growth' ? "growth" : "value"}
-                                        content={
-                                            <CustomLabel
-                                                fill="#000000"
-                                                formatter={labelFormatter}
+                                        name={viewMode === 'growth' ? "증감율" : (viewMode === 'daily' || viewMode === 'dailyProfitRate' ? "일평균 매출" : "매출액")}
+                                        stroke={mainColor}
+                                        strokeWidth={timeUnit === 'day' ? 1.5 : 2.5}
+                                        dot={timeUnit === 'day' ? false : { fill: mainColor, r: 4 }}
+                                        activeDot={{ r: 6 }}
+                                        isAnimationActive={false}
+                                    >
+                                        {timeUnit === 'month' && (
+                                            <LabelList
+                                                dataKey={viewMode === 'growth' ? "growth" : "value"}
+                                                content={
+                                                    <CustomLabel
+                                                        fill={mainColor}
+                                                        formatter={labelFormatter}
+                                                    />
+                                                }
                                             />
-                                        }
-                                    />
-                                )}
-                            </Line>
+                                        )}
+                                    </Line>
+                                );
+                            })()}
                             {isCombination && (
                                 <Line
                                     yAxisId="right"
@@ -765,9 +772,9 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                     dataKey="profitRate"
                                     name="이익률"
                                     stroke="#ff0066"
-                                    strokeWidth={3}
-                                    dot={timeUnit === 'day' ? false : { fill: "#ff0066", r: 4 }}
-                                    activeDot={{ r: 6 }}
+                                    strokeWidth={1.5}
+                                    dot={timeUnit === 'day' ? false : { fill: "#ff0066", r: 3 }}
+                                    activeDot={{ r: 5 }}
                                     isAnimationActive={false}
                                 >
                                     {timeUnit === 'month' && (

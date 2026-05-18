@@ -4,6 +4,94 @@
 
 ---
 
+## 2026-05-18 (4회차) — 차트 컬러 매핑 의미 체계 전환: "위계 기반" → "데이터 종류 기반 + 8-pattern"
+
+### 1. 배경
+- 사용자가 차트들을 점검한 후 지적: "그래프 선들의 굵기나 색상 로직이 일정하지가 않아. 통일해줄래?"
+- 추가 요청: "매출/일평균/이익률/증감률 어느 그래프를 가도 해당 그래프 색은 동일했으면"
+- 1~3차의 위계 기반 매핑(메인=검정/보조=회색/강조=빨강)은 차트 단위로는 일관했으나, 같은 의미의 시리즈가 차트마다 다른 색이라는 문제가 드러남.
+
+### 2. 의사결정 과정 (5라운드의 사용자 확인)
+1. **이익률 점선 처리**: 점선 → 실선으로 변경 (이전 결정 번복).
+2. **색 매핑 방식**: 데이터 종류별 고정 색조 (29CM 원칙 1개 예외 = 증감률 녹색).
+3. **다중 시리즈 패턴**: 사용자가 4가지 패턴(실선/점선 × 진함/옅음) 제안 → 5개 이상 시리즈(`DynamicAnalysisSection`, `ProductGroup`)는 부족 → **4단계 명도 × 2 패턴 = 8가지로 확장** 합의.
+4. **시리즈 순서**: 합계가 1번째(가장 두드러진 진함 실선), 이후 데이터 분해 순.
+5. **사전 점검**: A/B 치명적 문제(매출-일평균 동일 색, 이익률 단일 색의 다중 시리즈 모순), C 치명적 문제(ProductGroup N개), F 합계 색 변경(빨강→검정) 9가지 잠재 문제 카탈로그 → 사용자 확인 → 진행.
+
+### 3. 매핑 규칙 (디자인 문서 §8.5에 박제)
+
+#### 데이터 종류별 베이스 색 (4단계 명도)
+| 데이터 종류 | 1단계 | 2단계 | 3단계 | 4단계 |
+|---|---|---|---|---|
+| 매출 / 일평균 | `#000000` | `#5d5d5d` | `#7d7d7d` | `#b8b8b8` |
+| 이익률 | `#ff0066` | `#ff3385` | `#ff66a3` | `#ff99c1` |
+| 증감률 | `#065f46` | `#10b981` | `#34d399` | `#6ee7b7` |
+
+#### 시리즈 순서 → 8-pattern
+| i | 명도 | 라인 | strokeWidth |
+|---|---|---|---|
+| 1 | 1단계 | 실선 | 2.5 |
+| 2 | 1단계 | 점선 (`"4 4"`) | 1.5 |
+| 3 | 2단계 | 실선 | 1.5 |
+| 4 | 2단계 | 점선 | 1.5 |
+| 5 | 3단계 | 실선 | 1.5 |
+| 6 | 3단계 | 점선 | 1.5 |
+| 7 | 4단계 | 실선 | 1.5 |
+| 8 | 4단계 | 점선 | 1.5 |
+
+### 4. 적용 내역 (7개 파일)
+
+| 파일 | 변경 |
+|------|------|
+| `components/SalesChartNew.tsx` | 4 viewMode × 3 시리즈 IIFE로 재작성. 9개 hardcoded Line → seriesDefs.map(). 라벨 색·굵기 모두 8-pattern과 일치 |
+| `components/ChannelSalesChartNew.tsx` | 메인 라인 색 viewMode 기반 동적 (`#000`/`#ff0066`/`#065f46`), Combined view 이익률 점선 제거 → 실선 sw 1.5 |
+| `components/DetailedSalesChartNew.tsx` | 동일 |
+| `components/ProductSearchChart.tsx` | 동일 |
+| `components/ProductGroupChartNew.tsx` | 기존 10색 `COLORS` 배열 → `PALETTES` 객체 (viewMode별 4단계 명도) + `getSeriesStyle()` 함수. 합계 1번째 + 8-pattern |
+| `components/DynamicAnalysisSection.tsx` | single view (5/3/1 시리즈) IIFE + 8-pattern 매핑 함수, Combined view 이익률 점선 제거 → 실선 sw 1.5 |
+| `app/custom-dashboard/details/page.tsx` | 자체 컴포넌트 이익률 점선 제거. 브랜드 비교 4 시리즈 8-pattern (`전체` 진함실선 / `마이비` 진함점선 / `누비` 중간실선 / `쏭레브` 중간점선) |
+
+### 5. 검증
+- `/custom-dashboard` HTTP 200, `/custom-dashboard/details?filename=...&type=...` HTTP 200
+- 모든 차트가 같은 데이터 종류면 같은 베이스 색
+- 같은 차트 안 다중 시리즈는 8-pattern으로 명확히 구분
+- 이익률 점선 0건 (전수 제거 확인)
+
+### 6. 파일럿 → 전체 적용
+사용자가 "먼저 한 차트만 적용해서 보여주고 진행" 요청 → DynamicAnalysisSection single view에 먼저 적용 → 사용자 OK 후 나머지 6개 파일에 일괄 확장.
+
+### 7. 산출물
+- 수정 파일: 7개 차트 컴포넌트
+- 문서: `docs/design_document.md` (§8.5 8-pattern 매핑 표 추가, §8.8 4차 적용, §8.9 후속 항목 갱신), `docs/error.md` (§15 추가 — 의사결정 과정 모호함 + SOP 보강 5건), `docs/history.md` (본 섹션)
+
+### 8. 동시 진행 — 월 리뷰 페이지 (사용자 별도 작업)
+같은 시점에 사용자가 별도로 진행한 작업:
+- `api/monthly_review.py` 신규 — 월 리뷰 API 엔드포인트
+- `frontend/src/app/monthly-review/` 신규 페이지 — PPT 월간 리뷰 보고서를 화면 재현 + PDF 출력
+- `frontend/src/components/monthly-review/` 신규 컴포넌트
+- `frontend/src/app/page.tsx` — 홈에 "월 리뷰" 카드 링크 추가
+- `docs/design_document.md` §2.3 "월 리뷰" 페이지 명세 자체 추가
+- `api/uploads/targets/` 신규 — 목표 파일 업로드 디렉토리
+
+### 9. 누적 적용 현황 (2026-05-18 기준)
+
+| 회차 | 시점 | 파일 수 | 핵심 |
+|------|------|---------|------|
+| 1차 | 오전 | 19 | 전역·홈·대시보드·차트 9개·채팅/파일/모달 6개 |
+| 2차 | 오후 | 1 | `details/page.tsx` 전수 적용 |
+| 3차 | 저녁 | 1 | `DynamicAnalysisSection` Recharts stroke·fill 누락 보완 |
+| 4차 | 심야 | 7 | 데이터 종류 기반 + 8-pattern 매핑 전환 (1·3차에서 이미 손댄 파일 재변경) |
+| **누적** | — | **20+** | (재변경 중복 제외 기준) |
+
+### 10. 후속 권장 항목
+1. `app/coupang-orders/page.tsx` 적용 (별도 라운드).
+2. 매출·일평균 동일 색조의 시각적 트레이드오프 — 사용자 합의 사항이지만 모니터링 필요.
+3. 회색·녹색·분홍 명도 단계 hex(`#7d7d7d`, `#b8b8b8`, `#ff3385` 등)를 globals.css 토큰으로 등록.
+4. 차트 매핑 의미 체계(위계 vs 데이터 종류)를 사전 합의하는 SOP 정립 (error.md §15 참조).
+5. `details/page.tsx`의 자체 `DynamicAnalysisSection`을 공용으로 통합 (혼동 방지).
+
+---
+
 ## 2026-05-18 (3회차) — 공용 `DynamicAnalysisSection` Recharts 시리즈 색 누락 보완
 
 ### 1. 배경

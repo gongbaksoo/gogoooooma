@@ -33,14 +33,17 @@ sales-analysis-site/
 ├── api/                          # 백엔드 (Python/FastAPI)
 │   ├── index.py                  # API 라우터 (엔드포인트 정의)
 │   ├── dashboard.py              # 핵심 비즈니스 로직 (매출 계산)
+│   ├── monthly_review.py         # 월 리뷰 집계 로직 ⭐ NEW
 │   ├── uploads/                  # 업로드된 CSV/XLSX 파일 저장
-│   │   └── cache/                # Parquet 캐시 파일
+│   │   ├── cache/                # Parquet 캐시 파일
+│   │   └── targets/              # 월 리뷰용 목표 파일 ⭐ NEW
 │   └── verify_daily_api.py       # API 검증 스크립트
 ├── frontend/                     # 프론트엔드 (Next.js)
 │   ├── src/
 │   │   ├── app/                  # 페이지 라우팅
-│   │   │   ├── page.tsx          # 메인 페이지 (파일 업로드)
+│   │   │   ├── page.tsx          # 메인 페이지 (포털 카드 — 매출 분석 / 월 리뷰)
 │   │   │   ├── custom-dashboard/ # 대시보드 페이지
+│   │   │   ├── monthly-review/   # 월 리뷰 페이지 ⭐ NEW
 │   │   │   └── coupang-orders/   # 쿠팡 주문 페이지
 │   │   └── components/           # React 컴포넌트들
 │   │       ├── SalesSummary.tsx           # 월간 매출 현황 보고서 테이블
@@ -50,6 +53,10 @@ sales-analysis-site/
 │   │       ├── SalesChartNew.tsx          # 채널별 매출 차트 (메인)
 │   │       ├── ProductGroupChartNew.tsx   # 품목그룹별 매출 차트
 │   │       ├── DetailedSalesChartNew.tsx  # 3단계 필터 매출 차트
+│   │       ├── monthly-review/            # 월 리뷰 전용 차트 묶음 ⭐ NEW
+│   │       │   ├── Chart1Achievement.tsx  # 목표비 실적 막대
+│   │       │   ├── Chart2YoYTrend.tsx     # 전년비 트렌드 라인
+│   │       │   └── Chart3MainVsCoupang.tsx# 주력 vs 쿠팡사입 라인
 │   │       └── ...
 │   └── package.json
 └── README.md
@@ -100,6 +107,27 @@ sales-analysis-site/
 - 전월 대비, 3개월 평균 대비, 전년 동월 대비 일평균 매출 변동 분석
 - 이커머스/오프라인/해외 등 세그먼트별 분석
 - 거래처별 세부 분석 (쿠팡, 이마트 등)
+
+### 4.7 월 리뷰 (Monthly Review) ⭐ NEW
+
+- **페이지**: `/monthly-review`
+- **목적**: 월간 매출 리뷰용 정형 대시보드 — PPT 보고서를 화면에서 재현하고 PDF로 출력
+- **데이터 소스**:
+  - 매출 데이터: 기존 업로드 CSV/XLSX 재사용 (`/api/files/`)
+  - 목표 데이터: 별도 업로드 (포맷: `월,파트,목표`, 단위: 원)
+- **컨트롤**:
+  - 매출 파일 / 목표 파일 / 대상 월 (드롭다운, 데이터의 가용 월 자동 추출)
+  - 파트 토글: 전체 / 이커머스 / 오프라인
+- **Phase 1 차트 (구현 대상)**:
+  - **Chart 1 — 목표비 실적** (BarChart): 사업계획 vs 실적 + 달성률(%)
+  - **Chart 2 — 전년비 트렌드** (LineChart): 1~12월, 당해/전년 2시리즈
+  - **Chart 3 — 주력채널 vs 쿠팡(사입)** (LineChart): 최근 12개월, 2시리즈
+- **Phase 2 차트 (예정)**: 브랜드별, 상품별, 채널 유형별 — PPT 잔여 12개 차트 추가 구현
+- **매핑 규약**:
+  - 파트 필터: `all` → 필터X / `ecommerce` → `파트구분 == '이커머스'` / `offline` → `파트구분 == '오프라인'`
+  - 주력채널 정의: CSV의 `주력 채널` 컬럼 값이 `'주력'` 인 row 합산
+  - 쿠팡(사입) 정의: `채널구분`이 쿠팡 사입 관련 — 정확한 값은 구현 시 CSV 검증
+- **PDF 출력**: 클라이언트 사이드 (`html2canvas` + `jspdf`), A4 가로
 
 ---
 
@@ -178,6 +206,10 @@ sales-analysis-site/
 | GET | `/api/dashboard/performance` | 매출 성과 알림 카드 |
 | GET | `/api/dashboard/product-search-sales` | 상품 검색 매출 |
 | POST | `/api/cache/clear` | 캐시 클리어 |
+| GET | `/api/monthly-review/months` | 매출 파일에서 가용 월 목록 추출 ⭐ NEW |
+| GET | `/api/monthly-review/summary` | 월 리뷰 종합 (chart 1~3 데이터) ⭐ NEW |
+| POST | `/api/monthly-review/targets` | 목표 파일 업로드 ⭐ NEW |
+| GET | `/api/monthly-review/targets` | 목표 파일 리스트 ⭐ NEW |
 
 ---
 

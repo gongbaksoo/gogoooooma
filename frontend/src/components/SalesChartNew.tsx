@@ -415,49 +415,60 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                         <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="line" />
 
                         {/* Sales & Daily Mode */}
-                        {(viewMode === 'sales' || viewMode === 'daily') && (
-                            <>
-                                {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
-                                    <Line type="monotone" dataKey="이커머스" name="이커머스" stroke="#000000" strokeWidth={3} dot={{ r: 4, fill: '#000000', strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                                )}
-                                {(channelFilter === 'all' || channelFilter === 'offline') && (
-                                    <Line type="monotone" dataKey="오프라인" name="오프라인" stroke="#5d5d5d" strokeWidth={3} dot={{ r: 4, fill: '#5d5d5d', strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                                )}
-                                {(channelFilter === 'all' || channelFilter === 'total') && (
-                                    <Line type="monotone" dataKey="총매출" name="전체 합계" stroke="#ff0066" strokeWidth={3} dot={{ r: 4, fill: '#ff0066', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#ff0066', fontWeight: 'bold' } }} />
-                                )}
-                            </>
-                        )}
-
-                        {/* Growth Mode */}
-                        {viewMode === 'growth' && (
-                            <>
-                                {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
-                                    <Line type="monotone" dataKey="이커머스" name="이커머스 증감율" stroke="#000000" strokeWidth={3} dot={{ r: 4, fill: '#000000', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#000000' } }} />
-                                )}
-                                {(channelFilter === 'all' || channelFilter === 'offline') && (
-                                    <Line type="monotone" dataKey="오프라인" name="오프라인 증감율" stroke="#5d5d5d" strokeWidth={3} dot={{ r: 4, fill: '#5d5d5d', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#5d5d5d' } }} />
-                                )}
-                                {(channelFilter === 'all' || channelFilter === 'total') && (
-                                    <Line type="monotone" dataKey="총매출" name="전체 증감율" stroke="#ff0066" strokeWidth={3} dot={{ r: 4, fill: '#ff0066', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#ff0066', fontWeight: 'bold' } }} />
-                                )}
-                            </>
-                        )}
-
-                        {/* Profit Rate Mode */}
-                        {viewMode === 'profitRate' && (
-                            <>
-                                {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
-                                    <Line type="monotone" dataKey="ecommerceRate" name="이커머스 이익률" stroke="#000000" strokeWidth={3} dot={{ r: 4, fill: '#000000', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#000000' } }} />
-                                )}
-                                {(channelFilter === 'all' || channelFilter === 'offline') && (
-                                    <Line type="monotone" dataKey="offlineRate" name="오프라인 이익률" stroke="#5d5d5d" strokeWidth={3} dot={{ r: 4, fill: '#5d5d5d', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#5d5d5d' } }} />
-                                )}
-                                {(channelFilter === 'all' || channelFilter === 'total') && (
-                                    <Line type="monotone" dataKey="totalRate" name="전체 이익률" stroke="#ff0066" strokeWidth={3} dot={{ r: 6, fill: '#ff0066', strokeWidth: 2 }} activeDot={{ r: 8 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '11px', fill: '#ff0066', fontWeight: 'bold' } }} />
-                                )}
-                            </>
-                        )}
+                        {/* 데이터 종류별 8-pattern 매핑
+                            sales/daily = 검정 계열, growth = 녹색 계열, profitRate = 분홍 계열
+                            시리즈 순서: 1=총매출(메인 진함 실선), 2=이커머스(진함 점선), 3=오프라인(중간 실선)
+                        */}
+                        {(() => {
+                            const palette = viewMode === 'growth' ? ['#065f46', '#10b981', '#34d399', '#6ee7b7']
+                                : viewMode === 'profitRate' ? ['#ff0066', '#ff3385', '#ff66a3', '#ff99c1']
+                                : ['#000000', '#5d5d5d', '#7d7d7d', '#b8b8b8'];
+                            const seriesStyle = (i: number) => ({
+                                stroke: palette[Math.floor(i / 2)] || palette[palette.length - 1],
+                                strokeDasharray: (i % 2 === 1) ? '4 4' : undefined,
+                                strokeWidth: i === 0 ? 2.5 : 1.5,
+                                dotR: i === 0 ? 4 : 3,
+                                activeR: i === 0 ? 6 : 5,
+                            });
+                            // 시리즈 정의 — 순서: 총매출(1) / 이커머스(2) / 오프라인(3)
+                            const seriesDefs = viewMode === 'profitRate'
+                                ? [
+                                    { idx: 0, key: 'totalRate', name: '전체 이익률', channel: 'total' },
+                                    { idx: 1, key: 'ecommerceRate', name: '이커머스 이익률', channel: 'ecommerce' },
+                                    { idx: 2, key: 'offlineRate', name: '오프라인 이익률', channel: 'offline' },
+                                ]
+                                : viewMode === 'growth'
+                                ? [
+                                    { idx: 0, key: '총매출', name: '전체 증감율', channel: 'total' },
+                                    { idx: 1, key: '이커머스', name: '이커머스 증감율', channel: 'ecommerce' },
+                                    { idx: 2, key: '오프라인', name: '오프라인 증감율', channel: 'offline' },
+                                ]
+                                : [
+                                    { idx: 0, key: '총매출', name: '전체 합계', channel: 'total' },
+                                    { idx: 1, key: '이커머스', name: '이커머스', channel: 'ecommerce' },
+                                    { idx: 2, key: '오프라인', name: '오프라인', channel: 'offline' },
+                                ];
+                            return seriesDefs
+                                .filter(s => channelFilter === 'all' || channelFilter === s.channel)
+                                .map(s => {
+                                    const style = seriesStyle(s.idx);
+                                    const showLabel = viewMode !== 'sales' && viewMode !== 'daily';
+                                    return (
+                                        <Line
+                                            key={s.key}
+                                            type="monotone"
+                                            dataKey={s.key}
+                                            name={s.name}
+                                            stroke={style.stroke}
+                                            strokeWidth={style.strokeWidth}
+                                            strokeDasharray={style.strokeDasharray}
+                                            dot={{ r: style.dotR, fill: style.stroke }}
+                                            activeDot={{ r: style.activeR }}
+                                            label={showLabel ? { position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: style.stroke, fontWeight: s.idx === 0 ? 'bold' : 'normal' } } : undefined}
+                                        />
+                                    );
+                                });
+                        })()}
                     </ComposedChart>
                 </ResponsiveContainer>
 

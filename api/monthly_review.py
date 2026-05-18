@@ -1,0 +1,264 @@
+"""
+월 리뷰 (Monthly Review) 집계 모듈.
+
+PPT 월간 리뷰 보고서를 화면에서 재현하기 위한 집계 엔드포인트.
+Phase 1: 종합 슬라이드 차트 3개 (목표비 실적 / 전년비 트렌드 / 주력 vs 쿠팡사입).
+"""
+import os
+import logging
+import re
+from typing import Optional
+
+import pandas as pd
+from fastapi import APIRouter, HTTPException, UploadFile, File, Query
+
+from dashboard import get_dataframe
+
+router = APIRouter(prefix="/monthly-review", tags=["monthly-review"])
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TARGETS_DIR = os.path.join(BASE_DIR, "uploads", "targets")
+os.makedirs(TARGETS_DIR, exist_ok=True)
+
+PART_LABELS = {
+    "all": None,           # 필터 없음 (전체)
+    "ecommerce": "이커머스",
+    "offline": "오프라인",
+}
+
+PART_TO_TARGET_KEY = {
+    "all": "전체",
+    "ecommerce": "이커머스",
+    "offline": "오프라인",
+}
+
+
+# ---------- helpers ----------
+
+def _month_to_yymm(month: str) -> str:
+    """'2026-04' → '2604'"""
+    m = re.match(r"^(\d{4})-(\d{2})$", month or "")
+    if not m:
+        raise HTTPException(status_code=400, detail=f"잘못된 월 포맷: {month} (YYYY-MM 형식 필요)")
+    yyyy, mm = m.group(1), m.group(2)
+    return yyyy[-2:] + mm
+
+
+def _yymm_to_month(yymm: str) -> str:
+    """'2604' → '2026-04'"""
+    s = str(yymm).zfill(4)
+    return f"20{s[:2]}-{s[2:]}"
+
+
+def _apply_part_filter(df: pd.DataFrame, part: str) -> pd.DataFrame:
+    """파트구분 필터 적용. part='all'은 필터 없음."""
+    if part not in PART_LABELS:
+        raise HTTPException(status_code=400, detail=f"잘못된 파트: {part}")
+    label = PART_LABELS[part]
+    if label is None:
+        return df
+    if "파트구분" not in df.columns:
+        raise HTTPException(status_code=400, detail="CSV에 '파트구분' 컬럼이 없습니다.")
+    return df[df["파트구분"] == label]
+
+
+def _normalize_month_column(df: pd.DataFrame) -> pd.DataFrame:
+    """월구분을 4자리 YYMM 문자열로 통일."""
+    if "월구분" not in df.columns:
+        raise HTTPException(status_code=400, detail="CSV에 '월구분' 컬럼이 없습니다.")
+    df = df.copy()
+    df["월구분"] = df["월구분"].astype(str).str.replace(".0", "", regex=False).str.zfill(4)
+    return df
+
+
+def _load_targets(target_filename: Optional[str]) -> Optional[pd.DataFrame]:
+    """목표 파일 로드. None이면 None 반환."""
+    if not target_filename:
+        return None
+    path = os.path.join(TARGETS_DIR, target_filename)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail=f"목표 파일 없음: {target_filename}")
+    try:
+        # CSV는 utf-8 또는 cp949 가능성
+        for enc in ["utf-8", "utf-8-sig", "cp949", "euc-kr"]:
+            try:
+                df = pd.read_csv(path, encoding=enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            raise HTTPException(status_code=400, detail="목표 파일 인코딩 인식 실패")
+        df.columns = df.columns.astype(str).str.strip()
+        required = {"월", "파트", "목표"}
+        if not required.issubset(set(df.columns)):
+            raise HTTPException(
+                status_code=400,
+                detail=f"목표 파일 컬럼 부족. 필요: {required}, 실제: {set(df.columns)}",
+            )
+        df["월"] = df["월"].astype(str).str.strip()
+        df["파트"] = df["파트"].astype(str).str.strip()
+        df["목표"] = pd.to_numeric(df["목표"], errors="coerce").fillna(0)
+        return df
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("목표 파일 로드 실패")
+        raise HTTPException(status_code=500, detail=f"목표 파일 로드 실패: {e}")
+
+
+# ---------- endpoints ----------
+
+@router.get("/months/")
+def list_months(filename: str = Query(..., description="매출 CSV/XLSX 파일명")):
+    """매출 파일에서 가용 월 목록을 인간 친화 포맷(YYYY-MM)으로 반환. 최신순."""
+    try:
+        df = get_dataframe(filename)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"파일 없음: {filename}")
+    df = _normalize_month_column(df)
+    yymm_list = sorted(df["월구분"].dropna().unique().tolist(), reverse=True)
+    months = [_yymm_to_month(y) for y in yymm_list if re.match(r"^\d{4}$", str(y))]
+    return {"months": months}
+
+
+@router.get("/targets/")
+def list_target_files():
+    """목표 파일 목록."""
+    if not os.path.exists(TARGETS_DIR):
+        return {"files": []}
+    files = []
+    for name in os.listdir(TARGETS_DIR):
+        if name.startswith("."):
+            continue
+        path = os.path.join(TARGETS_DIR, name)
+        if os.path.isfile(path):
+            files.append({
+                "filename": name,
+                "size": os.path.getsize(path),
+                "modified": os.path.getmtime(path),
+            })
+    files.sort(key=lambda x: x["modified"], reverse=True)
+    return {"files": files}
+
+
+@router.post("/targets/")
+async def upload_target_file(file: UploadFile = File(...)):
+    """목표 파일 업로드 (CSV)."""
+    if not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="CSV 파일만 업로드 가능합니다.")
+    dst = os.path.join(TARGETS_DIR, file.filename)
+    try:
+        with open(dst, "wb") as f:
+            f.write(await file.read())
+        # 포맷 검증
+        try:
+            _load_targets(file.filename)
+        except HTTPException as e:
+            os.remove(dst)
+            raise e
+        return {"filename": file.filename, "size": os.path.getsize(dst)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("목표 파일 업로드 실패")
+        raise HTTPException(status_code=500, detail=f"업로드 실패: {e}")
+
+
+@router.get("/summary/")
+def get_summary(
+    filename: str = Query(..., description="매출 파일명"),
+    month: str = Query(..., description="대상 월 (YYYY-MM)"),
+    part: str = Query("all", description="all | ecommerce | offline"),
+    target_file: Optional[str] = Query(None, description="목표 파일명 (선택)"),
+):
+    """월 리뷰 종합 데이터 (chart 1, 2, 3).
+
+    - chart1: 목표비 실적 — 목표 vs 실적 + 달성률
+    - chart2: 전년비 트렌드 — 1~12월 당해/전년
+    - chart3: 주력 vs 쿠팡사입 — 최근 12개월
+    """
+    try:
+        df = get_dataframe(filename)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"파일 없음: {filename}")
+
+    df = _normalize_month_column(df)
+    if "판매액" not in df.columns:
+        raise HTTPException(status_code=400, detail="CSV에 '판매액' 컬럼이 없습니다.")
+
+    df_part = _apply_part_filter(df, part)
+    target_yymm = _month_to_yymm(month)
+    target_year = int(month[:4])
+    prev_year = target_year - 1
+
+    # ----- chart1: 목표비 실적 -----
+    actual = float(df_part[df_part["월구분"] == target_yymm]["판매액"].sum())
+    target_value = None
+    targets_df = _load_targets(target_file)
+    if targets_df is not None:
+        key = PART_TO_TARGET_KEY[part]
+        match = targets_df[(targets_df["월"] == month) & (targets_df["파트"] == key)]
+        if not match.empty:
+            target_value = float(match["목표"].iloc[0])
+
+    achievement_rate = None
+    if target_value and target_value > 0:
+        achievement_rate = round(actual / target_value * 100, 1)
+
+    chart1 = {
+        "target": target_value,
+        "actual": actual,
+        "achievement_rate": achievement_rate,
+    }
+
+    # ----- chart2: 전년비 트렌드 (1~12월, 당해/전년) -----
+    def _month_total(year: int, month_num: int, frame: pd.DataFrame) -> float:
+        yymm = f"{str(year)[-2:]}{str(month_num).zfill(2)}"
+        return float(frame[frame["월구분"] == yymm]["판매액"].sum())
+
+    chart2 = []
+    for m in range(1, 13):
+        chart2.append({
+            "month": f"{m}월",
+            "current_year": _month_total(target_year, m, df_part),
+            "prev_year": _month_total(prev_year, m, df_part),
+        })
+
+    # ----- chart3: 주력 vs 쿠팡(사입) — 최근 12개월 -----
+    if "주력 채널" not in df.columns:
+        raise HTTPException(status_code=400, detail="CSV에 '주력 채널' 컬럼이 없습니다.")
+
+    # 대상 월부터 역순 12개월 생성
+    def _months_back(yyyymm: str, n: int):
+        y, m = int(yyyymm[:4]), int(yyyymm[5:7])
+        out = []
+        for _ in range(n):
+            out.append((y, m))
+            m -= 1
+            if m == 0:
+                m = 12
+                y -= 1
+        return list(reversed(out))
+
+    last12 = _months_back(month, 12)
+
+    df_main = df_part[df_part["주력 채널"] == "주력"]
+    df_coupang = df_part[df_part["주력 채널"] == "주력(쿠팡)"]
+
+    chart3 = []
+    for y, m in last12:
+        yymm = f"{str(y)[-2:]}{str(m).zfill(2)}"
+        label = f"{y}-{str(m).zfill(2)}"
+        chart3.append({
+            "month": label,
+            "main_channels": float(df_main[df_main["월구분"] == yymm]["판매액"].sum()),
+            "coupang_purchase": float(df_coupang[df_coupang["월구분"] == yymm]["판매액"].sum()),
+        })
+
+    return {
+        "month": month,
+        "part": part,
+        "chart1": chart1,
+        "chart2": chart2,
+        "chart3": chart3,
+    }

@@ -17,19 +17,22 @@ interface ChartData {
 }
 
 
-// 29CM monotone palette + sale-red accent at the end
-const COLORS = [
-    '#000000',
-    '#3d3d3d',
-    '#5d5d5d',
-    '#7d7d7d',
-    '#9d9d9d',
-    '#b8b8b8',
-    '#c4c4c4',
-    '#d0d0d0',
-    '#dcdcdc',
-    '#ff0066', // sale-red accent
-];
+// 데이터 종류별 베이스 색 (4단계 명도) — 8-pattern 매핑 (4단계 × 실선/점선)
+const PALETTES: Record<string, string[]> = {
+    sales: ['#000000', '#5d5d5d', '#7d7d7d', '#b8b8b8'],
+    daily: ['#000000', '#5d5d5d', '#7d7d7d', '#b8b8b8'],
+    profitRate: ['#ff0066', '#ff3385', '#ff66a3', '#ff99c1'],
+    growth: ['#065f46', '#10b981', '#34d399', '#6ee7b7'],
+};
+
+// 시리즈 순서 i → 패턴 (0: 진함 실선, 1: 진함 점선, 2: 중간 실선, 3: 중간 점선, 4: 옅음 실선, ...)
+const getSeriesStyle = (i: number, palette: string[]) => ({
+    stroke: palette[Math.floor(i / 2)] || palette[palette.length - 1],
+    strokeDasharray: (i % 2 === 1) ? '4 4' : undefined,
+    strokeWidth: i === 0 ? 2.5 : 1.5,
+    dotR: i === 0 ? 4 : 3,
+    activeR: i === 0 ? 6 : 5,
+});
 
 type ViewMode = 'sales' | 'growth' | 'daily' | 'profitRate';
 
@@ -419,8 +422,8 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                         formatter={tooltipFormatter}
                         contentStyle={{
                             backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            border: '1px solid #ddd',
-                            borderRadius: '8px',
+                            border: '1px solid #c4c4c4',
+                            borderRadius: '2px',
                             padding: '10px'
                         }}
                     />
@@ -428,31 +431,35 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                         wrapperStyle={{ paddingTop: '20px' }}
                         iconType="line"
                     />
-                    {groups.map((group, index) => {
-                        if (!selectedGroups.includes(group)) return null;
-
-                        // "마이비+누비+쏭레브" (합계)는 강조를 위해 별도 고유 상위 색상 지정
-                        const isCombined = group === '마이비+누비+쏭레브';
-                        const color = isCombined ? '#ff0066' : COLORS[index % COLORS.length]; // sale-red for total
-                        const strokeWidth = isCombined ? 4 : 2;
-
-                        return (
-                            <Line
-                                key={group}
-                                type="monotone"
-                                dataKey={group}
-                                stroke={color}
-                                strokeWidth={strokeWidth}
-                                dot={{ fill: color, r: isCombined ? 5 : 3 }}
-                                activeDot={{ r: isCombined ? 7 : 5 }}
-                                label={{
-                                    position: 'top',
-                                    formatter: viewMode === 'growth' ? formatPercent : formatMillions,
-                                    style: { fontSize: '10px', fill: color, fontWeight: 'bold' }
-                                }}
-                            />
-                        );
-                    })}
+                    {(() => {
+                        // 데이터 종류별 베이스 색 + 8-pattern (4단계 명도 × 실선/점선)
+                        const palette = PALETTES[viewMode] || PALETTES.sales;
+                        // 합계가 1번째(메인), 나머지는 정의 순서대로 2~N번째
+                        const visibleGroups = groups.filter(g => selectedGroups.includes(g));
+                        const combinedGroup = visibleGroups.find(g => g === '마이비+누비+쏭레브');
+                        const otherGroups = visibleGroups.filter(g => g !== '마이비+누비+쏭레브');
+                        const ordered = combinedGroup ? [combinedGroup, ...otherGroups] : otherGroups;
+                        return ordered.map((group, i) => {
+                            const style = getSeriesStyle(i, palette);
+                            return (
+                                <Line
+                                    key={group}
+                                    type="monotone"
+                                    dataKey={group}
+                                    stroke={style.stroke}
+                                    strokeWidth={style.strokeWidth}
+                                    strokeDasharray={style.strokeDasharray}
+                                    dot={{ fill: style.stroke, r: style.dotR }}
+                                    activeDot={{ r: style.activeR }}
+                                    label={{
+                                        position: 'top',
+                                        formatter: viewMode === 'growth' || viewMode === 'profitRate' ? formatPercent : formatMillions,
+                                        style: { fontSize: '10px', fill: style.stroke, fontWeight: i === 0 ? 'bold' : 'normal' }
+                                    }}
+                                />
+                            );
+                        });
+                    })()}
                 </LineChart>
             </ResponsiveContainer>
         </div>

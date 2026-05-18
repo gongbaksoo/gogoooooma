@@ -274,29 +274,59 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                         <Legend wrapperStyle={{ paddingTop: '20px' }} />
 
                         {isSingleView ? (
-                            <>
-                                {(channel === 'total') && (
-                                    <>
-                                        <Line yAxisId="left" type="monotone" dataKey="val_total" name="전체" stroke="#000000" strokeWidth={3} dot={{ r: 4 }} />
-                                        <Line yAxisId="left" type="monotone" dataKey="val_ecom" name="이커머스" stroke="#5d5d5d" strokeWidth={2} dot={{ r: 3 }} />
-                                        <Line yAxisId="left" type="monotone" dataKey="val_offline" name="오프라인" stroke="#7d7d7d" strokeWidth={2} dot={{ r: 3 }} />
-                                        <Line yAxisId="left" type="monotone" dataKey="val_coupang" name="쿠팡(로켓)" stroke="#ff0066" strokeWidth={2} dot={{ r: 3 }} />
-                                        <Line yAxisId="left" type="monotone" dataKey="val_major" name="주력(쿠팡제외)" stroke="#b8b8b8" strokeWidth={2} dot={{ r: 3 }} />
-                                    </>
-                                )}
-                                {(channel === 'ecommerce') && (
-                                    <>
-                                        <Line yAxisId="left" type="monotone" dataKey="val_ecom" name="이커머스" stroke="#000000" strokeWidth={3} dot={{ r: 4 }} />
-                                        <Line yAxisId="left" type="monotone" dataKey="val_coupang" name="쿠팡(로켓)" stroke="#ff0066" strokeWidth={2} dot={{ r: 3 }} />
-                                        <Line yAxisId="left" type="monotone" dataKey="val_major" name="주력(쿠팡제외)" stroke="#5d5d5d" strokeWidth={2} dot={{ r: 3 }} />
-                                    </>
-                                )}
-                                {(channel === 'offline') && (
-                                    <>
-                                        <Line yAxisId="left" type="monotone" dataKey="val_offline" name="오프라인" stroke="#000000" strokeWidth={3} dot={{ r: 4 }} />
-                                    </>
-                                )}
-                            </>
+                            (() => {
+                                // 데이터 종류별 베이스 색 (4단계 명도)
+                                const palette = mode === 'profit_only'
+                                    ? ['#ff0066', '#ff3385', '#ff66a3', '#ff99c1']  // 이익률 분홍 계열
+                                    : ['#000000', '#5d5d5d', '#7d7d7d', '#b8b8b8']; // 매출/일평균 검정 계열
+
+                                // 시리즈 순서 → 패턴 (8가지: 4단계 명도 × 실선/점선)
+                                const seriesStyle = (i: number) => ({
+                                    stroke: palette[Math.floor(i / 2)] || palette[palette.length - 1],
+                                    strokeDasharray: (i % 2 === 1) ? '4 4' : undefined,
+                                    strokeWidth: i === 0 ? 2.5 : 1.5,
+                                    dotR: i === 0 ? 4 : 3,
+                                    activeR: i === 0 ? 6 : 5,
+                                });
+
+                                // 채널별 시리즈 매핑 (1번째=합계/메인, 이후 분해 순)
+                                const totalSeries = [
+                                    { key: 'val_total', name: '전체' },
+                                    { key: 'val_ecom', name: '이커머스' },
+                                    { key: 'val_offline', name: '오프라인' },
+                                    { key: 'val_coupang', name: '쿠팡(로켓)' },
+                                    { key: 'val_major', name: '주력(쿠팡제외)' },
+                                ];
+                                const ecomSeries = [
+                                    { key: 'val_ecom', name: '이커머스' },
+                                    { key: 'val_coupang', name: '쿠팡(로켓)' },
+                                    { key: 'val_major', name: '주력(쿠팡제외)' },
+                                ];
+                                const offlineSeries = [
+                                    { key: 'val_offline', name: '오프라인' },
+                                ];
+                                const series = channel === 'total' ? totalSeries
+                                    : channel === 'ecommerce' ? ecomSeries
+                                    : offlineSeries;
+
+                                return series.map((s, i) => {
+                                    const style = seriesStyle(i);
+                                    return (
+                                        <Line
+                                            key={s.key}
+                                            yAxisId="left"
+                                            type="monotone"
+                                            dataKey={s.key}
+                                            name={s.name}
+                                            stroke={style.stroke}
+                                            strokeWidth={style.strokeWidth}
+                                            strokeDasharray={style.strokeDasharray}
+                                            dot={{ fill: style.stroke, r: style.dotR }}
+                                            activeDot={{ r: style.activeR }}
+                                        />
+                                    );
+                                });
+                            })()
                         ) : (
                             <>
                                 {mode !== 'profit_only' && (
@@ -307,7 +337,7 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                         name={mode === 'total' || mode === 'sales_only' ? "월매출액" : (mode === 'daily' ? "일매출액" : "일평균 매출")}
                                         data={isDaily ? undefined : ((mode === 'avg' || mode === 'avg_only') ? chartData.map(d => ({ ...d, "판매액": (d as any).일평균매출 })) : undefined)}
                                         stroke="#000000"
-                                        strokeWidth={isDaily ? 2 : 3}
+                                        strokeWidth={isDaily ? 1.5 : 2.5}
                                         dot={isDaily ? false : { fill: "#000000", r: 4 }}
                                         activeDot={{ r: 6 }}
                                     >
@@ -322,10 +352,9 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                         dataKey="이익률"
                                         name="이익률"
                                         stroke="#ff0066"
-                                        strokeWidth={isDaily ? 2 : 3}
-                                        dot={isDaily ? false : { fill: "#ff0066", r: 4 }}
-                                        activeDot={{ r: 6 }}
-                                        strokeDasharray={mode === 'profit_only' ? undefined : "5 5"}
+                                        strokeWidth={1.5}
+                                        dot={isDaily ? false : { fill: "#ff0066", r: 3 }}
+                                        activeDot={{ r: 5 }}
                                     >
                                         {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ff0066" formatter={formatPercent} />} />}
                                     </Line>

@@ -159,7 +159,7 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             name={mode === 'total' ? "월매출액" : (mode === 'daily' ? "일매출액" : "일평균 매출")}
                             data={isDaily ? undefined : (mode === 'avg' ? chartData.map(d => ({ ...d, "판매액": (d as any).일평균매출 })) : undefined)}
                             stroke="#000000"
-                            strokeWidth={isDaily ? 2 : 3}
+                            strokeWidth={isDaily ? 1.5 : 2.5}
                             dot={isDaily ? false : { fill: "#000000", r: 4 }}
                             activeDot={{ r: 6 }}
                         >
@@ -172,10 +172,9 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             dataKey="이익률"
                             name="이익률"
                             stroke="#ff0066"
-                            strokeWidth={isDaily ? 2 : 3}
-                            dot={isDaily ? false : { fill: "#ff0066", r: 4 }}
-                            activeDot={{ r: 6 }}
-                            strokeDasharray="5 5"
+                            strokeWidth={1.5}
+                            dot={isDaily ? false : { fill: "#ff0066", r: 3 }}
+                            activeDot={{ r: 5 }}
                         >
                             {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ff0066" formatter={formatPercent} />} />}
                         </Line>
@@ -311,10 +310,11 @@ function DetailsContent() {
                                 <YAxis stroke="#5d5d5d" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatMillions} axisLine={false} tickLine={false} />
                                 <Tooltip formatter={(val: any) => [formatMillions(val), '매출액']} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #c4c4c4', borderRadius: '2px', padding: '10px' }} />
                                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                                <Line type="monotone" dataKey={`${isMain ? "주력채널" : typeLabel} 전체`} stroke="#000000" strokeWidth={3} dot={{ fill: "#000000", r: 4 }} activeDot={{ r: 6 }} />
-                                <Line type="monotone" dataKey="마이비" stroke="#5d5d5d" strokeWidth={2} dot={{ fill: "#5d5d5d", r: 3 }} />
-                                <Line type="monotone" dataKey="누비" stroke="#c4c4c4" strokeWidth={2} dot={{ fill: "#c4c4c4", r: 3 }} />
-                                <Line type="monotone" dataKey="쏭레브" stroke="#ff0066" strokeWidth={2} dot={{ fill: "#ff0066", r: 3 }} />
+                                {/* 8-pattern: 1=전체 진함실선, 2=마이비 진함점선, 3=누비 중간실선, 4=쏭레브 중간점선 — 모두 매출 데이터 (검정 계열) */}
+                                <Line type="monotone" dataKey={`${isMain ? "주력채널" : typeLabel} 전체`} stroke="#000000" strokeWidth={2.5} dot={{ fill: "#000000", r: 4 }} activeDot={{ r: 6 }} />
+                                <Line type="monotone" dataKey="마이비" stroke="#000000" strokeWidth={1.5} strokeDasharray="4 4" dot={{ fill: "#000000", r: 3 }} activeDot={{ r: 5 }} />
+                                <Line type="monotone" dataKey="누비" stroke="#5d5d5d" strokeWidth={1.5} dot={{ fill: "#5d5d5d", r: 3 }} activeDot={{ r: 5 }} />
+                                <Line type="monotone" dataKey="쏭레브" stroke="#5d5d5d" strokeWidth={1.5} strokeDasharray="4 4" dot={{ fill: "#5d5d5d", r: 3 }} activeDot={{ r: 5 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>

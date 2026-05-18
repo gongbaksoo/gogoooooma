@@ -76,8 +76,8 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
     return (
         <div
             className={cn(
-                "border-2 border-dashed rounded-xl p-10 text-center transition-colors cursor-pointer",
-                isDragging ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300",
+                "border-2 border-dashed rounded-sm p-10 text-center transition-colors cursor-pointer",
+                isDragging ? "border-black bg-[#f5f5f5]" : "border-[#c4c4c4] hover:border-black",
                 isUploading && "opacity-50 pointer-events-none"
             )}
             onDragOver={handleDragOver}
@@ -94,22 +94,20 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
             />
             <div className="flex flex-col items-center gap-4">
                 {isUploading ? (
-                    <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+                    <Loader2 className="w-10 h-10 text-black animate-spin" />
                 ) : (
-                    <div className="p-4 bg-blue-100 rounded-full text-blue-600">
-                        <Upload className="w-8 h-8" />
-                    </div>
+                    <Upload className="w-8 h-8 text-black" />
                 )}
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-bold text-black">
                         {isUploading ? "분석 중..." : "엑셀 파일 업로드"}
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-[#5d5d5d] mt-1">
                         여기로 파일을 드래그하거나 클릭하여 선택하세요.
                     </p>
                 </div>
             </div>
-            {error && <p className="text-red-500 mt-4 text-sm">{error}</p>}
+            {error && <p className="text-[#ff0066] mt-4 text-sm">{error}</p>}
         </div>
     );
 }

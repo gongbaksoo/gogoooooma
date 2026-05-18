@@ -104,20 +104,20 @@ const SchemaAliasManager: React.FC<SchemaAliasManagerProps> = ({ isOpen, onClose
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="bg-white border border-[#c4c4c4] w-full max-w-4xl max-h-[80vh] flex flex-col">
 
                 {/* Header */}
-                <div className="flex justify-between items-center p-6 border-b">
+                <div className="flex justify-between items-center p-6 border-b border-[#c4c4c4]">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-900">📋 스키마 별칭 설정</h2>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <h2 className="text-2xl font-bold text-black">스키마 별칭 설정</h2>
+                        <p className="text-sm text-[#5d5d5d] mt-1">
                             각 컬럼에 대한 별칭을 설정하여 AI가 다양한 용어로 질문에 답변할 수 있습니다
                         </p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition"
+                        className="text-black hover:opacity-60 transition-opacity"
                     >
                         <X className="w-6 h-6" />
                     </button>
@@ -127,13 +127,13 @@ const SchemaAliasManager: React.FC<SchemaAliasManagerProps> = ({ isOpen, onClose
                 <div className="flex-1 overflow-auto p-6">
                     {loading ? (
                         <div className="text-center py-10">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-                            <p className="mt-4 text-gray-500">로딩 중...</p>
+                            <div className="animate-spin rounded-full h-10 w-10 border-2 border-black border-t-transparent mx-auto"></div>
+                            <p className="mt-4 text-[#5d5d5d]">로딩 중...</p>
                         </div>
                     ) : (
                         <div className="space-y-4">
                             {/* Add New Column */}
-                            <div className="bg-purple-50 p-4 rounded-lg border-2 border-dashed border-purple-300">
+                            <div className="bg-white p-4 rounded-sm border-2 border-dashed border-[#c4c4c4]">
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
@@ -141,11 +141,11 @@ const SchemaAliasManager: React.FC<SchemaAliasManagerProps> = ({ isOpen, onClose
                                         onChange={(e) => setNewColumn(e.target.value)}
                                         onKeyPress={(e) => e.key === 'Enter' && addNewColumn()}
                                         placeholder="새 컬럼명 입력..."
-                                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        className="flex-1 px-3 py-2 border border-[#c4c4c4] rounded-sm focus:border-black focus:outline-none text-black"
                                     />
                                     <button
                                         onClick={addNewColumn}
-                                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center gap-2"
+                                        className="px-4 py-2 bg-black text-white rounded-sm hover:bg-[#222] transition-colors flex items-center gap-2"
                                     >
                                         <Plus className="w-4 h-4" />
                                         컬럼 추가
@@ -155,10 +155,10 @@ const SchemaAliasManager: React.FC<SchemaAliasManagerProps> = ({ isOpen, onClose
 
                             {/* Existing Columns */}
                             {Object.entries(aliases).map(([column, columnAliases]) => (
-                                <div key={column} className="bg-white border rounded-lg p-4 shadow-sm">
+                                <div key={column} className="bg-white border border-[#c4c4c4] rounded-sm p-4">
                                     <div className="flex items-center justify-between mb-3">
-                                        <h3 className="font-semibold text-lg text-gray-900">{column}</h3>
-                                        <span className="text-sm text-gray-500">
+                                        <h3 className="font-bold text-lg text-black">{column}</h3>
+                                        <span className="text-sm text-[#5d5d5d]">
                                             {columnAliases.length}개 별칭
                                         </span>
                                     </div>
@@ -168,12 +168,12 @@ const SchemaAliasManager: React.FC<SchemaAliasManagerProps> = ({ isOpen, onClose
                                         {columnAliases.map((alias) => (
                                             <div
                                                 key={alias}
-                                                className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                                                className="inline-flex items-center gap-2 px-3 py-1 border border-[#c4c4c4] text-black rounded-sm text-sm"
                                             >
                                                 <span>{alias}</span>
                                                 <button
                                                     onClick={() => removeAlias(column, alias)}
-                                                    className="hover:text-red-600 transition"
+                                                    className="hover:text-[#ff0066] transition-colors"
                                                 >
                                                     <X className="w-3 h-3" />
                                                 </button>
@@ -189,11 +189,11 @@ const SchemaAliasManager: React.FC<SchemaAliasManagerProps> = ({ isOpen, onClose
                                             onChange={(e) => setNewAlias({ ...newAlias, [column]: e.target.value })}
                                             onKeyPress={(e) => e.key === 'Enter' && addAlias(column)}
                                             placeholder="새 별칭 입력..."
-                                            className="flex-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            className="flex-1 px-3 py-2 border border-[#c4c4c4] rounded-sm text-sm focus:border-black focus:outline-none text-black"
                                         />
                                         <button
                                             onClick={() => addAlias(column)}
-                                            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm flex items-center gap-1"
+                                            className="px-3 py-2 bg-black text-white rounded-sm hover:bg-[#222] transition-colors text-sm flex items-center gap-1"
                                         >
                                             <Plus className="w-4 h-4" />
                                             추가
@@ -203,7 +203,7 @@ const SchemaAliasManager: React.FC<SchemaAliasManagerProps> = ({ isOpen, onClose
                             ))}
 
                             {Object.keys(aliases).length === 0 && (
-                                <div className="text-center py-10 text-gray-500">
+                                <div className="text-center py-10 text-[#5d5d5d]">
                                     <p>설정된 별칭이 없습니다.</p>
                                     <p className="text-sm mt-2">위의 입력창에서 컬럼을 추가해주세요.</p>
                                 </div>
@@ -213,13 +213,13 @@ const SchemaAliasManager: React.FC<SchemaAliasManagerProps> = ({ isOpen, onClose
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t bg-gray-50 flex justify-between items-center">
-                    <div className="text-sm text-gray-600">
-                        💡 <strong>팁:</strong> "매출"을 "판매액"의 별칭으로 설정하면, AI가 "매출이 얼마야?"라는 질문에도 답변할 수 있습니다
+                <div className="p-6 border-t border-[#c4c4c4] bg-white flex justify-between items-center">
+                    <div className="text-sm text-[#5d5d5d]">
+                        <strong className="text-black">팁:</strong> "매출"을 "판매액"의 별칭으로 설정하면, AI가 "매출이 얼마야?"라는 질문에도 답변할 수 있습니다
                     </div>
                     <button
                         onClick={onClose}
-                        className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition"
+                        className="px-6 py-2 bg-white border border-[#c4c4c4] text-black rounded-sm hover:border-black transition-colors"
                     >
                         닫기
                     </button>

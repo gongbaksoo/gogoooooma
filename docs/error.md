@@ -197,7 +197,96 @@ vercel redeploy https://gogoooooma-i5tmrg7oy-gongbaksoos-projects.vercel.app
 
 ---
 
+## 10. `pretendard` 패키지가 `frontend/node_modules`에 없는 것처럼 보임 (workspace hoisting)
+
+**발생일**: 2026-05-18
+
+### 🚨 증상
+- `cd frontend && npm install pretendard` 정상 종료 ("added 497 packages")
+- 직후 `ls frontend/node_modules/pretendard/` → `No such file or directory`
+- `pretendard/dist/web/variable/pretendardvariable.css` 경로가 안 잡힐까봐 일시적 혼란
+
+### 🧭 원인
+- 루트 `package.json`에 `"workspaces": ["frontend"]` 설정.
+- npm이 의존성을 **루트 `node_modules`로 호이스팅**하기 때문에 `frontend/node_modules`는 생성되지 않음.
+- `frontend/package.json`의 `dependencies`에는 `pretendard`가 정상 기록됨.
+
+### ✅ 해결 / 확인 방법
+```bash
+ls /Users/gongbaksoo/Desktop/Vibe Coding/AVK_Sales/node_modules/pretendard/dist/web/variable/
+# → pretendardvariable.css, pretendardvariable-dynamic-subset.css 등 확인
+```
+- Next.js의 모듈 해석은 워크스페이스 호이스팅을 자동 처리하므로 `globals.css`에서 `@import "pretendard/dist/..."` 그대로 동작.
+- 빌드된 CSS 청크에 `@font-face` 187건 번들 확인 (subset 폰트 정상).
+
+### 💡 메모
+- 패키지 위치를 의심하기 전에 항상 **루트 `node_modules`** 부터 확인.
+- 워크스페이스가 의도가 아니라면 루트 `package.json`의 `workspaces` 키를 제거하면 `frontend/node_modules`로 격리됨.
+
+---
+
+## 11. 디자인 리팩토링 — 페이지 wrapper만 모노톤화 시 자식 컴포넌트와 시각적 충돌
+
+**발생일**: 2026-05-18
+
+### 🚨 증상
+- 사용자가 화면 캡처와 함께 보고: "차트 카드들이 살짝 떠보임", "월별 매출 추이 헤더에 📊가 그대로"
+- 페이지 wrapper(`custom-dashboard/page.tsx`)는 순백/모노톤으로 바꿨는데, 차트 컴포넌트 내부는 여전히 파란 그라데이션/`rounded-3xl`/`shadow-xl` + 이모지 헤더 유지.
+- "wrapper + 차트 컬러만 모노톤"의 "차트 컬러"가 **recharts stroke/fill만 의미**한다고 좁게 해석한 결과 — 컨트롤 UI(viewMode 버튼, 검색박스, 셀렉트, CTA 버튼)는 손대지 않았음.
+
+### 🧭 원인 (작업 진행상의 누락)
+1. **범위 합의 표현의 모호성** — "차트 컬러"가 시리즈 색만 의미하는지 컨트롤 UI까지 포함하는지 사전에 명시되지 않음.
+2. **컴포넌트 텍스트 내부 이모지 누락** — 페이지 wrapper의 이모지(🛠️🤖🚨)만 lucide 아이콘으로 교체. 자식 컴포넌트 내 51개 이모지(📊📈📦💰⏱️🔍 등) 잔존.
+3. **점진적 적용의 일관성 비용** — 부분 적용은 시각적 일관성을 깨뜨려 결국 추가 라운드가 필요. 디자인 작업은 가급적 동일 범위에서 한 번에 끝내는 것이 비용 효율적.
+
+### ✅ 해결
+- 사용자가 캡처를 보내올 때마다 **3차에 걸쳐 점진 확장**:
+  1. 1차: 페이지 wrapper + 차트 시리즈 색 (page.tsx + 차트 5개)
+  2. 2차: 이모지 51개 전수 제거 (10개 파일)
+  3. 3차: 차트/분석 9개 컴포넌트 컨트롤 UI + 채팅/파일/모달 6개 컴포넌트 전부
+- 최종적으로 19개 파일 통일.
+
+### 💡 향후 권장
+- 디자인 시스템 전환은 **"적용 대상 컴포넌트 리스트"를 먼저 합의** 후 진행 — 페이지 단위가 아니라 컴포넌트 단위로.
+- "이모지 제거"가 정책이라면 grep으로 전수 스캔 (`grep -rn --include="*.tsx" -E "[이모지유니코드범위]" .`) 후 한 번에 처리.
+- 캡처 기반 1대1 수정은 비효율 — 범위 합의가 먼저.
+
+---
+
+## 12. 로컬 dev 환경에서 파일 업로드 실패 — 백엔드가 떠 있지 않음
+
+**발생일**: 2026-05-18
+
+### 🚨 증상
+- `http://localhost:3000/custom-dashboard`에서 "저장된 파일 카드"에 빨간 에러 "파일 목록을 불러오지 못했습니다. (서버 연결 확인 필요)"
+- 파일 업로드 시도 시 connection refused (ECONNREFUSED)
+
+### 🧭 원인
+- `frontend/src/config/api.ts`: `NODE_ENV === 'development'`이면 `localhost:8000` 호출.
+- `frontend/.env.local`이 없어 환경변수로 우회 안 됨.
+- 이 Mac에 `com.avk.backend` launchd 미등록 (Mac Mini가 별도 머신).
+- 127.0.0.1:8000에 아무 프로세스도 떠있지 않음 → `lsof -i :8000` 빈 결과, curl 000.
+
+### ✅ 해결 (`.env.local` 추가로 원격 백엔드 사용)
+```bash
+echo "NEXT_PUBLIC_API_URL=https://api.gongbaksoo.com" > frontend/.env.local
+# dev 서버 재시작 → "Environments: .env.local" 로그 표시 확인
+```
+- 원격 Mac Mini 백엔드(`https://api.gongbaksoo.com`)는 200 OK 응답, 2/5건 파일 보유 상태.
+- `lib/api.ts`의 `BASE_URL.replace('localhost', '127.0.0.1')`는 원격 URL에 'localhost' 토큰이 없으므로 안전하게 통과.
+
+### 💡 메모
+- 로컬 백엔드를 띄우려면 추가로 필요:
+  - `api/venv` 생성 + `pip install -r requirements.txt` (16개 패키지)
+  - `api/.env`에 `DATABASE_URL`, `GOOGLE_API_KEY` 필요
+  - PostgreSQL 접근, Gemini API 키 보유
+- 디자인/프론트 작업 중에는 **`.env.local`로 원격 백엔드 사용이 가장 효율적**.
+- `frontend/.env.local`은 `.gitignore`의 `.env*.local` 패턴으로 커밋 제외.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
 3. **TCC 안정 위치 권장** — 향후 작업은 `~/Projects` 등 권한 트러블이 적은 위치에서 진행.
+4. **디자인 시스템 전환 SOP** — 캡처 1대1이 아니라, ① 컴포넌트 리스트 합의 → ② 토큰 정의 → ③ grep 기반 일괄 치환 → ④ 잔여 수동 수정 → ⑤ 캡처 검증 순서로 진행하면 라운드 수 감소.

@@ -2,12 +2,15 @@
 
 ## 1. 전체 디자인 컨셉
 
-| 항목 | 내용 |
-|------|------|
-| **테마** | 프리미엄 분석 대시보드 |
-| **색상 기조** | 화이트/슬레이트 기반 + 블루 액센트 |
-| **폰트** | 시스템 기본 (sans-serif) |
-| **레이아웃** | 반응형, 모바일 카드뷰 / 데스크탑 테이블뷰 |
+> **변경 이력**: 2026-05-18 — 29CM(에디토리얼 셀렉트샵) 기반 모노톤 톤으로 전환. 현재 컨셉은 **§8 29CM 디자인 시스템** 참조. 아래 표/이하 섹션은 이전 디자인 시점의 기록.
+
+| 항목 | 이전 (2026-05-15까지) | 현재 (2026-05-18 ~) |
+|------|----------------------|----------------------|
+| **테마** | 프리미엄 분석 대시보드 (블루+그라데이션) | 29CM 에디토리얼 모노톤 |
+| **색상 기조** | 화이트/슬레이트 + 블루 액센트 | 순백/순흑 + `#c4c4c4` outline + `#ff0066` 세일레드 액센트 |
+| **폰트** | 시스템 기본 (sans-serif) | Pretendard Variable (400/700/800) |
+| **레이아웃** | 반응형, 모바일 카드뷰 / 데스크탑 테이블뷰 | 동일 (반응형 유지) |
+| **레퍼런스** | — | `Design/DESIGN.md` (29CM omd 0.1) |
 
 ---
 
@@ -166,3 +169,105 @@ interface SummaryData {
     prev_year_daily_avg: number; // 전년 동월 일평균
 }
 ```
+
+---
+
+## 8. 29CM 디자인 시스템 (현행, 2026-05-18 ~)
+
+레퍼런스: `Design/DESIGN.md` (29CM omd 0.1, 2026-05-15 검증)
+
+### 8.1 디자인 토큰
+
+| 토큰 | 값 | 용도 |
+|------|-----|------|
+| `--ink` | `#000000` | 본문/헤딩/인버티드 CTA 배경 |
+| `--background` | `#ffffff` | 페이지 배경, ghost CTA 배경 |
+| `--outline` | `#c4c4c4` | ghost 버튼·셀렉트·카드 보더 (1px) |
+| `--muted` | `rgba(93,93,93,0.64)` | 보조 캡션, placeholder, 메타 텍스트 |
+| `--sale-red` | `#ff0066` | 단일 액센트 — 성장률 상승, 차트 강조선, 인라인 에러 보더 |
+
+- 정의 위치: `frontend/src/app/globals.css`
+- Tailwind v4 `@theme inline` 등록 (`--color-ink`, `--color-outline`, `--color-muted`, `--color-sale-red`)
+- 추가 회색 단계는 hex 인라인 (`#5d5d5d`, `#e5e5e5`, `#f5f5f5`, `#f8f8f8`) — 정식 토큰화 보류
+
+### 8.2 타이포그래피
+
+- **단일 패밀리**: Pretendard Variable (`pretendard` npm 패키지, dynamic-subset CSS 로드)
+- 폴백: `ui-sans-serif, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif`
+- 웨이트: 400(본문/캡션), 700(타이틀/가격/CTA), 800(액티브 nav, 선택적)
+- 이탤릭 사용 금지 — 강조는 weight로만
+
+| 역할 | 사이즈 | 웨이트 | 비고 |
+|------|--------|--------|------|
+| 섹션 헤드라인 | 30px | 700 | 라틴/한글 혼용 |
+| 에디토리얼 카드 타이틀 | 22px | 700 | line-height 29.92px (1.36) |
+| 본문 / 카드 설명 | 15px | 400 | line-height 1.5 |
+| ghost CTA "더보기" | 14px | 700 | 트레일링 chevron `>` |
+| 푸터 헤딩 | 13px | 700 | 캡스 라틴 (NOTICE, ABOUT US 등) |
+| 가격 / 카드 메타 | 12px | 700/400 | 가격은 제목보다 작게 |
+
+### 8.3 컴포넌트 토큰
+
+| 컴포넌트 | 스타일 |
+|---------|--------|
+| **Primary CTA** (인버티드 블랙) | `bg-black text-white rounded-sm` (2px) — 페이지당 1~2회만 |
+| **Ghost CTA** (기본 컨트롤) | `bg-white text-black border border-[#c4c4c4] rounded` (4px), 호버 `border-black` |
+| **Active Toggle 버튼** | `bg-black text-white border-black` |
+| **Inactive Toggle 버튼** | `bg-white text-black border-[#c4c4c4] hover:border-black` |
+| **Input / Select** | `border border-[#c4c4c4] rounded focus:border-black` (포커스 ring 없음) |
+| **Card / Wrapper** | `bg-white border border-[#c4c4c4]` — 그림자 없음 |
+| **Modal** | 동일 `border border-[#c4c4c4]`, 오버레이 `bg-black/60` |
+
+### 8.4 라운드/그림자/장식 규칙
+
+- **Border-radius 스케일**: 0 / 2px (인버티드 CTA) / 4px (ghost) — **8px 이상 금지, pill 금지**
+- **Shadow**: 사용 안 함. 깊이는 색 대비(인버티드)와 보더로만 표현
+- **Decorative iconography**: 마케팅 surface에 장식 아이콘 없음. lucide-react는 기능적 컨트롤(닫기, 새로고침, 화살표)에만
+- **이모지**: 전면 금지 (UI/카피/에러 메시지 모두)
+
+### 8.5 차트 팔레트 (Recharts)
+
+- Grid: `#f0f0f0`
+- Axis stroke: `#5d5d5d`
+- 시리즈 1순위: `#000000`
+- 시리즈 2순위: `#5d5d5d`
+- 시리즈 3~9순위: 흑백 단계 (`#3d3d3d`, `#7d7d7d`, `#9d9d9d`, `#b8b8b8`, `#c4c4c4`, `#d0d0d0`, `#dcdcdc`)
+- 강조 시리즈 (합계/총매출/이익률): `#ff0066`
+- **한계**: 5개 이상 시리즈 동시 표시 시 색 구분 어려움 — 흑백 그라데이션의 알려진 트레이드오프
+
+### 8.6 상태 표현
+
+| 상태 | 표현 |
+|------|------|
+| 매출 증가 ↑ | `#ff0066` 텍스트 + 보더 |
+| 매출 감소 ↓ | 검정 텍스트 + 보더 |
+| 변동 없음 | `#5d5d5d` + `#c4c4c4` 보더 |
+| 인라인 에러 | `#ff0066` 보더 + `#ff0066` 텍스트 |
+| 로딩 스피너 | `border-2 border-black border-t-transparent rounded-full animate-spin` |
+| 비활성 (disabled) | `opacity-50` 또는 보더 유지 + 채도 다운 |
+
+### 8.7 보이스 & 카피
+
+- 한국어 우선, 영어는 매거진 섹션 라벨로만 (예: `AI Insight Chat`, `Auto-Refreshed`)
+- 친근-격식 어미 (`~해요`, `~하세요`) — 코퍼레이트 `~합니다`는 법적 고지에만
+- 금지 표현: `최저가`, `긴급세일`, `오늘만`, `SHOP NOW!`, 이모지, 우르겐시 카운트다운
+
+### 8.8 적용 범위 (2026-05-18 1차 적용)
+
+| 영역 | 파일 수 | 비고 |
+|------|---------|------|
+| 전역 (CSS·layout·홈) | 3 | `globals.css`, `layout.tsx`, `app/page.tsx` |
+| 대시보드 페이지 | 1 | `app/custom-dashboard/page.tsx` |
+| 차트/분석 컴포넌트 | 9 | Sales/Channel/ProductGroup/Detailed/ProductSearch/BrandAnalysis/DynamicAnalysis/SalesSummary/SalesAlerts |
+| 채팅/파일/모달 | 6 | FileUpload, FileSelector, ChatHistoryList, ChatInterface, AIInstructionsManager, SchemaAliasManager |
+| 미적용 | 2 | `app/custom-dashboard/details/page.tsx` (이모지·텍스트만 정리, 카드 wrapper 미손댐), `app/coupang-orders/page.tsx` |
+
+총 19개 파일 수정. 검증: dev `/`, `/custom-dashboard` HTTP 200, hot-reload 컴파일 에러 0건.
+
+### 8.9 알려진 한계 / 후속 항목
+
+1. **상세 페이지 미적용**: `app/custom-dashboard/details/page.tsx`와 `coupang-orders/page.tsx`는 이번 회차 범위 밖. 별도 작업 필요.
+2. **차트 다시리즈 가독성**: 흑백 그라데이션이 5색 이상에서 시각적 구분 약함. 패턴(점선/실선) 추가나 라벨 강화 검토 필요.
+3. **회색 인라인 hex 토큰화**: `#5d5d5d`, `#e5e5e5`, `#f5f5f5`, `#f8f8f8`이 인라인으로 흩어져 있음. globals.css에 추가 토큰 등록 권장.
+4. **`details/page.tsx` 차트 시리즈 hardcode**: 라인 310-313에 `#8b5cf6/#3b82f6/#10b981/#f59e0b`가 남아있음 (페이지 전체가 미적용 상태).
+

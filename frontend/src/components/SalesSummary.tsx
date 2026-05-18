@@ -69,11 +69,11 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
     // Skeleton Loading
     if (loading) {
         return (
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 mb-8 animate-pulse">
-                <div className="h-8 bg-slate-100 rounded-lg w-1/3 mb-8"></div>
+            <div className="bg-white border border-[#c4c4c4] p-8 mb-8 animate-pulse">
+                <div className="h-8 bg-[#f0f0f0] rounded-sm w-1/3 mb-8"></div>
                 <div className="space-y-4">
                     {[1, 2, 3, 4, 5, 6].map(i => (
-                        <div key={i} className="h-16 bg-slate-50 rounded-xl w-full"></div>
+                        <div key={i} className="h-16 bg-[#f5f5f5] rounded-sm w-full"></div>
                     ))}
                 </div>
             </div>
@@ -114,28 +114,26 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
     };
 
     return (
-        <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/40 border border-slate-100 mb-6 md:mb-10 overflow-hidden transition-all hover:shadow-2xl hover:shadow-slate-200/60">
+        <div className="bg-white border border-[#c4c4c4] mb-6 md:mb-10 overflow-hidden">
             {/* Header Section */}
-            <div className="bg-gradient-to-r from-slate-50 to-white px-6 py-5 md:px-8 md:py-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="bg-white px-6 py-5 md:px-8 md:py-6 border-b border-[#c4c4c4] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 className="text-xl md:text-2xl font-extrabold text-slate-800 flex items-center gap-2">
-                        <span className="bg-blue-600 text-white p-1.5 rounded-lg shadow-sm">
-                            <Calendar className="w-4 h-4 md:w-5 md:h-5" />
-                        </span>
+                    <h2 className="text-xl md:text-2xl font-bold text-black flex items-center gap-2">
+                        <Calendar className="w-5 h-5" />
                         월간 매출 현황 보고서
                     </h2>
                     <div className="mt-2 flex flex-col gap-1">
-                        <p className="text-slate-500 text-xs md:text-sm font-medium flex flex-wrap items-center gap-1 md:gap-2">
-                            집계월: <span className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-md">{currentMonthLabel}</span>
-                            <span className="text-slate-300 hidden md:inline">|</span>
-                            데이터 기준일: <span className="text-slate-700 font-bold underline decoration-blue-200 underline-offset-4">{formatReferenceDate(meta.max_date)}</span>
+                        <p className="text-[#5d5d5d] text-xs md:text-sm font-normal flex flex-wrap items-center gap-1 md:gap-2">
+                            집계월: <span className="text-black font-bold">{currentMonthLabel}</span>
+                            <span className="text-[#c4c4c4] hidden md:inline">|</span>
+                            데이터 기준일: <span className="text-black font-bold">{formatReferenceDate(meta.max_date)}</span>
                         </p>
-                        <p className="text-slate-400 text-[10px] md:text-xs">
+                        <p className="text-[#5d5d5d] text-[10px] md:text-xs">
                             Source: {filename}
                         </p>
                     </div>
                 </div>
-                <div className="hidden md:flex px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold border border-blue-100 items-center gap-1 shadow-sm">
+                <div className="hidden md:flex px-3 py-1 text-black rounded-sm text-[10px] font-bold border border-[#c4c4c4] items-center gap-1">
                     <RefreshCw className="w-3 h-3" />
                     Auto-Refreshed
                 </div>
@@ -145,7 +143,7 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
             <div className="p-0 md:p-8">
 
                 {/* Mobile View (Cards) - Visible on small screens */}
-                <div className="md:hidden flex flex-col divide-y divide-slate-100">
+                <div className="md:hidden flex flex-col divide-y divide-[#e5e5e5]">
                     {categories.map((cat) => {
                         const item = data[cat.key];
                         if (!item) return null;
@@ -155,16 +153,16 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
                         const isDecline = item.growth_rate < 0;
 
                         return (
-                            <div key={cat.key} className={`p-5 ${isTotal ? 'bg-slate-50 border-b-2 border-slate-200' : ''}`}>
+                            <div key={cat.key} className={`p-5 ${isTotal ? 'bg-[#f5f5f5]' : ''}`}>
                                 <div className="flex justify-between items-center mb-4">
                                     <div className="flex items-center gap-2">
-                                        {isTotal && <div className="w-1 h-5 bg-blue-600 rounded-full"></div>}
-                                        <span className={`font-bold text-lg ${isTotal ? 'text-slate-900' : 'text-slate-700'}`}>
+                                        {isTotal && <div className="w-1 h-5 bg-black"></div>}
+                                        <span className={`font-bold text-lg ${isTotal ? 'text-black' : 'text-black'}`}>
                                             {cat.label}
                                         </span>
                                     </div>
-                                    <div className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border ${isGrowth ? 'bg-red-50 text-red-600 border-red-100' :
-                                        isDecline ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-100 text-slate-500 border-slate-200'
+                                    <div className={`flex items-center gap-1 px-2.5 py-1 rounded-sm text-xs font-bold border ${isGrowth ? 'border-[#ff0066] text-[#ff0066]' :
+                                        isDecline ? 'border-black text-black' : 'border-[#c4c4c4] text-[#5d5d5d]'
                                         }`}>
                                         {isGrowth ? <TrendingUp className="w-3 h-3" /> : isDecline ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
                                         {formatRate(item.growth_rate)}
@@ -173,29 +171,29 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
 
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="flex flex-col space-y-1">
-                                        <span className="text-xs text-slate-400 font-medium">당월 누적 매출</span>
+                                        <span className="text-xs text-[#5d5d5d] font-normal">당월 누적 매출</span>
                                         <div>
-                                            <span className="text-xl font-bold text-slate-800 tracking-tight">
+                                            <span className="text-xl font-bold text-black tracking-tight">
                                                 {formatMillions(item.current_total)}
                                             </span>
-                                            <span className="text-xs font-normal text-slate-400 ml-1">백만</span>
+                                            <span className="text-xs font-normal text-[#5d5d5d] ml-1">백만</span>
                                         </div>
-                                        <span className="text-[10px] text-slate-400 bg-slate-50 self-start px-1.5 py-0.5 rounded">
+                                        <span className="text-[10px] text-[#5d5d5d] self-start">
                                             전월 {formatMillions(item.prev_total)}
                                         </span>
                                     </div>
                                     <div className="flex flex-col items-end space-y-1">
                                         <div className="flex items-center gap-1">
-                                            <span className="text-xs text-slate-400 font-medium">일평균 매출</span>
-                                            <span className="text-[9px] text-blue-500 font-bold bg-blue-50 px-1 rounded">{item.current_days}일 기준</span>
+                                            <span className="text-xs text-[#5d5d5d] font-normal">일평균 매출</span>
+                                            <span className="text-[9px] text-black font-bold border border-[#c4c4c4] px-1 rounded-sm">{item.current_days}일 기준</span>
                                         </div>
                                         <div>
-                                            <span className="text-lg font-bold text-slate-700 tracking-tight">
+                                            <span className="text-lg font-bold text-black tracking-tight">
                                                 {formatMillions(item.current_daily_avg)}
                                             </span>
-                                            <span className="text-xs font-normal text-slate-400 ml-1">백만</span>
+                                            <span className="text-xs font-normal text-[#5d5d5d] ml-1">백만</span>
                                         </div>
-                                        <span className="text-[10px] text-slate-400 bg-slate-50 self-end px-1.5 py-0.5 rounded">
+                                        <span className="text-[10px] text-[#5d5d5d] self-end">
                                             전월 {formatMillions(item.prev_daily_avg)}
                                         </span>
                                     </div>
@@ -206,21 +204,21 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
                 </div>
 
                 {/* PC/Tablet View (Table) - Hidden on mobile */}
-                <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-100">
+                <div className="hidden md:block overflow-x-auto border border-[#c4c4c4]">
                     <table className="w-full">
                         <thead>
-                            <tr className="bg-slate-50/80 text-xs text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                            <tr className="bg-[#f5f5f5] text-xs text-[#5d5d5d] uppercase tracking-wider border-b border-[#c4c4c4]">
                                 <th className="text-left py-4 pl-6 font-semibold w-[9%]">구분</th>
-                                <th className="text-right py-4 font-semibold w-[9%]">당월 누적 <span className="text-[10px] normal-case text-slate-400">(백만)</span></th>
-                                <th className="text-right py-4 font-semibold w-[8%]">당일매출 <span className="text-[10px] normal-case text-slate-400">(백만)</span></th>
-                                <th className="text-right py-4 font-semibold w-[12%]">당월 일평균 <span className="text-[10px] normal-case text-slate-400">(백만)</span></th>
+                                <th className="text-right py-4 font-semibold w-[9%]">당월 누적 <span className="text-[10px] normal-case text-[#5d5d5d]">(백만)</span></th>
+                                <th className="text-right py-4 font-semibold w-[8%]">당일매출 <span className="text-[10px] normal-case text-[#5d5d5d]">(백만)</span></th>
+                                <th className="text-right py-4 font-semibold w-[12%]">당월 일평균 <span className="text-[10px] normal-case text-[#5d5d5d]">(백만)</span></th>
                                 <th className="text-center py-4 font-semibold w-[10%]">전월 대비</th>
-                                <th className="text-right py-4 font-semibold w-[13%]">전월 <span className="text-[10px] normal-case text-slate-400">(누적/일평균)</span></th>
-                                <th className="text-right py-4 font-semibold w-[16%] bg-blue-50/50">최근 3개월 <span className="text-[10px] normal-case text-slate-400">(누적/일평균)</span></th>
-                                <th className="text-right py-4 pr-6 font-semibold w-[13%] bg-amber-50/50">전년 동월 <span className="text-[10px] normal-case text-slate-400">(누적/일평균)</span></th>
+                                <th className="text-right py-4 font-semibold w-[13%]">전월 <span className="text-[10px] normal-case text-[#5d5d5d]">(누적/일평균)</span></th>
+                                <th className="text-right py-4 font-semibold w-[16%]">최근 3개월 <span className="text-[10px] normal-case text-[#5d5d5d]">(누적/일평균)</span></th>
+                                <th className="text-right py-4 pr-6 font-semibold w-[13%]">전년 동월 <span className="text-[10px] normal-case text-[#5d5d5d]">(누적/일평균)</span></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
+                        <tbody className="divide-y divide-[#e5e5e5] bg-white">
                             {categories.map((cat) => {
                                 const item = data[cat.key];
                                 if (!item) return null;
@@ -231,30 +229,30 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
                                 const isZero = item.growth_rate === 0;
 
                                 return (
-                                    <tr key={cat.key} className={`group transition-colors hover:bg-slate-50 ${isTotal ? 'bg-slate-50/50' : ''}`}>
+                                    <tr key={cat.key} className={`group transition-colors hover:bg-[#f8f8f8] ${isTotal ? 'bg-[#f5f5f5]' : ''}`}>
                                         <td className="py-5 pl-6">
                                             <div className={`flex items-center gap-2 ${isTotal ? 'pl-2' : ''}`}>
-                                                <span className={`font-bold text-sm ${isTotal ? 'text-slate-900' : 'text-slate-600'}`}>
+                                                <span className="font-bold text-sm text-black">
                                                     {cat.label}
                                                 </span>
                                             </div>
                                         </td>
 
-                                        <td className="py-4 text-right font-bold text-slate-800 text-base tabular-nums tracking-tight">
+                                        <td className="py-4 text-right font-bold text-black text-base tabular-nums tracking-tight">
                                             {formatMillions(item.current_total)}
                                         </td>
 
-                                        <td className="py-4 text-right font-bold text-blue-600 text-base tabular-nums tracking-tight">
+                                        <td className="py-4 text-right font-bold text-black text-base tabular-nums tracking-tight">
                                             {formatMillions(item.latest_day_sales)}
                                         </td>
 
                                         <td className="py-4 text-right">
                                             <div className="flex flex-col items-end">
                                                 <div className="flex items-center gap-1">
-                                                    <span className="text-base font-bold text-slate-600 tabular-nums tracking-tight">
+                                                    <span className="text-base font-bold text-black tabular-nums tracking-tight">
                                                         {formatMillions(item.current_daily_avg)}
                                                     </span>
-                                                    <span className="text-[9px] text-blue-500 font-bold bg-blue-50 px-1 py-0.5 rounded border border-blue-100">
+                                                    <span className="text-[9px] text-black font-bold border border-[#c4c4c4] px-1 py-0.5 rounded-sm">
                                                         {item.current_days}일
                                                     </span>
                                                 </div>
@@ -262,8 +260,8 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
                                         </td>
 
                                         <td className="py-4 text-center">
-                                            <div className={`inline-flex items-center justify-center gap-1 px-2 py-1 rounded-full w-[90px] mx-auto transition-all shadow-sm ${isGrowth ? 'bg-green-50 text-green-700 border border-green-200' :
-                                                isDecline ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-500 border border-slate-200'
+                                            <div className={`inline-flex items-center justify-center gap-1 px-2 py-1 rounded-sm w-[90px] mx-auto border ${isGrowth ? 'border-[#ff0066] text-[#ff0066]' :
+                                                isDecline ? 'border-black text-black' : 'border-[#c4c4c4] text-[#5d5d5d]'
                                                 }`}>
                                                 {isGrowth && <TrendingUp className="w-3 h-3" />}
                                                 {isDecline && <TrendingDown className="w-3 h-3" />}
@@ -275,14 +273,14 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
                                         <td className="py-4 text-right">
                                             <div className="flex flex-col items-end gap-0.5">
                                                 <div className="flex items-center gap-1">
-                                                    <span className="text-[9px] text-slate-400 bg-slate-100 px-1 rounded">누적</span>
-                                                    <span className="text-slate-500 text-sm font-medium tabular-nums">
+                                                    <span className="text-[9px] text-[#5d5d5d]">누적</span>
+                                                    <span className="text-[#5d5d5d] text-sm font-medium tabular-nums">
                                                         {formatMillions(item.prev_total)}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-1">
-                                                    <span className="text-[9px] text-slate-400 bg-slate-100 px-1 rounded">일평균</span>
-                                                    <span className="text-slate-400 text-sm tabular-nums">
+                                                    <span className="text-[9px] text-[#5d5d5d]">일평균</span>
+                                                    <span className="text-[#5d5d5d] text-sm tabular-nums">
                                                         {formatMillions(item.prev_daily_avg)}
                                                     </span>
                                                 </div>
@@ -290,17 +288,17 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
                                         </td>
 
                                         {/* 새로 추가: 최근 3개월 */}
-                                        <td className="py-4 text-right bg-blue-50/30">
+                                        <td className="py-4 text-right">
                                             <div className="flex flex-col items-end gap-0.5">
                                                 <div className="flex items-center gap-1">
-                                                    <span className="text-[9px] text-blue-500 bg-blue-100 px-1 rounded">누적</span>
-                                                    <span className="text-blue-700 text-sm font-bold tabular-nums">
+                                                    <span className="text-[9px] text-[#5d5d5d]">누적</span>
+                                                    <span className="text-black text-sm font-bold tabular-nums">
                                                         {formatMillions(item.last_3months_total)}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-1">
-                                                    <span className="text-[9px] text-blue-400 bg-blue-100 px-1 rounded">{item.last_3months_days}일</span>
-                                                    <span className="text-blue-500 text-sm tabular-nums">
+                                                    <span className="text-[9px] text-[#5d5d5d]">{item.last_3months_days}일</span>
+                                                    <span className="text-[#5d5d5d] text-sm tabular-nums">
                                                         {formatMillions(item.last_3months_daily_avg)}
                                                     </span>
                                                 </div>
@@ -308,17 +306,17 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
                                         </td>
 
                                         {/* 새로 추가: 전년 동월 */}
-                                        <td className="py-4 pr-6 text-right bg-amber-50/30">
+                                        <td className="py-4 pr-6 text-right">
                                             <div className="flex flex-col items-end gap-0.5">
                                                 <div className="flex items-center gap-1">
-                                                    <span className="text-[9px] text-amber-600 bg-amber-100 px-1 rounded">누적</span>
-                                                    <span className="text-amber-700 text-sm font-bold tabular-nums">
+                                                    <span className="text-[9px] text-[#5d5d5d]">누적</span>
+                                                    <span className="text-black text-sm font-bold tabular-nums">
                                                         {item.prev_year_total > 0 ? formatMillions(item.prev_year_total) : '-'}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-1">
-                                                    <span className="text-[9px] text-amber-500 bg-amber-100 px-1 rounded">일평균</span>
-                                                    <span className="text-amber-500 text-sm tabular-nums">
+                                                    <span className="text-[9px] text-[#5d5d5d]">일평균</span>
+                                                    <span className="text-[#5d5d5d] text-sm tabular-nums">
                                                         {item.prev_year_daily_avg > 0 ? formatMillions(item.prev_year_daily_avg) : '-'}
                                                     </span>
                                                 </div>
@@ -333,11 +331,11 @@ const SalesSummary: React.FC<SalesSummaryProps> = ({ filename }) => {
 
                 {/* Footer Insight */}
                 <div className="mt-4 md:mt-6 flex flex-col md:flex-row justify-between items-center px-6 md:px-0 gap-2">
-                    <p className="text-[10px] md:text-xs text-slate-400 flex items-center gap-1">
+                    <p className="text-[10px] md:text-xs text-[#5d5d5d] flex items-center gap-1">
                         <Info className="w-3 h-3" />
                         일평균 매출은 [당월 누적 매출]을 [해당 월의 실제 데이터가 존재하는 일수]로 나누어 계산됩니다.
                     </p>
-                    <p className="text-[10px] md:text-xs text-slate-400 italic">
+                    <p className="text-[10px] md:text-xs text-[#5d5d5d]">
                         * 매출 단위: 백만 원, 소수점 반올림 처리
                     </p>
                 </div>

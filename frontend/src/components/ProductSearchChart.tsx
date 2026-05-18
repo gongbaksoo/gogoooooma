@@ -388,46 +388,46 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
     const displayData = getDisplayData();
     const isCombination = viewMode === 'salesProfitRate' || viewMode === 'dailyProfitRate';
     const chartTitle = viewMode === 'sales'
-        ? `🔎 ${currentLabel} 월별 매출 추이`
+        ? `${currentLabel} 월별 매출 추이`
         : viewMode === 'daily'
-            ? `🔎 ${currentLabel} 월별 일평균 매출`
+            ? `${currentLabel} 월별 일평균 매출`
             : viewMode === 'profitRate'
-                ? `🔎 ${currentLabel} 월별 평균 이익률`
+                ? `${currentLabel} 월별 평균 이익률`
                 : viewMode === 'salesProfitRate'
-                    ? `💰 ${currentLabel} 매출액 + 이익률 분석`
+                    ? `${currentLabel} 매출액 + 이익률 분석`
                     : viewMode === 'dailyProfitRate'
-                        ? `⏱️ ${currentLabel} 일평균 + 이익률 분석`
-                        : `📈 ${currentLabel} 월별 증감율 (전월 대비)`;
+                        ? `${currentLabel} 일평균 + 이익률 분석`
+                        : `${currentLabel} 월별 증감율 (전월 대비)`;
 
     const yAxisFormatter = (viewMode === 'growth' || viewMode === 'profitRate') ? formatPercent : formatMillions;
     const labelFormatter = (viewMode === 'growth' || viewMode === 'profitRate') ? (val: any) => typeof val === 'number' ? val.toFixed(1) + '%' : String(val) : formatMillions;
 
     return (
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60 mt-12">
+        <div className="bg-white p-4 md:p-8 border border-[#c4c4c4] mt-12">
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
                 <div>
                     <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight">
-                        🔎 상품명 검색 분석
+                        상품명 검색 분석
                     </h3>
-                    <p className="text-slate-400 text-sm mt-1 font-medium italic">{currentLabel}</p>
+                    <p className="text-[#5d5d5d] text-sm mt-1 font-normal">{currentLabel}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full xl:w-auto items-center">
                     {/* Time Unit Toggle */}
-                    <div className="flex bg-slate-100 p-1 rounded-xl mr-2">
+                    <div className="flex border border-[#c4c4c4] rounded mr-2">
                         <button
                             onClick={() => setTimeUnit('month')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timeUnit === 'month'
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
+                            className={`px-3 py-1.5 text-xs font-bold transition-colors ${timeUnit === 'month'
+                                ? 'bg-black text-white'
+                                : 'text-[#5d5d5d] hover:text-black'
                                 }`}
                         >
                             월간
                         </button>
                         <button
                             onClick={() => setTimeUnit('day')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${timeUnit === 'day'
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
+                            className={`px-3 py-1.5 text-xs font-bold transition-colors ${timeUnit === 'day'
+                                ? 'bg-black text-white'
+                                : 'text-[#5d5d5d] hover:text-black'
                                 }`}
                         >
                             일간
@@ -436,11 +436,11 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
 
                     {/* Date Range Selectors */}
                     {data.length > 0 && (
-                        <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200 w-full sm:w-auto justify-between">
+                        <div className="flex items-center gap-1 bg-white p-1 rounded border border-[#c4c4c4] w-full sm:w-auto justify-between">
                             <select
                                 value={startMonth}
                                 onChange={(e) => setStartMonth(e.target.value)}
-                                className="bg-transparent text-xs font-bold text-slate-600 focus:outline-none p-1.5"
+                                className="bg-transparent text-xs font-bold text-black focus:outline-none p-1.5"
                             >
                                 {timeUnit === 'month'
                                     ? data.map(d => (
@@ -457,11 +457,11 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                     })
                                 }
                             </select>
-                            <span className="text-slate-300">~</span>
+                            <span className="text-[#c4c4c4]">~</span>
                             <select
                                 value={endMonth}
                                 onChange={(e) => setEndMonth(e.target.value)}
-                                className="bg-transparent text-xs font-bold text-slate-600 focus:outline-none p-1.5"
+                                className="bg-transparent text-xs font-bold text-black focus:outline-none p-1.5"
                             >
                                 {timeUnit === 'month'
                                     ? data.map(d => (
@@ -486,19 +486,19 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
             {/* View Mode Buttons */}
             <div className="flex flex-wrap gap-2 mb-6">
                 {[
-                    { key: 'sales', label: '💰 매출액' },
-                    { key: 'daily', label: '⏱️ 일평균 매출' },
-                    { key: 'profitRate', label: '📊 이익률' },
-                    { key: 'salesProfitRate', label: '💰+📊 매출+이익률' },
-                    { key: 'dailyProfitRate', label: '⏱️+📊 일평균+이익률' },
-                    { key: 'growth', label: '📈 증감율' },
+                    { key: 'sales', label: '매출액' },
+                    { key: 'daily', label: '일평균 매출' },
+                    { key: 'profitRate', label: '이익률' },
+                    { key: 'salesProfitRate', label: '매출+이익률' },
+                    { key: 'dailyProfitRate', label: '일평균+이익률' },
+                    { key: 'growth', label: '증감율' },
                 ].map(({ key, label }) => (
                     <button
                         key={key}
                         onClick={() => setViewMode(key as ViewMode)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === key
-                            ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        className={`px-4 py-2 rounded text-xs font-bold transition-colors border ${viewMode === key
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-black border-[#c4c4c4] hover:border-black'
                             }`}
                     >
                         {label}
@@ -507,11 +507,11 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
             </div>
 
             {/* Search and Filter Controls */}
-            <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 rounded-2xl mb-8 border border-slate-200">
+            <div className="bg-white p-6 rounded mb-8 border border-[#c4c4c4]">
                 <div className="flex flex-col lg:flex-row gap-4 mb-4">
                     {/* Search Input */}
                     <div className="flex-grow">
-                        <label className="block text-xs font-bold text-slate-500 mb-2">🔎 상품명 검색</label>
+                        <label className="block text-xs font-bold text-slate-500 mb-2">상품명 검색</label>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
@@ -520,7 +520,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                 onChange={(e) => setSearchKeyword(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && fetchData()}
                                 placeholder="상품명을 입력하세요 (예: 치약, 세제)"
-                                className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-medium border border-slate-200 bg-white text-slate-700 placeholder:text-slate-400 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                className="w-full pl-10 pr-4 py-3 rounded text-sm font-medium border border-[#c4c4c4] bg-white text-black placeholder:text-[#5d5d5d] hover:border-black transition-colors focus:outline-none focus:border-black"
                             />
                         </div>
                     </div>
@@ -531,7 +531,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                         <select
                             value={selectedPart}
                             onChange={(e) => handlePartChange(e.target.value)}
-                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            className="px-3 py-2 rounded text-[11px] font-bold border border-[#c4c4c4] bg-white text-black hover:border-black transition-colors focus:outline-none focus:border-black"
                         >
                             <option value="">전체 (파트구분)</option>
                             {Object.keys(channelOptions).map((part) => (
@@ -543,7 +543,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                         <select
                             value={selectedChannel}
                             onChange={(e) => handleChannelChange(e.target.value)}
-                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            className="px-3 py-2 rounded text-[11px] font-bold border border-[#c4c4c4] bg-white text-black hover:border-black transition-colors focus:outline-none focus:border-black"
                             disabled={!selectedPart}
                         >
                             <option value="">전체 (채널구분)</option>
@@ -556,7 +556,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                         <select
                             value={selectedAccount}
                             onChange={(e) => setSelectedAccount(e.target.value)}
-                            className="px-3 py-2 rounded-xl text-[11px] font-bold border border-slate-200 bg-white text-slate-700 hover:border-blue-400 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            className="px-3 py-2 rounded text-[11px] font-bold border border-[#c4c4c4] bg-white text-black hover:border-black transition-colors focus:outline-none focus:border-black"
                             disabled={!selectedChannel}
                         >
                             <option value="">전체 (거래처)</option>
@@ -571,7 +571,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                     <button
                         onClick={fetchData}
                         disabled={loading}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl flex items-center gap-2 text-sm font-bold shadow-lg shadow-blue-200 transition-all active:scale-95 disabled:opacity-50"
+                        className="bg-black hover:bg-[#222] text-white px-8 py-3 rounded-sm flex items-center gap-2 text-sm font-bold transition-colors active:scale-95 disabled:opacity-50"
                     >
                         {loading ? (
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -589,15 +589,15 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                     <div className="flex items-center justify-between mb-3">
                         <button
                             onClick={() => setShowProducts(!showProducts)}
-                            className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-blue-600"
+                            className="flex items-center gap-2 text-sm font-bold text-black hover:opacity-70"
                         >
-                            <span>📦 검색된 상품 목록 ({matchedProducts.length}건)</span>
+                            <span>검색된 상품 목록 ({matchedProducts.length}건)</span>
                             <span className={`transform transition-transform ${showProducts ? 'rotate-180' : ''}`}>▼</span>
                         </button>
                         {showProducts && (
                             <div className="flex items-center gap-3">
-                                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                                    ✓ {selectedProducts.size}개 선택됨
+                                <span className="text-xs font-bold text-black border border-[#c4c4c4] px-3 py-1 rounded-sm">
+                                    {selectedProducts.size}개 선택됨
                                 </span>
                                 <button
                                     onClick={() => {
@@ -609,19 +609,19 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                         // Re-fetch with only selected product codes
                                         fetchFilteredData();
                                     }}
-                                    className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-4 py-1.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95"
+                                    className="bg-black hover:bg-[#222] text-white px-4 py-1.5 rounded-sm text-xs font-bold transition-colors active:scale-95"
                                 >
-                                    🔍 선택 항목 조회
+                                    선택 항목 조회
                                 </button>
                             </div>
                         )}
                     </div>
                     {showProducts && (
-                        <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-xl">
+                        <div className="max-h-60 overflow-y-auto border border-[#c4c4c4] rounded-sm">
                             <table className="w-full text-xs">
-                                <thead className="bg-slate-100 sticky top-0">
+                                <thead className="bg-[#f5f5f5] sticky top-0">
                                     <tr>
-                                        <th className="px-3 py-2 text-center font-bold text-slate-600 w-10">
+                                        <th className="px-3 py-2 text-center font-bold text-black w-10">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedProducts.size === matchedProducts.length && matchedProducts.length > 0}
@@ -632,18 +632,18 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                                         setSelectedProducts(new Set());
                                                     }
                                                 }}
-                                                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                className="w-4 h-4 rounded-sm border-[#c4c4c4] text-black focus:ring-black cursor-pointer"
                                             />
                                         </th>
-                                        <th className="px-4 py-2 text-left font-bold text-slate-600">품목코드</th>
-                                        <th className="px-4 py-2 text-left font-bold text-slate-600">품목명[규격]</th>
+                                        <th className="px-4 py-2 text-left font-bold text-black">품목코드</th>
+                                        <th className="px-4 py-2 text-left font-bold text-black">품목명[규격]</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {matchedProducts.map((product, idx) => (
                                         <tr
                                             key={idx}
-                                            className={`border-t border-slate-100 hover:bg-slate-50 cursor-pointer ${selectedProducts.has(product.code) ? 'bg-blue-50/50' : ''}`}
+                                            className={`border-t border-[#e5e5e5] hover:bg-[#f8f8f8] cursor-pointer ${selectedProducts.has(product.code) ? 'bg-[#f5f5f5]' : ''}`}
                                             onClick={() => {
                                                 const newSelected = new Set(selectedProducts);
                                                 if (newSelected.has(product.code)) {
@@ -668,11 +668,11 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                                         }
                                                         setSelectedProducts(newSelected);
                                                     }}
-                                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                    className="w-4 h-4 rounded-sm border-[#c4c4c4] text-black focus:ring-black cursor-pointer"
                                                 />
                                             </td>
-                                            <td className="px-4 py-2 text-slate-700 font-mono">{product.code}</td>
-                                            <td className="px-4 py-2 text-slate-700">{product.name}</td>
+                                            <td className="px-4 py-2 text-black font-mono">{product.code}</td>
+                                            <td className="px-4 py-2 text-black">{product.name}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -684,7 +684,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
 
             {loading ? (
                 <div className="h-80 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-black border-t-transparent"></div>
                 </div>
             ) : error ? (
                 <div className="h-80 flex items-center justify-center text-red-500">
@@ -705,7 +705,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                             <XAxis
                                 dataKey="rawMonth"
                                 tickFormatter={formatXAxisTick}
-                                stroke="#94a3b8"
+                                stroke="#5d5d5d"
                                 style={{ fontSize: '9px', fontWeight: 500 }}
                                 tickLine={false}
                                 axisLine={false}
@@ -717,7 +717,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                             />
                             <YAxis
                                 yAxisId="left"
-                                stroke="#94a3b8"
+                                stroke="#5d5d5d"
                                 style={{ fontSize: '9px', fontWeight: 600 }}
                                 tickFormatter={yAxisFormatter}
                                 axisLine={false}
@@ -727,7 +727,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                 <YAxis
                                     yAxisId="right"
                                     orientation="right"
-                                    stroke="#ec4899"
+                                    stroke="#ff0066"
                                     style={{ fontSize: '9px', fontWeight: 600 }}
                                     tickFormatter={formatPercent}
                                     axisLine={false}
@@ -758,9 +758,9 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                 type="monotone"
                                 dataKey={viewMode === 'growth' ? "growth" : "value"}
                                 name={viewMode === 'growth' ? "증감율" : (viewMode === 'daily' || viewMode === 'dailyProfitRate' ? "일평균 매출" : "매출액")}
-                                stroke="#10b981"
+                                stroke="#000000"
                                 strokeWidth={3}
-                                dot={timeUnit === 'day' ? false : { fill: "#10b981", r: 4 }}
+                                dot={timeUnit === 'day' ? false : { fill: "#000000", r: 4 }}
                                 activeDot={{ r: 6 }}
                                 isAnimationActive={false}
                             >
@@ -769,7 +769,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                         dataKey={viewMode === 'growth' ? "growth" : "value"}
                                         content={
                                             <CustomLabel
-                                                fill="#10b981"
+                                                fill="#000000"
                                                 formatter={labelFormatter}
                                             />
                                         }
@@ -782,9 +782,9 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                     type="monotone"
                                     dataKey="profitRate"
                                     name="이익률"
-                                    stroke="#ec4899"
+                                    stroke="#ff0066"
                                     strokeWidth={3}
-                                    dot={timeUnit === 'day' ? false : { fill: "#ec4899", r: 4 }}
+                                    dot={timeUnit === 'day' ? false : { fill: "#ff0066", r: 4 }}
                                     activeDot={{ r: 6 }}
                                     isAnimationActive={false}
                                 >
@@ -793,7 +793,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                             dataKey="profitRate"
                                             content={
                                                 <CustomLabel
-                                                    fill="#ec4899"
+                                                    fill="#ff0066"
                                                     formatter={formatPercent}
                                                 />
                                             }

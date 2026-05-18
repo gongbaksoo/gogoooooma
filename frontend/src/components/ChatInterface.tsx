@@ -96,7 +96,7 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
                 error.response?.data?.detail || "죄송합니다. 오류가 발생했습니다.";
             setMessages((prev) => [
                 ...prev,
-                { role: "bot", content: `❌ 오류: ${errorMessage}` },
+                { role: "bot", content: `오류: ${errorMessage}` },
             ]);
         } finally {
             setIsLoading(false);
@@ -104,17 +104,17 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
     };
 
     return (
-        <div className="flex flex-col h-[600px] bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden transition-all hover:shadow-2xl hover:shadow-slate-200/60">
+        <div className="flex flex-col h-[600px] bg-white border border-[#c4c4c4] overflow-hidden">
             {/* Header */}
-            <div className="px-6 py-5 border-b border-slate-50 bg-white/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-10">
+            <div className="px-6 py-5 border-b border-[#c4c4c4] bg-white flex items-center justify-between sticky top-0 z-10">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100 shadow-sm">
-                        <Bot className="w-6 h-6 text-blue-600" />
+                    <div className="w-10 h-10 rounded-sm border border-[#c4c4c4] flex items-center justify-center">
+                        <Bot className="w-6 h-6 text-black" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-slate-800 tracking-tight leading-none">AI Insight Chat</h3>
-                        <p className="text-[11px] font-semibold text-emerald-500 mt-1 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <h3 className="font-bold text-black tracking-tight leading-none">AI Insight Chat</h3>
+                        <p className="text-[11px] font-bold text-black mt-1 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
                             AI Online
                         </p>
                     </div>
@@ -122,7 +122,7 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/30 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white custom-scrollbar">
                 {messages.map((message, index) => (
                     <div
                         key={index}
@@ -139,25 +139,25 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
                         >
                             <div
                                 className={cn(
-                                    "max-w-[85%] rounded-3xl px-5 py-3.5 text-sm shadow-sm transition-all",
+                                    "max-w-[85%] rounded-sm px-5 py-3.5 text-sm transition-colors",
                                     message.role === "user"
-                                        ? "bg-blue-600 text-white rounded-tr-none shadow-blue-100"
-                                        : "bg-white text-slate-700 border border-slate-100 rounded-tl-none shadow-slate-100"
+                                        ? "bg-black text-white"
+                                        : "bg-[#f5f5f5] text-black border border-[#c4c4c4]"
                                 )}
                             >
-                                <div className="prose prose-sm max-w-none break-words leading-relaxed font-medium">
+                                <div className="prose prose-sm max-w-none break-words leading-relaxed font-normal">
                                     <ReactMarkdown
                                         components={{
                                             table: ({ node, ...props }) => (
-                                                <div className="overflow-x-auto my-4 rounded-xl border border-slate-200 bg-white shadow-sm font-sans">
+                                                <div className="overflow-x-auto my-4 border border-[#c4c4c4] bg-white font-sans">
                                                     <table className="w-full border-collapse" {...props} />
                                                 </div>
                                             ),
                                             th: ({ node, ...props }) => (
-                                                <th className="border-b border-slate-200 px-4 py-2 bg-slate-50 font-bold text-slate-600 text-[11px] uppercase tracking-wider text-left" {...props} />
+                                                <th className="border-b border-[#c4c4c4] px-4 py-2 bg-[#f5f5f5] font-bold text-black text-[11px] uppercase tracking-wider text-left" {...props} />
                                             ),
                                             td: ({ node, ...props }) => (
-                                                <td className="border-b border-slate-50 px-4 py-3 text-slate-600 font-medium" {...props} />
+                                                <td className="border-b border-[#e5e5e5] px-4 py-3 text-black font-normal" {...props} />
                                             ),
                                             p: ({ node, ...props }) => <p className="mb-0 last:mb-0" {...props} />,
                                         }}
@@ -166,7 +166,7 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
                                     </ReactMarkdown>
                                 </div>
                             </div>
-                            <span className="text-[10px] font-bold text-slate-300 uppercase px-1">
+                            <span className="text-[10px] font-bold text-[#5d5d5d] uppercase px-1">
                                 {message.role === "user" ? "YOU" : "AI ANALYST"}
                             </span>
                         </div>
@@ -175,13 +175,13 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
                 {isLoading && (
                     <div className="flex items-start gap-4 animate-in fade-in duration-300">
                         <div className="flex flex-col gap-1 items-start">
-                            <div className="bg-white px-5 py-4 rounded-3xl rounded-tl-none border border-slate-100 shadow-sm shadow-slate-100 flex items-center gap-3">
+                            <div className="bg-[#f5f5f5] px-5 py-4 rounded-sm border border-[#c4c4c4] flex items-center gap-3">
                                 <span className="flex gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:-0.3s]" />
-                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:-0.15s]" />
-                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-black animate-bounce [animation-delay:-0.3s]" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-black animate-bounce [animation-delay:-0.15s]" />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-black animate-bounce" />
                                 </span>
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Analyzing Data...</span>
+                                <span className="text-xs font-bold text-black uppercase tracking-wider">Analyzing Data...</span>
                             </div>
                         </div>
                     </div>
@@ -190,7 +190,7 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
             </div>
 
             {/* Input Area */}
-            <div className="p-6 bg-white border-t border-slate-50 sticky bottom-0">
+            <div className="p-6 bg-white border-t border-[#c4c4c4] sticky bottom-0">
                 <form onSubmit={handleSubmit} className="flex gap-3 items-center">
                     <div className="flex-1 relative flex items-center">
                         <input
@@ -199,12 +199,12 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Ask anything about your data..."
                             disabled={isLoading}
-                            className="w-full pl-5 pr-12 py-3.5 bg-slate-50 border-transparent rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400/50 outline-none transition-all text-sm font-semibold text-slate-700 placeholder:text-slate-400 disabled:opacity-50"
+                            className="w-full pl-5 pr-12 py-3.5 bg-white border border-[#c4c4c4] rounded-sm focus:border-black outline-none transition-colors text-sm font-medium text-black placeholder:text-[#5d5d5d] disabled:opacity-50"
                         />
                         <button
                             type="submit"
                             disabled={isLoading || !input.trim()}
-                            className="absolute right-2 p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-200 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none transition-all"
+                            className="absolute right-2 p-2.5 bg-black text-white rounded-sm hover:bg-[#222] disabled:bg-[#c4c4c4] disabled:text-white transition-colors"
                         >
                             <Send className="w-5 h-5" />
                         </button>

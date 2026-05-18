@@ -226,9 +226,9 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
 
     if (!filename) {
         return (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-700 mb-4">📊 월별 매출 추이</h3>
-                <div className="h-80 flex items-center justify-center text-gray-500">
+            <div className="bg-white p-6 border border-[#c4c4c4]">
+                <h3 className="text-lg font-bold text-black mb-4">월별 매출 추이</h3>
+                <div className="h-80 flex items-center justify-center text-[#5d5d5d]">
                     파일을 업로드하거나 선택해주세요
                 </div>
             </div>
@@ -237,10 +237,10 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
 
     if (loading) {
         return (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-700 mb-4">📊 월별 매출 추이</h3>
+            <div className="bg-white p-6 border border-[#c4c4c4]">
+                <h3 className="text-lg font-bold text-black mb-4">월별 매출 추이</h3>
                 <div className="h-80 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-black border-t-transparent"></div>
                 </div>
             </div>
         );
@@ -248,8 +248,8 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
 
     if (error) {
         return (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-700 mb-4">📊 월별 매출 추이</h3>
+            <div className="bg-white p-6 border border-[#c4c4c4]">
+                <h3 className="text-lg font-bold text-black mb-4">월별 매출 추이</h3>
                 <div className="h-80 flex items-center justify-center text-red-500">
                     {error}
                 </div>
@@ -269,12 +269,12 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
     };
 
     const chartTitle = viewMode === 'sales'
-        ? '📊 월별 이커머스 vs 오프라인 매출 추이'
+        ? '월별 이커머스 vs 오프라인 매출 추이'
         : viewMode === 'daily'
-            ? '📊 월별 일평균 매출 (이커머스 vs 오프라인)'
+            ? '월별 일평균 매출 (이커머스 vs 오프라인)'
             : viewMode === 'profitRate'
-                ? '📊 월별 평균 이익률 (%)'
-                : '📈 월별 매출 증감율 (전월 대비)';
+                ? '월별 평균 이익률 (%)'
+                : '월별 매출 증감율 (전월 대비)';
 
     const yAxisLabel = viewMode === 'sales'
         ? '매출액'
@@ -297,32 +297,32 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
     };
 
     return (
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60 mt-12 first:mt-0">
+        <div className="bg-white p-4 md:p-8 border border-[#c4c4c4] mt-12 first:mt-0">
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
                 <div>
-                    <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight">
+                    <h3 className="text-xl md:text-2xl font-bold text-black tracking-tight leading-tight">
                         {chartTitle}
                     </h3>
-                    <p className="text-slate-400 text-sm mt-1 font-medium">Monthly performance overview</p>
+                    <p className="text-[#5d5d5d] text-sm mt-1 font-normal">Monthly performance overview</p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full xl:w-auto">
                     {/* Date Range Selectors */}
                     {data && data.months && (
-                        <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200 w-full sm:w-auto justify-between">
+                        <div className="flex items-center gap-1 bg-white p-1 rounded border border-[#c4c4c4] w-full sm:w-auto justify-between">
                             <select
                                 value={startMonth}
                                 onChange={(e) => setStartMonth(e.target.value)}
-                                className="bg-transparent text-sm font-medium text-gray-700 focus:outline-none p-1"
+                                className="bg-transparent text-sm font-medium text-black focus:outline-none p-1"
                             >
                                 {data.months.map(m => (
                                     <option key={`start-${m}`} value={m}>{formatMonth(m)}</option>
                                 ))}
                             </select>
-                            <span className="text-gray-400">~</span>
+                            <span className="text-[#c4c4c4]">~</span>
                             <select
                                 value={endMonth}
                                 onChange={(e) => setEndMonth(e.target.value)}
-                                className="bg-transparent text-sm font-medium text-gray-700 focus:outline-none p-1"
+                                className="bg-transparent text-sm font-medium text-black focus:outline-none p-1"
                             >
                                 {data.months.map(m => (
                                     <option key={`end-${m}`} value={m}>{formatMonth(m)}</option>
@@ -333,36 +333,36 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
 
                     <button
                         onClick={() => setViewMode('sales')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'sales'
-                            ? 'bg-blue-600 text-white shadow-blue-200'
-                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                        className={`px-4 py-2.5 rounded text-xs font-bold transition-colors border grow sm:grow-0 ${viewMode === 'sales'
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-black border-[#c4c4c4] hover:border-black'
                             }`}
                     >
                         매출액
                     </button>
                     <button
                         onClick={() => setViewMode('daily')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'daily'
-                            ? 'bg-blue-600 text-white shadow-blue-200'
-                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                        className={`px-4 py-2.5 rounded text-xs font-bold transition-colors border grow sm:grow-0 ${viewMode === 'daily'
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-black border-[#c4c4c4] hover:border-black'
                             }`}
                     >
                         일평균
                     </button>
                     <button
                         onClick={() => setViewMode('profitRate')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'profitRate'
-                            ? 'bg-blue-600 text-white shadow-blue-200'
-                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                        className={`px-4 py-2.5 rounded text-xs font-bold transition-colors border grow sm:grow-0 ${viewMode === 'profitRate'
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-black border-[#c4c4c4] hover:border-black'
                             }`}
                     >
                         이익률
                     </button>
                     <button
                         onClick={() => setViewMode('growth')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'growth'
-                            ? 'bg-blue-600 text-white shadow-blue-200'
-                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                        className={`px-4 py-2.5 rounded text-xs font-bold transition-colors border grow sm:grow-0 ${viewMode === 'growth'
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-black border-[#c4c4c4] hover:border-black'
                             }`}
                     >
                         증감율
@@ -370,7 +370,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                     <select
                         value={channelFilter}
                         onChange={(e) => setChannelFilter(e.target.value as ChannelFilter)}
-                        className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm grow sm:grow-0"
+                        className="px-4 py-2.5 rounded text-xs font-bold border border-[#c4c4c4] bg-white text-black hover:border-black transition-colors focus:outline-none focus:border-black grow sm:grow-0"
                     >
                         <option value="all">전체 채널</option>
                         <option value="total">총매출만</option>
@@ -386,7 +386,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                         <XAxis
                             dataKey="rawMonth"
                             tickFormatter={formatXAxisTick}
-                            stroke="#94a3b8"
+                            stroke="#5d5d5d"
                             style={{ fontSize: '9px', fontWeight: 500 }}
                             tickLine={false}
                             axisLine={false}
@@ -397,7 +397,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                             height={60}
                         />
                         <YAxis
-                            stroke="#94a3b8"
+                            stroke="#5d5d5d"
                             style={{ fontSize: '9px', fontWeight: 600 }}
                             tickFormatter={viewMode === 'growth' || viewMode === 'profitRate' ? formatPercent : formatMillions}
                             axisLine={false}
@@ -418,13 +418,13 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                         {(viewMode === 'sales' || viewMode === 'daily') && (
                             <>
                                 {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
-                                    <Line type="monotone" dataKey="이커머스" name="이커머스" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                                    <Line type="monotone" dataKey="이커머스" name="이커머스" stroke="#000000" strokeWidth={3} dot={{ r: 4, fill: '#000000', strokeWidth: 2 }} activeDot={{ r: 6 }} />
                                 )}
                                 {(channelFilter === 'all' || channelFilter === 'offline') && (
-                                    <Line type="monotone" dataKey="오프라인" name="오프라인" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                                    <Line type="monotone" dataKey="오프라인" name="오프라인" stroke="#5d5d5d" strokeWidth={3} dot={{ r: 4, fill: '#5d5d5d', strokeWidth: 2 }} activeDot={{ r: 6 }} />
                                 )}
                                 {(channelFilter === 'all' || channelFilter === 'total') && (
-                                    <Line type="monotone" dataKey="총매출" name="전체 합계" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#f59e0b', fontWeight: 'bold' } }} />
+                                    <Line type="monotone" dataKey="총매출" name="전체 합계" stroke="#ff0066" strokeWidth={3} dot={{ r: 4, fill: '#ff0066', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#ff0066', fontWeight: 'bold' } }} />
                                 )}
                             </>
                         )}
@@ -433,13 +433,13 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                         {viewMode === 'growth' && (
                             <>
                                 {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
-                                    <Line type="monotone" dataKey="이커머스" name="이커머스 증감율" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#3b82f6' } }} />
+                                    <Line type="monotone" dataKey="이커머스" name="이커머스 증감율" stroke="#000000" strokeWidth={3} dot={{ r: 4, fill: '#000000', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#000000' } }} />
                                 )}
                                 {(channelFilter === 'all' || channelFilter === 'offline') && (
-                                    <Line type="monotone" dataKey="오프라인" name="오프라인 증감율" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#10b981' } }} />
+                                    <Line type="monotone" dataKey="오프라인" name="오프라인 증감율" stroke="#5d5d5d" strokeWidth={3} dot={{ r: 4, fill: '#5d5d5d', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#5d5d5d' } }} />
                                 )}
                                 {(channelFilter === 'all' || channelFilter === 'total') && (
-                                    <Line type="monotone" dataKey="총매출" name="전체 증감율" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#f59e0b', fontWeight: 'bold' } }} />
+                                    <Line type="monotone" dataKey="총매출" name="전체 증감율" stroke="#ff0066" strokeWidth={3} dot={{ r: 4, fill: '#ff0066', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#ff0066', fontWeight: 'bold' } }} />
                                 )}
                             </>
                         )}
@@ -448,13 +448,13 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                         {viewMode === 'profitRate' && (
                             <>
                                 {(channelFilter === 'all' || channelFilter === 'ecommerce') && (
-                                    <Line type="monotone" dataKey="ecommerceRate" name="이커머스 이익률" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#3b82f6' } }} />
+                                    <Line type="monotone" dataKey="ecommerceRate" name="이커머스 이익률" stroke="#000000" strokeWidth={3} dot={{ r: 4, fill: '#000000', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#000000' } }} />
                                 )}
                                 {(channelFilter === 'all' || channelFilter === 'offline') && (
-                                    <Line type="monotone" dataKey="offlineRate" name="오프라인 이익률" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#10b981' } }} />
+                                    <Line type="monotone" dataKey="offlineRate" name="오프라인 이익률" stroke="#5d5d5d" strokeWidth={3} dot={{ r: 4, fill: '#5d5d5d', strokeWidth: 2 }} activeDot={{ r: 6 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: '#5d5d5d' } }} />
                                 )}
                                 {(channelFilter === 'all' || channelFilter === 'total') && (
-                                    <Line type="monotone" dataKey="totalRate" name="전체 이익률" stroke="#ef4444" strokeWidth={3} dot={{ r: 6, fill: '#ef4444', strokeWidth: 2 }} activeDot={{ r: 8 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '11px', fill: '#ef4444', fontWeight: 'bold' } }} />
+                                    <Line type="monotone" dataKey="totalRate" name="전체 이익률" stroke="#ff0066" strokeWidth={3} dot={{ r: 6, fill: '#ff0066', strokeWidth: 2 }} activeDot={{ r: 8 }} label={{ position: 'top', formatter: yAxisFormatter, style: { fontSize: '11px', fill: '#ff0066', fontWeight: 'bold' } }} />
                                 )}
                             </>
                         )}
@@ -465,7 +465,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                 {process.env.NODE_ENV === 'development' && debugLogs.length > 0 && (
                     <details className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs font-mono text-slate-600">
                         <summary className="cursor-pointer font-bold mb-2 select-none hover:text-slate-900">
-                            🔍 Calculation Debug Info (Click to expand)
+                            Calculation Debug Info (Click to expand)
                         </summary>
                         <div className="max-h-60 overflow-y-auto whitespace-pre-wrap">
                             {debugLogs.map((log, i) => (

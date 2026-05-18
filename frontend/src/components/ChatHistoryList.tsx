@@ -106,16 +106,16 @@ export default function ChatHistoryList({ onChatSelect }: ChatHistoryListProps) 
     };
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="bg-white p-6 border border-[#c4c4c4]">
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
+                <h3 className="text-lg font-bold flex items-center gap-2 text-black">
                     <MessageSquare className="w-5 h-5" />
                     저장된 대화 ({chats.length})
                 </h3>
                 <button
                     onClick={loadChats}
                     disabled={isLoading}
-                    className="p-2 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition"
+                    className="p-2 text-black hover:opacity-60 transition-opacity"
                     title="새로고침"
                 >
                     <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
@@ -123,7 +123,7 @@ export default function ChatHistoryList({ onChatSelect }: ChatHistoryListProps) 
             </div>
 
             {chats.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
+                <div className="text-center py-8 text-[#5d5d5d]">
                     저장된 대화가 없습니다.
                 </div>
             ) : (
@@ -132,14 +132,14 @@ export default function ChatHistoryList({ onChatSelect }: ChatHistoryListProps) 
                         <div
                             key={chat.id}
                             onClick={() => handleChatClick(chat.id)}
-                            className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition group"
+                            className="p-4 rounded-sm border border-[#c4c4c4] hover:border-black cursor-pointer transition-colors group"
                         >
                             <div className="flex items-start justify-between">
                                 <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-gray-900 truncate">
+                                    <h4 className="font-medium text-black truncate">
                                         {chat.title}
                                     </h4>
-                                    <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
+                                    <div className="flex items-center gap-3 mt-1 text-sm text-[#5d5d5d]">
                                         <span className="flex items-center gap-1">
                                             <MessageSquare className="w-3 h-3" />
                                             {chat.message_count}개 메시지
@@ -149,13 +149,13 @@ export default function ChatHistoryList({ onChatSelect }: ChatHistoryListProps) 
                                             {formatDate(chat.updated_at)}
                                         </span>
                                     </div>
-                                    <div className="text-xs text-gray-400 mt-1">
-                                        📄 {chat.filename}
+                                    <div className="text-xs text-[#5d5d5d] mt-1">
+                                        {chat.filename}
                                     </div>
                                 </div>
                                 <button
                                     onClick={(e) => handleDelete(chat.id, e)}
-                                    className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition opacity-0 group-hover:opacity-100"
+                                    className="p-2 text-[#c4c4c4] hover:text-[#ff0066] transition-colors opacity-0 group-hover:opacity-100"
                                     title="삭제"
                                 >
                                     <Trash2 className="w-4 h-4" />
@@ -168,19 +168,19 @@ export default function ChatHistoryList({ onChatSelect }: ChatHistoryListProps) 
 
             {/* Chat Viewer Modal */}
             {selectedChat && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedChat(null)}>
-                    <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setSelectedChat(null)}>
+                    <div className="bg-white border border-[#c4c4c4] max-w-3xl w-full max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                         {/* Modal Header */}
-                        <div className="p-6 border-b flex items-center justify-between">
+                        <div className="p-6 border-b border-[#c4c4c4] flex items-center justify-between">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900">{selectedChat.title}</h2>
-                                <p className="text-sm text-gray-500 mt-1">📄 {selectedChat.filename}</p>
+                                <h2 className="text-xl font-bold text-black">{selectedChat.title}</h2>
+                                <p className="text-sm text-[#5d5d5d] mt-1">{selectedChat.filename}</p>
                             </div>
                             <button
                                 onClick={() => setSelectedChat(null)}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                                className="p-2 hover:opacity-60 transition-opacity"
                             >
-                                <X className="w-5 h-5" />
+                                <X className="w-5 h-5 text-black" />
                             </button>
                         </div>
 
@@ -193,20 +193,20 @@ export default function ChatHistoryList({ onChatSelect }: ChatHistoryListProps) 
                                         }`}
                                 >
                                     {message.role === "bot" && (
-                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                                            <Bot className="w-5 h-5 text-blue-600" />
+                                        <div className="w-8 h-8 rounded-full border border-[#c4c4c4] flex items-center justify-center flex-shrink-0">
+                                            <Bot className="w-5 h-5 text-black" />
                                         </div>
                                     )}
                                     <div
-                                        className={`max-w-[70%] rounded-lg p-4 ${message.role === "user"
-                                            ? "bg-blue-600 text-white"
-                                            : "bg-gray-100 text-gray-900"
+                                        className={`max-w-[70%] rounded-sm p-4 ${message.role === "user"
+                                            ? "bg-black text-white"
+                                            : "bg-[#f5f5f5] text-black"
                                             }`}
                                     >
                                         <p className="whitespace-pre-wrap break-words">{message.content}</p>
                                     </div>
                                     {message.role === "user" && (
-                                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                                        <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0">
                                             <User className="w-5 h-5 text-white" />
                                         </div>
                                     )}
@@ -215,10 +215,10 @@ export default function ChatHistoryList({ onChatSelect }: ChatHistoryListProps) 
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-4 border-t bg-gray-50 flex justify-end">
+                        <div className="p-4 border-t border-[#c4c4c4] bg-white flex justify-end">
                             <button
                                 onClick={() => setSelectedChat(null)}
-                                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition"
+                                className="px-4 py-2 bg-white border border-[#c4c4c4] hover:border-black text-black rounded-sm transition-colors"
                             >
                                 닫기
                             </button>

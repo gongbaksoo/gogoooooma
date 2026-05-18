@@ -289,7 +289,7 @@ function DetailsContent() {
                 {/* 1. Dynamic Overall Analysis (Monthly/Daily) */}
                 <DynamicAnalysisSection
                     title={`${typeLabel} 전체 매출 분석`}
-                    emoji="📊"
+                    emoji=""
                     data={mainData}
                     defaultMode="total"
                 />
@@ -297,7 +297,7 @@ function DetailsContent() {
                 {/* 2. Brand Monthly Comparison (Line) */}
                 <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60">
                     <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight mb-8">
-                        📈 {typeLabel} 브랜드별 월별 매출추이
+                        {typeLabel} 브랜드별 월별 매출추이
                     </h3>
                     <div className="h-[400px]">
                         <ResponsiveContainer width="100%" height="100%">
@@ -324,12 +324,12 @@ function DetailsContent() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                             </svg>
                         </span>
-                        📍 채널 및 브랜드별 성과 분석
+                        채널 및 브랜드별 성과 분석
                     </h2>
 
-                    <DynamicAnalysisSection title={`${brandPrefix} 마이비`} emoji="🎯" data={getBrandData('myb') || mainData} />
-                    <DynamicAnalysisSection title={`${brandPrefix} 누비`} emoji="🎯" data={getBrandData('nubi') || mainData} />
-                    <DynamicAnalysisSection title={`${brandPrefix} 쏭레브`} emoji="🎯" data={getBrandData('sonreve') || mainData} />
+                    <DynamicAnalysisSection title={`${brandPrefix} 마이비`} emoji="" data={getBrandData('myb') || mainData} />
+                    <DynamicAnalysisSection title={`${brandPrefix} 누비`} emoji="" data={getBrandData('nubi') || mainData} />
+                    <DynamicAnalysisSection title={`${brandPrefix} 쏭레브`} emoji="" data={getBrandData('sonreve') || mainData} />
                 </div>
 
                 <div className="pt-12 border-t border-slate-200 mt-12 transition-opacity duration-500 ease-in-out">
@@ -343,7 +343,7 @@ function DetailsContent() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a2 2 0 00-1.96 1.414l-.477 2.387a2 2 0 00.547 1.022l1.428 1.428a2 2 0 001.022.547l2.387.477a2 2 0 001.96-1.414l.477-2.387a2 2 0 00-.547-1.022l-1.428-1.428z" />
                                 </svg>
                             </span>
-                            📦 마이비 품목별 분석
+                            마이비 품목별 분석
                             <span className="text-sm font-medium text-slate-400 ml-4 group-hover:text-emerald-500 transition-colors">
                                 {isProductAnalysisExpanded ? "접기 ▲" : "펼쳐보기 ▼"}
                             </span>

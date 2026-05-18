@@ -182,10 +182,10 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
     }
 
     return (
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60 mt-8">
+        <div className="bg-white p-4 md:p-8 border border-[#c4c4c4] mt-8">
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
                 <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight">
-                    {emoji} {title} 동적 매출 분석
+                    {title} 동적 매출 분석
                 </h3>
 
                 <div className="flex flex-wrap gap-2">
@@ -194,7 +194,7 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                         <select
                             value={channel}
                             onChange={(e) => setChannel(e.target.value as any)}
-                            className="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="px-3 py-2 rounded text-xs font-bold border border-[#c4c4c4] bg-white text-black focus:outline-none focus:border-black"
                         >
                             <option value="total">전체 (통합)</option>
                             <option value="ecommerce">이커머스</option>
@@ -205,44 +205,44 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
 
                     <div className="flex flex-col sm:flex-row gap-2">
                         {/* Single View Buttons */}
-                        <div className="flex bg-slate-100 p-1 rounded-2xl">
+                        <div className="flex border border-[#c4c4c4] rounded">
                             <button
                                 onClick={() => setMode('sales_only')}
-                                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'sales_only' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`px-3 py-2 text-xs font-bold transition-colors ${mode === 'sales_only' ? 'bg-black text-white' : 'text-[#5d5d5d] hover:text-black'}`}
                             >
                                 매출액
                             </button>
                             <button
                                 onClick={() => setMode('avg_only')}
-                                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'avg_only' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`px-3 py-2 text-xs font-bold transition-colors ${mode === 'avg_only' ? 'bg-black text-white' : 'text-[#5d5d5d] hover:text-black'}`}
                             >
                                 일평균
                             </button>
                             <button
                                 onClick={() => setMode('profit_only')}
-                                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'profit_only' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`px-3 py-2 text-xs font-bold transition-colors ${mode === 'profit_only' ? 'bg-black text-white' : 'text-[#5d5d5d] hover:text-black'}`}
                             >
                                 이익률
                             </button>
                         </div>
 
                         {/* Combined View Buttons */}
-                        <div className="flex bg-slate-100 p-1 rounded-2xl">
+                        <div className="flex border border-[#c4c4c4] rounded">
                             <button
                                 onClick={() => setMode('total')}
-                                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'total' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`px-3 py-2 text-xs font-bold transition-colors ${mode === 'total' ? 'bg-black text-white' : 'text-[#5d5d5d] hover:text-black'}`}
                             >
                                 월매출+이익률
                             </button>
                             <button
                                 onClick={() => setMode('avg')}
-                                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'avg' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`px-3 py-2 text-xs font-bold transition-colors ${mode === 'avg' ? 'bg-black text-white' : 'text-[#5d5d5d] hover:text-black'}`}
                             >
                                 일평균+이익률
                             </button>
                             <button
                                 onClick={() => setMode('daily')}
-                                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'daily' ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                                className={`px-3 py-2 text-xs font-bold transition-colors ${mode === 'daily' ? 'bg-black text-white' : 'text-[#5d5d5d] hover:text-black'}`}
                             >
                                 일매출+이익률
                             </button>

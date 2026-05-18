@@ -89,8 +89,8 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
     if (loading && !data) {
         return (
             <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="ml-3 text-slate-500 font-medium">품목별 데이터 불러오는 중...</span>
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-black border-t-transparent"></div>
+                <span className="ml-3 text-[#5d5d5d] font-normal">품목별 데이터 불러오는 중...</span>
             </div>
         );
     }
@@ -142,23 +142,23 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
         <div className="space-y-8 mt-12 mb-12">
 
             {/* Global Date Range Selector */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
+            <div className="bg-white p-6 border border-[#c4c4c4] flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
                 <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
                     <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-slate-700">⚙️ 통합 조회 설정</span>
-                        <span className="text-sm text-slate-400 font-medium">(전체 브랜드 적용)</span>
+                        <span className="text-lg font-bold text-black">통합 조회 설정</span>
+                        <span className="text-sm text-[#5d5d5d] font-normal">(전체 브랜드 적용)</span>
                     </div>
 
                     <div className="flex gap-2">
                         <button
                             onClick={handleExpandAll}
-                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded-lg transition-colors border border-blue-100"
+                            className="px-3 py-1.5 bg-white hover:border-black text-black text-xs font-bold rounded-sm transition-colors border border-[#c4c4c4]"
                         >
                             모두 펼치기
                         </button>
                         <button
                             onClick={handleCollapseAll}
-                            className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 text-xs font-bold rounded-lg transition-colors border border-slate-200"
+                            className="px-3 py-1.5 bg-white hover:border-black text-black text-xs font-bold rounded-sm transition-colors border border-[#c4c4c4]"
                         >
                             모두 접기
                         </button>
@@ -168,11 +168,11 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto">
                     {/* Global Channel Selector */}
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <span className="text-xs font-bold text-slate-500 whitespace-nowrap">기본 채널:</span>
+                        <span className="text-xs font-bold text-black whitespace-nowrap">기본 채널:</span>
                         <select
                             value={globalChannel}
                             onChange={(e) => setGlobalChannel(e.target.value as any)}
-                            className="w-full sm:w-auto px-3 py-2 rounded-xl text-sm font-bold border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full sm:w-auto px-3 py-2 rounded text-sm font-bold border border-[#c4c4c4] bg-white text-black focus:outline-none focus:border-black"
                         >
                             <option value="total">전체 (통합)</option>
                             <option value="ecommerce">이커머스</option>
@@ -181,22 +181,22 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                     </div>
 
                     {/* Date Range Selector */}
-                    <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 w-full sm:w-auto">
-                        <span className="text-xs font-bold text-slate-500 ml-1">기간:</span>
+                    <div className="flex items-center gap-2 bg-white p-2 rounded border border-[#c4c4c4] w-full sm:w-auto">
+                        <span className="text-xs font-bold text-black ml-1">기간:</span>
                         <select
                             value={startMonth}
                             onChange={(e) => setStartMonth(e.target.value)}
-                            className="bg-transparent text-sm font-bold text-slate-600 focus:outline-none p-1.5 grow sm:grow-0"
+                            className="bg-transparent text-sm font-bold text-black focus:outline-none p-1.5 grow sm:grow-0"
                         >
                             {availableMonths.map(m => (
                                 <option key={`start-${m}`} value={m}>{m}</option>
                             ))}
                         </select>
-                        <span className="text-slate-400 font-bold">~</span>
+                        <span className="text-[#c4c4c4] font-bold">~</span>
                         <select
                             value={endMonth}
                             onChange={(e) => setEndMonth(e.target.value)}
-                            className="bg-transparent text-sm font-bold text-slate-600 focus:outline-none p-1.5 grow sm:grow-0"
+                            className="bg-transparent text-sm font-bold text-black focus:outline-none p-1.5 grow sm:grow-0"
                         >
                             {availableMonths.map(m => (
                                 <option key={`end-${m}`} value={m}>{m}</option>
@@ -210,14 +210,11 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
             <div className="transition-opacity duration-500 ease-in-out">
                 <button
                     onClick={() => setIsMybExpanded(!isMybExpanded)}
-                    className="w-full flex items-center justify-between p-6 bg-white rounded-3xl border border-slate-200 shadow-lg hover:shadow-xl transition-all group"
+                    className="w-full flex items-center justify-between p-6 bg-white border border-[#c4c4c4] hover:border-black transition-colors group"
                 >
-                    <h2 className="text-2xl font-black text-slate-800 flex items-center gap-4">
-                        <span className="p-3 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-100 group-hover:scale-110 transition-transform">
-                            📦
-                        </span>
+                    <h2 className="text-2xl font-bold text-black flex items-center gap-4">
                         마이비 품목별 분석
-                        <span className="text-sm font-medium text-slate-400 ml-4 group-hover:text-emerald-500 transition-colors">
+                        <span className="text-sm font-normal text-[#5d5d5d] ml-4">
                             {isMybExpanded ? "접기 ▲" : "펼쳐보기 ▼"}
                         </span>
                     </h2>
@@ -228,7 +225,7 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                         {/* Overall MyBee */}
                         <DynamicAnalysisSection
                             title="마이비 전체"
-                            emoji="📦"
+                            emoji=""
                             dataOptions={{
                                 total: data.total_myb,
                                 ecommerce: data.ecommerce_myb,
@@ -259,14 +256,11 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
             <div className="transition-opacity duration-500 ease-in-out">
                 <button
                     onClick={() => setIsNubiExpanded(!isNubiExpanded)}
-                    className="w-full flex items-center justify-between p-6 bg-white rounded-3xl border border-slate-200 shadow-lg hover:shadow-xl transition-all group"
+                    className="w-full flex items-center justify-between p-6 bg-white border border-[#c4c4c4] hover:border-black transition-colors group"
                 >
-                    <h2 className="text-2xl font-black text-slate-800 flex items-center gap-4">
-                        <span className="p-3 bg-blue-500 rounded-2xl shadow-lg shadow-blue-100 group-hover:scale-110 transition-transform">
-                            🍼
-                        </span>
+                    <h2 className="text-2xl font-bold text-black flex items-center gap-4">
                         누비 품목별 분석
-                        <span className="text-sm font-medium text-slate-400 ml-4 group-hover:text-blue-500 transition-colors">
+                        <span className="text-sm font-normal text-[#5d5d5d] ml-4">
                             {isNubiExpanded ? "접기 ▲" : "펼쳐보기 ▼"}
                         </span>
                     </h2>
@@ -305,14 +299,11 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
             <div className="transition-opacity duration-500 ease-in-out">
                 <button
                     onClick={() => setIsSonreveExpanded(!isSonreveExpanded)}
-                    className="w-full flex items-center justify-between p-6 bg-white rounded-3xl border border-slate-200 shadow-lg hover:shadow-xl transition-all group"
+                    className="w-full flex items-center justify-between p-6 bg-white border border-[#c4c4c4] hover:border-black transition-colors group"
                 >
-                    <h2 className="text-2xl font-black text-slate-800 flex items-center gap-4">
-                        <span className="p-3 bg-pink-500 rounded-2xl shadow-lg shadow-pink-100 group-hover:scale-110 transition-transform">
-                            🧴
-                        </span>
+                    <h2 className="text-2xl font-bold text-black flex items-center gap-4">
                         쏭레브 품목별 분석
-                        <span className="text-sm font-medium text-slate-400 ml-4 group-hover:text-pink-500 transition-colors">
+                        <span className="text-sm font-normal text-[#5d5d5d] ml-4">
                             {isSonreveExpanded ? "접기 ▲" : "펼쳐보기 ▼"}
                         </span>
                     </h2>

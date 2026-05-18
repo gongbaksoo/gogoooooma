@@ -17,17 +17,18 @@ interface ChartData {
 }
 
 
+// 29CM monotone palette + sale-red accent at the end
 const COLORS = [
-    '#3b82f6', // blue
-    '#10b981', // green
-    '#f59e0b', // amber
-    '#ef4444', // red
-    '#8b5cf6', // violet
-    '#ec4899', // pink
-    '#14b8a6', // teal
-    '#f97316', // orange
-    '#6366f1', // indigo
-    '#84cc16', // lime
+    '#000000',
+    '#3d3d3d',
+    '#5d5d5d',
+    '#7d7d7d',
+    '#9d9d9d',
+    '#b8b8b8',
+    '#c4c4c4',
+    '#d0d0d0',
+    '#dcdcdc',
+    '#ff0066', // sale-red accent
 ];
 
 type ViewMode = 'sales' | 'growth' | 'daily' | 'profitRate';
@@ -257,8 +258,8 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
 
     if (!filename) {
         return (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-700 mb-4">📦 브랜드별 월별 매출</h3>
+            <div className="bg-white p-6 border border-[#c4c4c4]">
+                <h3 className="text-lg font-bold text-gray-700 mb-4">브랜드별 월별 매출</h3>
                 <div className="h-80 flex items-center justify-center text-gray-500">
                     파일을 업로드하거나 선택해주세요
                 </div>
@@ -268,10 +269,10 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
 
     if (loading) {
         return (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-700 mb-4">📦 브랜드별 월별 매출</h3>
+            <div className="bg-white p-6 border border-[#c4c4c4]">
+                <h3 className="text-lg font-bold text-gray-700 mb-4">브랜드별 월별 매출</h3>
                 <div className="h-80 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-black border-t-transparent"></div>
                 </div>
             </div>
         );
@@ -279,8 +280,8 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
 
     if (error) {
         return (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-700 mb-4">📦 브랜드별 월별 매출</h3>
+            <div className="bg-white p-6 border border-[#c4c4c4]">
+                <h3 className="text-lg font-bold text-gray-700 mb-4">브랜드별 월별 매출</h3>
                 <div className="h-80 flex items-center justify-center text-red-500">
                     {error}
                 </div>
@@ -299,27 +300,27 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
         }
     };
     const chartTitle = viewMode === 'sales'
-        ? '📦 브랜드별 월별 매출 추이'
+        ? '브랜드별 월별 매출 추이'
         : viewMode === 'daily'
-            ? '📦 브랜드별 월별 일평균 매출'
+            ? '브랜드별 월별 일평균 매출'
             : viewMode === 'profitRate'
-                ? '📦 브랜드별 월별 평균 이익률'
-                : '📈 브랜드별 월별 증감율 (전월 대비)';
+                ? '브랜드별 월별 평균 이익률'
+                : '브랜드별 월별 증감율 (전월 대비)';
     const yAxisLabel = viewMode === 'sales' ? '매출액' : viewMode === 'daily' ? '일평균 매출' : viewMode === 'profitRate' ? '이익률 (%)' : '증감율 (%)';
 
     return (
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-4 md:p-8 border border-slate-100 transition-all hover:shadow-2xl hover:shadow-slate-200/60 mt-12 last:mb-12">
+        <div className="bg-white p-4 md:p-8 border border-[#c4c4c4] mt-12 last:mb-12">
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
                 <div>
                     <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight">
-                        📦 브랜드별 월별매출
+                        브랜드별 월별매출
                     </h3>
                     <p className="text-slate-400 text-sm mt-1 font-medium">Monthly performance by brand</p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full xl:w-auto">
                     {/* Date Range Selectors */}
                     {data.length > 0 && (
-                        <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200 w-full sm:w-auto justify-between">
+                        <div className="flex items-center gap-1 bg-white p-1 rounded border border-[#c4c4c4] w-full sm:w-auto justify-between">
                             <select
                                 value={startMonth}
                                 onChange={(e) => setStartMonth(e.target.value)}
@@ -343,36 +344,36 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                     )}
                     <button
                         onClick={() => setViewMode('sales')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'sales'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                        className={`px-4 py-2.5 rounded text-xs font-bold transition-colors border grow sm:grow-0 ${viewMode === 'sales'
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-black border-[#c4c4c4] hover:border-black'
                             }`}
                     >
                         매출액
                     </button>
                     <button
                         onClick={() => setViewMode('daily')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'daily'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                        className={`px-4 py-2.5 rounded text-xs font-bold transition-colors border grow sm:grow-0 ${viewMode === 'daily'
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-black border-[#c4c4c4] hover:border-black'
                             }`}
                     >
                         일평균
                     </button>
                     <button
                         onClick={() => setViewMode('profitRate')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'profitRate'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                        className={`px-4 py-2.5 rounded text-xs font-bold transition-colors border grow sm:grow-0 ${viewMode === 'profitRate'
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-black border-[#c4c4c4] hover:border-black'
                             }`}
                     >
                         이익률
                     </button>
                     <button
                         onClick={() => setViewMode('growth')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm grow sm:grow-0 ${viewMode === 'growth'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                        className={`px-4 py-2.5 rounded text-xs font-bold transition-colors border grow sm:grow-0 ${viewMode === 'growth'
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-black border-[#c4c4c4] hover:border-black'
                             }`}
                     >
                         증감율
@@ -380,7 +381,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                     <select
                         value={selectedGroups.length === groups.length ? 'all' : selectedGroups.includes('마이비+누비+쏭레브') && selectedGroups.includes('마이비') ? 'combined' : selectedGroups[0] || ''}
                         onChange={(e) => handleBrandSelection(e.target.value)}
-                        className="px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all focus:outline-none shadow-sm grow sm:grow-0"
+                        className="px-4 py-2.5 rounded text-xs font-bold border border-[#c4c4c4] bg-white text-black hover:border-black transition-colors focus:outline-none focus:border-black grow sm:grow-0"
                     >
                         <option value="all">전체 브랜드</option>
                         <option value="combined">주요 브랜드</option>
@@ -397,7 +398,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                     <XAxis
                         dataKey="rawMonth"
                         tickFormatter={formatXAxisTick}
-                        stroke="#94a3b8"
+                        stroke="#5d5d5d"
                         style={{ fontSize: '9px', fontWeight: 500 }}
                         tickLine={false}
                         axisLine={false}
@@ -408,7 +409,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                         height={60}
                     />
                     <YAxis
-                        stroke="#94a3b8"
+                        stroke="#5d5d5d"
                         style={{ fontSize: '9px', fontWeight: 600 }}
                         tickFormatter={viewMode === 'growth' || viewMode === 'profitRate' ? formatPercent : formatMillions}
                         axisLine={false}
@@ -432,7 +433,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
 
                         // "마이비+누비+쏭레브" (합계)는 강조를 위해 별도 고유 상위 색상 지정
                         const isCombined = group === '마이비+누비+쏭레브';
-                        const color = isCombined ? '#6366f1' : COLORS[index % COLORS.length]; // Indigo for total
+                        const color = isCombined ? '#ff0066' : COLORS[index % COLORS.length]; // sale-red for total
                         const strokeWidth = isCombined ? 4 : 2;
 
                         return (

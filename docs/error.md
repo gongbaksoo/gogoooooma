@@ -315,6 +315,37 @@ echo "NEXT_PUBLIC_API_URL=https://api.gongbaksoo.com" > frontend/.env.local
 
 ---
 
+## 14. 공용 `DynamicAnalysisSection`의 차트 stroke 색 누락 — "토글 스타일은 변경, Recharts stroke는 미변경"
+
+**발생일**: 2026-05-18 (저녁, 3차 적용 라운드)
+
+### 🚨 증상
+- 사용자가 `https://gogoooooma.vercel.app/custom-dashboard`의 "마이비 전체 동적 매출 분석" 차트 캡처를 보내옴:
+  - 보라색 월매출액 라인, 핑크 점선 이익률 라인 — **모노톤 디자인이 적용되지 않은 상태**.
+  - 토글 버튼(매출액/일평균/이익률/월매출+이익률/일평균+이익률/일매출+이익률)은 검정 인버티드로 정상.
+- 이전(§11)에서 "차트/분석 9개 컴포넌트 컨트롤 UI 통일 완료"라고 보고했지만, 실제로는 컨트롤 UI(토글/셀렉트)만 손댔고 **Recharts Line stroke/fill 색은 미손댐**.
+
+### 🧭 원인
+1. **"차트 컴포넌트" 정의의 불일치** — 1차 라운드에서 "차트 컬러"를 "차트 카드 wrapper + 컨트롤 UI"로 좁게 해석. Recharts stroke 색(시리즈 색)은 별도 패스로 잡았어야 했음.
+2. **이전 grep 패턴이 wrapper 클래스만 감지** — `bg-blue-*`, `rounded-3xl` 등은 잡혔지만 `stroke="#..."`, `fill: '#...'`는 검사 패턴에 없었음.
+3. **차트 컴포넌트 별 다른 변경 범위** — `SalesChartNew`, `ChannelSalesChartNew` 등 5개는 이전에 stroke 색까지 교체했지만, `DynamicAnalysisSection`은 "분석" 카테고리로 분류되며 stroke 단계가 누락. 분류 기반 작업 시 일관성 검증이 없었음.
+
+### ✅ 해결
+- `components/DynamicAnalysisSection.tsx`에서 8개 hex 색 전수 교체:
+  - 단순 매핑 4건 (replace_all): `#94a3b8` → `#5d5d5d`, `#ec4899` → `#ff0066`, `#8b5cf6` → `#000000`, `#f97316` → `#ff0066`
+  - 컨텍스트별 4건 (개별 Edit, 같은 hex가 다른 의미): `#3b82f6` × 2 (모드별 다른 회색 단계), `#10b981` × 2, `#06b6d4` × 2
+- Tooltip border `#ddd` → `#c4c4c4`, radius 8px → 2px
+- 헤더 `text-slate-800` → `text-black`
+- 모드별 시리즈 매핑 명문화 (디자인 문서 §8.5에 표로 기록).
+
+### 💡 향후 권장
+1. **"차트 컴포넌트 적용" 체크리스트** — wrapper / 컨트롤 UI / **Recharts stroke·fill** 세 항목을 모두 grep으로 검증한 뒤 완료 처리.
+2. **사전 grep 패턴 보강** — 차트 컴포넌트는 `stroke="#"`, `fill: '#"`, `fill="#"`, `contentStyle={[^}]*border:` 4종을 항상 검사.
+3. **컴포넌트 분류와 변경 범위 매핑** — "차트 5개"/"분석 4개"처럼 분류만 보지 말고, **컴포넌트별 변경 카탈로그**(시리즈 색 / 토글 / 카드 / etc.)를 명시.
+4. **다시리즈 색 토큰 정의** — 동일 컴포넌트가 모드에 따라 다른 시리즈 수를 그릴 때, 모드별 매핑을 사전에 정의하지 않으면 일관성이 깨짐. 디자인 문서 §8.5처럼 표로 박제.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -322,3 +353,4 @@ echo "NEXT_PUBLIC_API_URL=https://api.gongbaksoo.com" > frontend/.env.local
 4. **디자인 시스템 전환 SOP** — 캡처 1대1이 아니라, ① 컴포넌트 리스트 합의 → ② 토큰 정의 → ③ grep 기반 일괄 치환 → ④ 잔여 수동 수정 → ⑤ 캡처 검증 순서로 진행하면 라운드 수 감소.
 5. **이모지 정책 lint** — pre-commit hook으로 유니코드 범위 기반 이모지 검사 추가 검토 (§13 권장 1번 참조).
 6. **페이지 로컬 동명 컴포넌트 통합** — `details/page.tsx`의 자체 `DynamicAnalysisSection`을 `components/DynamicAnalysisSection.tsx`로 통합 또는 다른 이름으로 리네임 권장 (혼동 방지).
+7. **차트 컴포넌트 적용 체크리스트** — wrapper / 컨트롤 / stroke·fill 3축 동시 검증 (§14 권장 1번 참조).

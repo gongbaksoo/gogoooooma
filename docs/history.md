@@ -4,6 +4,61 @@
 
 ---
 
+## 2026-05-18 (3회차) — 공용 `DynamicAnalysisSection` Recharts 시리즈 색 누락 보완
+
+### 1. 배경
+- 사용자가 `https://gogoooooma.vercel.app/custom-dashboard`의 "마이비 전체 동적 매출 분석" 차트 캡처 공유 — 보라/핑크 시리즈가 그대로 노출.
+- 1차 라운드(같은 날 오전)에서 "차트/분석 컴포넌트 9개 통일"로 보고했지만, `components/DynamicAnalysisSection.tsx`의 **Recharts Line stroke·fill 8색이 미손댐 상태**였음을 확인.
+- 이전에 손댄 것: 토글 그룹 ghost 패턴, 액티브 검정 인버티드, emoji prop 표시 제거.
+- 미손댄 것: 차트 axis stroke, 시리즈 stroke, 시리즈 dot fill, label fill, Tooltip border/radius.
+
+### 2. 적용 내역
+
+| 영역 | 변경 |
+|------|------|
+| Axis stroke (XAxis/YAxis left) | `#94a3b8` 슬레이트 → `#5d5d5d` |
+| YAxis right (이익률 축) | `#ec4899` 핑크 → `#ff0066` |
+| Tooltip border / radius | `#ddd`, 8px → `#c4c4c4`, 2px |
+| 헤더 텍스트 | `text-slate-800` → `text-black` |
+| Combined 모드 (월매출+이익률 등) — 판매액 라인 | `#8b5cf6` 보라 → `#000000` (stroke + dot + label) |
+| Combined 모드 — 이익률 라인 (점선) | `#ec4899` 핑크 → `#ff0066` |
+| 전체(`total`) 모드 5색 시리즈 | 보라/파랑/녹색/오렌지/시안 → `#000`(전체)/`#5d5d5d`(이커머스)/`#7d7d7d`(오프라인)/`#ff0066`(쿠팡 강조)/`#b8b8b8`(주력) |
+| 이커머스(`ecommerce`) 모드 3색 | 파랑/오렌지/시안 → `#000`(메인)/`#ff0066`(쿠팡)/`#5d5d5d`(주력) |
+| 오프라인(`offline`) 모드 1색 | 녹색 → `#000` |
+
+### 3. 변경 방식
+- 단순 매핑 4건 → `replace_all` (`#94a3b8`, `#ec4899`, `#8b5cf6`, `#f97316`).
+- 컨텍스트별 4건 → 개별 Edit (`#3b82f6` × 2, `#10b981` × 2, `#06b6d4` × 2 — 같은 hex가 모드별로 다른 회색 단계여서 일괄 치환 불가).
+- Tooltip, 헤더, individual 컨텍스트는 위치 검색 후 정확한 컨텍스트로 Edit.
+
+### 4. 검증
+- 비-29CM 패턴 grep (gradient, bg-blue-*, rounded-xl, italic 등) **0건**.
+- `text-slate-*` 잔존 **0건**.
+- 사용 hex 색 **7개** 모두 29CM 토큰: `#000000`, `#5d5d5d`, `#7d7d7d`, `#b8b8b8`, `#c4c4c4`, `#f0f0f0`, `#ff0066`.
+- dev `/custom-dashboard` **HTTP 200**, 컴파일 27ms.
+
+### 5. 산출물
+- 수정 파일: `frontend/src/components/DynamicAnalysisSection.tsx` (342줄, ~13개 위치 변경).
+- 문서 업데이트: `docs/design_document.md` (§8.5 다시리즈 매핑 표 추가 + §8.8 3차 적용 추가), `docs/error.md` (§14 추가 + 향후 권장 7번 추가), `docs/history.md` (본 섹션).
+
+### 6. 누적 적용 현황 (2026-05-18 기준)
+
+| 회차 | 시점 | 파일 수 | 핵심 |
+|------|------|---------|------|
+| 1차 | 오전 | 19 | 전역·홈·대시보드·차트 9개·채팅/파일/모달 6개 wrapper + 컨트롤 UI + 시리즈 색 |
+| 2차 | 오후 | 1 | `details/page.tsx` 전수 적용 |
+| 3차 | 저녁 | 1 | `DynamicAnalysisSection` Recharts stroke·fill 누락 보완 |
+
+**누적 21개 파일** (1·3차는 같은 파일 2회 변경이지만 별도 라운드).
+
+### 7. 후속 권장 항목
+1. `app/coupang-orders/page.tsx` 적용 (별도 라운드).
+2. 차트 컴포넌트 작업 시 wrapper / 컨트롤 / **stroke·fill** 3축 동시 검증 (error.md §14 권장 1번).
+3. 회색 인라인 hex(`#5d5d5d`, `#7d7d7d`, `#b8b8b8` 등) 토큰화 — globals.css에 추가 등록.
+4. 페이지 로컬 동명 컴포넌트(`details/page.tsx`의 자체 `DynamicAnalysisSection`)를 공용으로 통합.
+
+---
+
 ## 2026-05-18 (2회차) — 상세 분석 페이지 (`/custom-dashboard/details`) 29CM 전수 적용
 
 ### 1. 배경

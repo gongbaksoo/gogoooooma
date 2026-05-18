@@ -229,11 +229,24 @@ interface SummaryData {
 
 - Grid: `#f0f0f0`
 - Axis stroke: `#5d5d5d`
+- 이익률 우측 Y축 / 이익률 라인 (점선): `#ff0066`
+- Tooltip border: `#c4c4c4`, radius: 2px
 - 시리즈 1순위: `#000000`
 - 시리즈 2순위: `#5d5d5d`
 - 시리즈 3~9순위: 흑백 단계 (`#3d3d3d`, `#7d7d7d`, `#9d9d9d`, `#b8b8b8`, `#c4c4c4`, `#d0d0d0`, `#dcdcdc`)
-- 강조 시리즈 (합계/총매출/이익률): `#ff0066`
-- **한계**: 5개 이상 시리즈 동시 표시 시 색 구분 어려움 — 흑백 그라데이션의 알려진 트레이드오프
+- 강조 시리즈 (합계/총매출/이익률/쿠팡 등 단일 강조 대상): `#ff0066`
+
+#### 다시리즈 차트 컨텍스트별 매핑 (DynamicAnalysisSection 기준)
+
+| 모드 | 시리즈 수 | 매핑 |
+|------|----------|------|
+| 전체 통합 (`total`) | 5 | 전체=`#000`, 이커머스=`#5d5d5d`, 오프라인=`#7d7d7d`, 쿠팡(강조)=`#ff0066`, 주력채널=`#b8b8b8` |
+| 이커머스 (`ecommerce`) | 3 | 이커머스(메인)=`#000`, 쿠팡(강조)=`#ff0066`, 주력채널=`#5d5d5d` |
+| 오프라인 (`offline`) | 1 | 오프라인=`#000` |
+| Combined 모드 (월매출+이익률 등) | 2 | 판매액=`#000`(실선), 이익률=`#ff0066`(점선, 우축) |
+| 브랜드 비교 (details 페이지) | 4 | 전체=`#000`, 마이비=`#5d5d5d`, 누비=`#c4c4c4`, 쏭레브(강조)=`#ff0066` |
+
+- **한계**: 5개 이상 시리즈 동시 표시 시 색 구분 어려움 — 흑백 그라데이션의 알려진 트레이드오프. "강조 1색만 빨강" 원칙으로 정보 위계 보강.
 
 ### 8.6 상태 표현
 
@@ -269,6 +282,13 @@ interface SummaryData {
 | 영역 | 파일 수 | 비고 |
 |------|---------|------|
 | 상세 분석 페이지 | 1 | `app/custom-dashboard/details/page.tsx` 전수 적용 (페이지 내부 자체 정의 `DynamicAnalysisSection` 포함) |
+
+#### 3차 적용 (2026-05-18 저녁) — 누락 보완
+
+| 영역 | 파일 수 | 비고 |
+|------|---------|------|
+| 공용 `DynamicAnalysisSection` Recharts 시리즈 색 | 1 | `components/DynamicAnalysisSection.tsx` — 1차 라운드에서 토글 스타일은 손댔으나 차트 stroke 8색 누락. 보라/핑크/파랑/녹색/시안/오렌지/슬레이트/회색 → 모노 흑백 단계 + `#ff0066` |
+| 모드별 시리즈 매핑 정의 | — | 전체 5색 / 이커머스 3색 / 오프라인 1색 / Combined 2색 (§8.5 표 참조) |
 | 카드 wrapper | 4곳 | flat `border border-[#c4c4c4]`로 통일 |
 | 모드 토글 (월매출/일평균/일매출) | 1세트 × 5인스턴스 | 검정 인버티드 + ghost |
 | 컬러 박스 + 인라인 SVG 아이콘 | 4개 제거 | indigo-600 / emerald-500 / blue-500 / pink-500 박스 모두 제거 |
@@ -278,7 +298,7 @@ interface SummaryData {
 | 페이지 내부 자체 차트 시리즈 | 2색 교체 | 판매액 `#8b5cf6` → `#000000`, 이익률 `#ec4899` → `#ff0066` |
 | 로딩 상태 | 3곳 | loading/no-data/Suspense fallback 모두 모노 |
 
-**누적 총 20개 파일 수정** (1차 19개 + 2차 1개). 검증: dev `/`, `/custom-dashboard`, `/custom-dashboard/details?filename=...&type=ecommerce` 모두 HTTP 200.
+**누적 총 21개 파일 수정** (1차 19개 + 2차 1개 + 3차 1개; 3차는 1차에서 손댄 파일에 추가 변경). 검증: dev `/`, `/custom-dashboard`, `/custom-dashboard/details?filename=...&type=ecommerce` 모두 HTTP 200.
 
 #### 미적용 (잔여)
 

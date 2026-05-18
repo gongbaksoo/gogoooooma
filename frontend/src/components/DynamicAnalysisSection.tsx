@@ -184,7 +184,7 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
     return (
         <div className="bg-white p-4 md:p-8 border border-[#c4c4c4] mt-8">
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
-                <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight leading-tight">
+                <h3 className="text-xl md:text-2xl font-bold text-black tracking-tight leading-tight">
                     {title} 동적 매출 분석
                 </h3>
 
@@ -258,7 +258,7 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                         <XAxis
                             dataKey={isDaily ? "Date" : "Month"}
                             tickFormatter={(val, index) => isDaily ? val.split('-').slice(1).join('/') : formatXAxisTick(val, index)}
-                            stroke="#94a3b8"
+                            stroke="#5d5d5d"
                             style={{ fontSize: '9px', fontWeight: 500 }}
                             axisLine={false}
                             tickLine={false}
@@ -268,32 +268,32 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                             textAnchor="end"
                             height={60}
                         />
-                        <YAxis yAxisId="left" stroke="#94a3b8" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={mode === 'profit_only' ? formatPercent : formatMillions} axisLine={false} tickLine={false} />
-                        <YAxis yAxisId="right" orientation="right" stroke="#ec4899" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatPercent} axisLine={false} tickLine={false} hide={isSingleView} />
-                        <Tooltip formatter={(val: any, name: any) => (name === '이익률' || mode === 'profit_only') ? [formatPercent(val), name] : [formatMillions(val), name]} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #ddd', borderRadius: '8px', padding: '10px' }} />
+                        <YAxis yAxisId="left" stroke="#5d5d5d" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={mode === 'profit_only' ? formatPercent : formatMillions} axisLine={false} tickLine={false} />
+                        <YAxis yAxisId="right" orientation="right" stroke="#ff0066" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatPercent} axisLine={false} tickLine={false} hide={isSingleView} />
+                        <Tooltip formatter={(val: any, name: any) => (name === '이익률' || mode === 'profit_only') ? [formatPercent(val), name] : [formatMillions(val), name]} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #c4c4c4', borderRadius: '2px', padding: '10px' }} />
                         <Legend wrapperStyle={{ paddingTop: '20px' }} />
 
                         {isSingleView ? (
                             <>
                                 {(channel === 'total') && (
                                     <>
-                                        <Line yAxisId="left" type="monotone" dataKey="val_total" name="전체" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4 }} />
-                                        <Line yAxisId="left" type="monotone" dataKey="val_ecom" name="이커머스" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
-                                        <Line yAxisId="left" type="monotone" dataKey="val_offline" name="오프라인" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
-                                        <Line yAxisId="left" type="monotone" dataKey="val_coupang" name="쿠팡(로켓)" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
-                                        <Line yAxisId="left" type="monotone" dataKey="val_major" name="주력(쿠팡제외)" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_total" name="전체" stroke="#000000" strokeWidth={3} dot={{ r: 4 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_ecom" name="이커머스" stroke="#5d5d5d" strokeWidth={2} dot={{ r: 3 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_offline" name="오프라인" stroke="#7d7d7d" strokeWidth={2} dot={{ r: 3 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_coupang" name="쿠팡(로켓)" stroke="#ff0066" strokeWidth={2} dot={{ r: 3 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_major" name="주력(쿠팡제외)" stroke="#b8b8b8" strokeWidth={2} dot={{ r: 3 }} />
                                     </>
                                 )}
                                 {(channel === 'ecommerce') && (
                                     <>
-                                        <Line yAxisId="left" type="monotone" dataKey="val_ecom" name="이커머스" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} />
-                                        <Line yAxisId="left" type="monotone" dataKey="val_coupang" name="쿠팡(로켓)" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
-                                        <Line yAxisId="left" type="monotone" dataKey="val_major" name="주력(쿠팡제외)" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_ecom" name="이커머스" stroke="#000000" strokeWidth={3} dot={{ r: 4 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_coupang" name="쿠팡(로켓)" stroke="#ff0066" strokeWidth={2} dot={{ r: 3 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_major" name="주력(쿠팡제외)" stroke="#5d5d5d" strokeWidth={2} dot={{ r: 3 }} />
                                     </>
                                 )}
                                 {(channel === 'offline') && (
                                     <>
-                                        <Line yAxisId="left" type="monotone" dataKey="val_offline" name="오프라인" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+                                        <Line yAxisId="left" type="monotone" dataKey="val_offline" name="오프라인" stroke="#000000" strokeWidth={3} dot={{ r: 4 }} />
                                     </>
                                 )}
                             </>
@@ -306,12 +306,12 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                         dataKey="판매액"
                                         name={mode === 'total' || mode === 'sales_only' ? "월매출액" : (mode === 'daily' ? "일매출액" : "일평균 매출")}
                                         data={isDaily ? undefined : ((mode === 'avg' || mode === 'avg_only') ? chartData.map(d => ({ ...d, "판매액": (d as any).일평균매출 })) : undefined)}
-                                        stroke="#8b5cf6"
+                                        stroke="#000000"
                                         strokeWidth={isDaily ? 2 : 3}
-                                        dot={isDaily ? false : { fill: "#8b5cf6", r: 4 }}
+                                        dot={isDaily ? false : { fill: "#000000", r: 4 }}
                                         activeDot={{ r: 6 }}
                                     >
-                                        {!isDaily && <LabelList dataKey={mode === 'total' || mode === 'sales_only' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#8b5cf6" formatter={formatMillions} />} />}
+                                        {!isDaily && <LabelList dataKey={mode === 'total' || mode === 'sales_only' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} />} />}
                                     </Line>
                                 )}
 
@@ -321,13 +321,13 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                         type="monotone"
                                         dataKey="이익률"
                                         name="이익률"
-                                        stroke="#ec4899"
+                                        stroke="#ff0066"
                                         strokeWidth={isDaily ? 2 : 3}
-                                        dot={isDaily ? false : { fill: "#ec4899", r: 4 }}
+                                        dot={isDaily ? false : { fill: "#ff0066", r: 4 }}
                                         activeDot={{ r: 6 }}
                                         strokeDasharray={mode === 'profit_only' ? undefined : "5 5"}
                                     >
-                                        {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ec4899" formatter={formatPercent} />} />}
+                                        {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ff0066" formatter={formatPercent} />} />}
                                     </Line>
                                 )}
                             </>

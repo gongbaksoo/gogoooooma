@@ -468,6 +468,37 @@ echo "NEXT_PUBLIC_API_URL=https://api.gongbaksoo.com" > frontend/.env.local
 
 ---
 
+## 19. 운영 백엔드 미배포 상태에서 dev/Vercel 호출 시 404 (Mac Mini는 자동 배포 안 됨)
+
+작성일: 2026-05-19
+
+### 🚨 증상
+- git push로 백엔드 코드까지 origin/main에 올렸지만 `https://api.gongbaksoo.com/api/monthly-review/*` 가 여전히 404.
+- 사용자가 "다른 세션이 영향 줘서 그런가?" 의심.
+
+### 🧭 원인 (구조 이해 부족)
+- **Vercel은 git push 시 자동 빌드**. 그러나 **Mac Mini는 자동이 아님** — launchd로 부팅 시 uvicorn을 띄울 뿐 코드 업데이트는 사람 손이 필요.
+- 매 git push 후 Mac Mini에서 별도로 `git pull` + `launchctl kickstart -k gui/$(id -u)/com.avk.backend` 실행해야 운영 백엔드에 신규 엔드포인트가 반영됨.
+- §16의 `.env.local` 함정과 결합되면 디버깅이 복잡해짐: dev 서버가 운영을 부르는데 운영은 옛 코드 → "왜 푸시했는데 안 되지?" 혼란.
+
+### ✅ 해결 (사용자가 Mac Mini에서 직접 실행)
+```bash
+cd ~/Desktop/Vibe\ Coding/AVK_Sales   # 또는 실제 경로
+git pull origin main
+launchctl kickstart -k gui/$(id -u)/com.avk.backend
+sleep 3
+curl http://127.0.0.1:8000/api/health
+curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
+```
+실행 후 외부에서 `https://api.gongbaksoo.com/api/monthly-review/months/?filename=...` 200 OK 검증.
+
+### 💡 향후 권장
+- **자동 배포 검토**: Mac Mini에 GitHub Webhook 수신기를 띄워 push 이벤트마다 자동 git pull + kickstart 수행. 또는 단순 cron으로 `git pull && launchctl kickstart` 주기 실행 (분당 1회 정도).
+- **README/CLAUDE.md에 배포 절차 명문화**: "프론트 변경만이면 push 끝, 백엔드 변경이면 Mac Mini 추가 배포 필요"를 한 문장으로.
+- **세션 간 작업 충돌 의심 시 우선 fetch + 직접 endpoint curl**: 다른 세션 영향과 단순 배포 누락은 git log + curl 한 번이면 구분 가능.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.

@@ -4,6 +4,61 @@
 
 ---
 
+## 2026-05-19 (7회차) — 월 리뷰 Phase 1 운영 배포 + Production 검증
+
+### 1. 배경
+- 5~6회차에서 코드 작성·로컬 검증 완료, GitHub origin/main까지 푸시 완료(`241bf00`, `d28349e`).
+- Vercel 프론트는 자동 빌드되었으나 **Mac Mini 백엔드는 자동 배포가 아니라** `/api/monthly-review/*` 호출 시 여전히 404.
+- 사용자가 dev 서버에서 같은 404를 다시 마주치자 "다른 세션 영향?" 의심 → 단순히 운영 백엔드 미배포가 원인이었음 확인.
+
+### 2. 배포 절차 (Mac Mini)
+사용자가 Mac Mini에 물리적으로 있어 명령만 전달:
+
+```bash
+cd ~/Desktop/Vibe\ Coding/AVK_Sales
+git pull origin main
+launchctl kickstart -k gui/$(id -u)/com.avk.backend
+sleep 3
+curl http://127.0.0.1:8000/api/health
+curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
+```
+
+Mac Mini에서 위 절차 수행 완료 (사용자 보고).
+
+### 3. Production 검증 (외부 머신에서 확인)
+
+| # | 검증 항목 | 결과 |
+|---|---|---|
+| 1 | `api.gongbaksoo.com/api/health` | 200 OK |
+| 2 | `/api/monthly-review/months/?filename=260210_2.csv` | 200 OK — 62개월 반환 (2021-01 ~ 2026-02) |
+| 3 | `/api/monthly-review/targets/` | 200 OK — `test_targets.csv` 1건 |
+| 4 | `/api/monthly-review/summary/?month=2026-02&part=all` | 200 OK — chart1/2/3 정상 |
+| 5 | `gogoooooma.vercel.app/monthly-review` | 200 OK |
+
+#### Chart 2 trailing-12-month 운영 검증 (2026-02 기준)
+- X축: `2025-03 ~ 2026-02` (12개월, 빈 칸 없음)
+- 예: `2025-03` 포인트 → 당해(2025-03) 689M / 전년(2024-03) 601M
+- 예: `2025-04` 포인트 → 당해(2025-04) 517M / 전년(2024-04) 735M
+
+### 4. 운영 환경 차이점 (로컬 vs 운영)
+- 로컬에 업로드해 두었던 `full_targets_extracted.csv` 목표 파일은 **운영 서버에는 없음**.
+- 운영에서 사용하려면 사용자가 `gogoooooma.vercel.app/monthly-review`에서 "목표 파일 → 업로드"로 다시 등록 필요.
+
+### 5. 산출물 / 상태
+- 코드 변경: 이번 회차에서는 **추가 코드 변경 없음** (배포 + 검증만).
+- 문서 신규/수정: `project_plan §4.7` Phase 1 상태 = "운영 배포 완료(2026-05-19)" 갱신 / `design_document §2.3.3.1` 폐기된 chart-fade-in 패턴 정리 → §8.10 참조 / `error §19` 신규 (Mac Mini 비자동 배포 함정) / `history` 본 7회차 entry.
+- **Phase 1 Operational**: 운영 환경에서 월 리뷰 페이지가 안정적으로 동작하는 상태.
+
+### 6. Phase 2 후속 항목 (변동 없음)
+1. PPT 잔여 12개 차트 (브랜드별/상품별/채널 유형별).
+2. 차트 추가/제거 UI.
+3. xlsx 직접 업로드 지원 (전사 시트 파서).
+4. dev 전용 env 분리 (`.env.development.local`).
+5. `ensure_file_on_disk()` 공용 모듈화.
+6. **신규** — Mac Mini 자동 배포 검토 (webhook 수신기 또는 cron `git pull && launchctl kickstart`).
+
+---
+
 ## 2026-05-18 (6회차) — 차트 등장 애니메이션 통일 (Recharts 기본 + 일관 속도)
 
 ### 1. 배경

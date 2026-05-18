@@ -118,10 +118,14 @@ sales-analysis-site/
 - **컨트롤**:
   - 매출 파일 / 목표 파일 / 대상 월 (드롭다운, 데이터의 가용 월 자동 추출)
   - 파트 토글: 전체 / 이커머스 / 오프라인
-- **Phase 1 차트 (구현 완료, 2026-05-18)**:
+- **Phase 1 차트 (운영 배포 완료, 2026-05-19)**:
   - **Chart 1 — 목표비 실적** (BarChart): 사업계획 vs 실적 + 달성률(%)
   - **Chart 2 — 전년비 트렌드** (LineChart): **대상월 기준 직전 12개월** vs **같은 기간 1년 전** (예: 대상월 26-02 → X축 25.03~26.02, 전년 라인은 24.03~25.02 동일 월 값)
   - **Chart 3 — 주력채널 vs 쿠팡(사입)** (LineChart): 최근 12개월, 2시리즈
+- **운영 동작 상태** (2026-05-19 검증):
+  - Mac Mini 백엔드 `launchctl kickstart -k gui/$(id -u)/com.avk.backend` 으로 코드 반영
+  - `https://api.gongbaksoo.com/api/monthly-review/{months, targets, summary}` 모두 200 OK
+  - Vercel 프론트 `https://gogoooooma.vercel.app/monthly-review` 200 OK + 차트 정상 렌더
 - **Phase 2 차트 (예정)**: 브랜드별, 상품별, 채널 유형별 — PPT 잔여 12개 차트 추가 구현
 - **매핑 규약**:
   - 파트 필터: `all` → 필터X / `ecommerce` → `파트구분 == '이커머스'` / `offline` → `파트구분 == '오프라인'`

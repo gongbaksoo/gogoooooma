@@ -84,9 +84,10 @@ PPT 월간 리뷰 보고서를 화면에서 재현하고 PDF로 출력하는 정
 - "전년" 시리즈는 **같은 X축 위치에서 1년 전 매출** (예: X축 `25.03`의 전년 값 = 2024년 3월 매출).
 - 빈 칸 없이 12개월 전부 채워짐. 이전 캘린더 연도 고정(1~12월) 방식에서 trailing 12-month로 전환.
 
-#### 2.3.3.1 차트 전환 인터랙션
-- 차트 외곽 래퍼에 `chart-fade-in` 클래스 + 데이터 시그니처 기반 `key` → 파트/월 전환 시 fade-in.
-- Recharts 내부 `isAnimationActive={false}` → 라인/막대 트위닝 비활성 → 깜빡임 방지, 래퍼 단일 fade로 통일.
+#### 2.3.3.1 차트 전환 애니메이션
+- **§8.10 차트 등장 애니메이션 통일 규약** 적용 (Recharts 기본 활성화 + `animationDuration={1500}` `animationEasing="ease-out"`).
+- 데이터 시그니처 기반 `key` (월 리뷰는 `month` 또는 `data[0].month + data.length`)로 파트·월 전환 시 차트 remount → 애니메이션 재생.
+- 이전 도입했던 `chart-fade-in` CSS 클래스와 `isAnimationActive={false}` 패턴은 §8.10에 의해 폐기 (2026-05-18 6차 적용).
 
 #### 2.3.4 목표 파일 포맷
 

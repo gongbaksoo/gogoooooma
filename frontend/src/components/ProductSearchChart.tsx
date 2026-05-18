@@ -699,8 +699,8 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
             ) : (
                 <>
                     <h4 className="text-md font-semibold text-gray-600 mb-2 text-center">{chartTitle}</h4>
-                    <div key={`${viewMode}-${timeUnit}-${searchKeyword}-${selectedChannel}-${selectedAccount}-${Array.from(selectedProducts).sort().join('|')}`} className="chart-fade-in" style={{ height: 400 }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                    <div key={`${viewMode}-${timeUnit}-${searchKeyword}-${selectedChannel}-${selectedAccount}-${Array.from(selectedProducts).sort().join('|')}`}>
+                    <ResponsiveContainer width="100%" height={400}>
                         <ComposedChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                             <XAxis
@@ -768,7 +768,8 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                 strokeWidth={timeUnit === 'day' ? 1.5 : 2.5}
                                 dot={timeUnit === 'day' ? false : { fill: mainColor, r: 4 }}
                                 activeDot={{ r: 6 }}
-                                isAnimationActive={false}
+                                animationDuration={1500}
+                                animationEasing="ease-out"
                             >
                                 {timeUnit === 'month' && (
                                     <LabelList
@@ -794,7 +795,8 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                     strokeWidth={1.5}
                                     dot={timeUnit === 'day' ? false : { fill: "#ff0066", r: 3 }}
                                     activeDot={{ r: 5 }}
-                                    isAnimationActive={false}
+                                    animationDuration={1500}
+                                    animationEasing="ease-out"
                                 >
                                     {timeUnit === 'month' && (
                                         <LabelList

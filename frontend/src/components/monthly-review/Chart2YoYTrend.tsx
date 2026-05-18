@@ -48,8 +48,8 @@ export default function Chart2YoYTrend({ data }: { data: Chart2Point[] }) {
         <span className="text-[12px] text-[#5d5d5d]">최근 12개월 (단위: 백만)</span>
       </div>
 
-      <div key={`${data[0]?.month ?? ''}-${data.length}`} className="chart-fade-in" style={{ height: 260 }}>
-      <ResponsiveContainer width="100%" height="100%">
+      <div key={`${data[0]?.month ?? ''}-${data.length}`}>
+      <ResponsiveContainer width="100%" height={260}>
         <LineChart data={chartData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
           <CartesianGrid stroke="#f0f0f0" vertical={false} />
           <XAxis
@@ -75,7 +75,8 @@ export default function Chart2YoYTrend({ data }: { data: Chart2Point[] }) {
             stroke="#000000"
             strokeWidth={2}
             dot={{ r: 3, fill: "#000000" }}
-            isAnimationActive={false}
+            animationDuration={1500}
+            animationEasing="ease-out"
           />
           <Line
             type="monotone"
@@ -84,7 +85,8 @@ export default function Chart2YoYTrend({ data }: { data: Chart2Point[] }) {
             strokeWidth={1.5}
             strokeDasharray="4 4"
             dot={{ r: 3, fill: "#5d5d5d" }}
-            isAnimationActive={false}
+            animationDuration={1500}
+            animationEasing="ease-out"
           />
         </LineChart>
       </ResponsiveContainer>

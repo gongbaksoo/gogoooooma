@@ -52,8 +52,8 @@ export default function Chart1Achievement({
         </div>
       ) : (
         <>
-          <div key={month} className="chart-fade-in" style={{ height: 220 }}>
-          <ResponsiveContainer width="100%" height="100%">
+          <div key={month}>
+          <ResponsiveContainer width="100%" height={220}>
             <BarChart data={chartData} margin={{ top: 28, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="name" stroke="#5d5d5d" tick={{ fontSize: 12 }} axisLine={{ stroke: "#c4c4c4" }} />
@@ -62,7 +62,7 @@ export default function Chart1Achievement({
                 contentStyle={{ border: "1px solid #c4c4c4", borderRadius: 2, fontSize: 12 }}
                 formatter={(v: number) => [`${v.toLocaleString()} 백만`, ""]}
               />
-              <Bar dataKey="value" radius={[2, 2, 0, 0]} isAnimationActive={false}>
+              <Bar dataKey="value" radius={[2, 2, 0, 0]} animationDuration={1500} animationEasing="ease-out">
                 {chartData.map((d, i) => (
                   <Cell key={i} fill={d.color} />
                 ))}

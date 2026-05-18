@@ -252,7 +252,7 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
             </div>
 
             <div className="h-[400px]">
-                <div key={`${mode}-${channel}`} className="chart-fade-in">
+                <div key={`${mode}-${channel}`} style={{ width: '100%', height: '100%' }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={mergedChartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
@@ -324,7 +324,8 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                             strokeDasharray={style.strokeDasharray}
                                             dot={{ fill: style.stroke, r: style.dotR }}
                                             activeDot={{ r: style.activeR }}
-                                            isAnimationActive={false}
+                                            animationDuration={1500}
+                                            animationEasing="ease-out"
                                         />
                                     );
                                 });
@@ -342,7 +343,8 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                         strokeWidth={isDaily ? 1.5 : 2.5}
                                         dot={isDaily ? false : { fill: "#000000", r: 4 }}
                                         activeDot={{ r: 6 }}
-                                        isAnimationActive={false}
+                                        animationDuration={1500}
+                                        animationEasing="ease-out"
                                     >
                                         {!isDaily && <LabelList dataKey={mode === 'total' || mode === 'sales_only' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} />} />}
                                     </Line>
@@ -358,7 +360,8 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                         strokeWidth={1.5}
                                         dot={isDaily ? false : { fill: "#ff0066", r: 3 }}
                                         activeDot={{ r: 5 }}
-                                        isAnimationActive={false}
+                                        animationDuration={1500}
+                                        animationEasing="ease-out"
                                     >
                                         {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ff0066" formatter={formatPercent} />} />}
                                     </Line>

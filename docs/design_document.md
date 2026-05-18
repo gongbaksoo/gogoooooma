@@ -448,3 +448,74 @@ interface SummaryData {
 6. **녹색·분홍 명도 단계 토큰화**: `#065f46`/`#10b981`/`#34d399`/`#6ee7b7`, `#ff3385`/`#ff66a3`/`#ff99c1`도 토큰으로 빼면 일관성 강화.
 7. **페이지 로컬 컴포넌트 정의 패턴**: `details/page.tsx`처럼 페이지 파일 내부에 컴포넌트를 직접 정의하는 패턴이 있어, 동명의 공용 컴포넌트(`components/DynamicAnalysisSection.tsx`)와 혼동을 일으킴. 향후 동명 컴포넌트는 공용으로 통합하거나 명확히 다른 이름으로 리네임 권장.
 
+### 8.10 차트 등장 애니메이션 — 통일 규약 (2026-05-18 6차 적용)
+
+#### 원칙
+
+- **배경(축, 그리드, 컨테이너)은 정지**. 데이터 요소만 애니메이션.
+- **Line** — 좌→우로 천천히 그려짐 (Recharts 내장 clip reveal)
+- **Bar** — 아래(x축 baseline)→위로 천천히 자라남 (Recharts 내장 grow)
+- mount(첫 로드)와 토글(viewMode 전환) 모두 동일하게 재생
+
+#### 표준 props
+
+모든 `<Line>`·`<Bar>`·`<Area>`에 다음 두 props를 일관 적용 (Recharts 기본 활성화 + 통일된 속도):
+
+```jsx
+animationDuration={1500}
+animationEasing="ease-out"
+```
+
+- `isAnimationActive`는 명시하지 않음 (기본값 `true` 활용)
+- 이전에 `isAnimationActive={false}`로 꺼져 있던 차트(ChannelSales/DetailedSales/ProductSearch)도 모두 활성화로 통일
+
+#### 토글 시 재생
+
+`viewMode`(또는 동등한 상태)가 바뀔 때 차트가 다시 마운트되어 애니메이션을 재생해야 함. 차트 컨테이너의 한 단계 바깥 div에 `key`를 부여:
+
+```jsx
+<div key={`${viewMode}-${...추가상태}`}>
+  <ResponsiveContainer width="100%" height={400}>
+    <ComposedChart ...>
+      <Line ... animationDuration={1500} animationEasing="ease-out" />
+    </ComposedChart>
+  </ResponsiveContainer>
+</div>
+```
+
+key 구성에 포함할 상태는 차트마다 다름:
+- `SalesChartNew`: `viewMode + channelFilter`
+- `ChannelSalesChartNew`: `viewMode + timeUnit + selectedChannel`
+- `DetailedSalesChartNew`: `viewMode + timeUnit + selectedGroup + selectedCategory + selectedSubCategory + selectedChannel + selectedAccount`
+- `ProductSearchChart`: `viewMode + timeUnit + searchKeyword + selectedChannel + selectedAccount + selectedProducts`
+- `ProductGroupChartNew`: `viewMode + selectedGroups`
+- `DynamicAnalysisSection`: `mode + channel`
+- `monthly-review/Chart1`: `month`
+- `monthly-review/Chart2/Chart3`: `data[0].month + data.length`
+- `details/page.tsx` 1차 차트: `mode`
+- `details/page.tsx` 브랜드 비교: `typeLabel + comparisonData.length`
+
+#### 금지
+
+- 차트 컨테이너 전체를 opacity/translateY로 움직이는 방식 (배경이 함께 움직여 정책 위반)
+- 차트마다 다른 duration/easing 사용
+- 어떤 차트는 끄고(`isAnimationActive={false}`) 어떤 차트는 켜는 비대칭
+
+#### 적용 범위 (10개 파일 + globals.css)
+
+| 파일 | 변경 |
+|------|------|
+| `SalesChartNew.tsx` | Line 1개 |
+| `ChannelSalesChartNew.tsx` | Line 2개 (false → true) |
+| `DetailedSalesChartNew.tsx` | Line 2개 (false → true) |
+| `ProductSearchChart.tsx` | Line 2개 (false → true) |
+| `ProductGroupChartNew.tsx` | Line 1개 |
+| `DynamicAnalysisSection.tsx` | Line 3개 |
+| `monthly-review/Chart1Achievement.tsx` | Bar 1개 |
+| `monthly-review/Chart2YoYTrend.tsx` | Line 2개 |
+| `monthly-review/Chart3MainVsCoupang.tsx` | Line 2개 |
+| `app/custom-dashboard/details/page.tsx` | Line 6개 (페이지 차트 2 + 브랜드비교 4) |
+| `app/globals.css` | `chart-fade-in` keyframe·class 제거 (시행착오 결과물 정리) |
+
+총 `<Line>`·`<Bar>` 22개에 동일 props 적용. 1:1 매칭으로 누락 없음 검증 완료.
+

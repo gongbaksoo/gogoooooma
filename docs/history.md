@@ -4,6 +4,73 @@
 
 ---
 
+## 2026-05-18 (6회차) — 차트 등장 애니메이션 통일 (Recharts 기본 + 일관 속도)
+
+### 1. 배경
+- 사용자 지적: "각 그래프들이 등장할때 애니메이션이 다 다르거든?"
+- 점검 결과 — 일부 차트는 `isAnimationActive={false}`로 꺼져 있음(ChannelSales/DetailedSales/ProductSearch), 일부는 Recharts 기본(좌→우 stroke draw). 비대칭 상태.
+
+### 2. 의사결정 과정 (3라운드 시행착오 — 상세는 error.md §18)
+
+| 라운드 | 사용자 요청 해석 | 구현 | 결과 |
+|--------|------------------|------|------|
+| A | "페이드인 통일" → CSS opacity 0→1 | 모든 차트 컨테이너에 `chart-fade-in` 클래스 + `key=viewMode` 부착 | 보여줌 |
+| B | "아래에서 위로 서서히 올라오는" → `translateY(20px)` slide-up | 같은 클래스 keyframe 수정 (배경 포함 전체 이동) | 거부 — "배경은 가만히 있고 선만" |
+| C | "선만 천천히 올라오는, 기존 그래프 중에 있었음" → Recharts 기본 Bar(아래→위)·Line(좌→우)이 정답 | `isAnimationActive={false}` 모두 제거 → 기본 활성화 + `animationDuration=1500` `animationEasing="ease-out"` 통일 | ✅ |
+
+핵심 교훈: 사용자가 "기존에 어떤 그래프가 ~"라고 단서를 줬을 때 어느 차트/어느 동작인지 묻지 않고 추측해 라운드가 3배로 늘어남.
+
+### 3. 최종 규약 (디자인 문서 §8.10에 박제)
+
+- **배경(축·그리드·컨테이너)은 정지**. 데이터 요소만 애니메이션.
+- **Line** — 좌→우로 천천히 그려짐 (Recharts 내장 clip reveal)
+- **Bar** — 아래(baseline)→위로 천천히 자라남 (Recharts 내장 grow)
+- 표준 props (모든 `<Line>`·`<Bar>`):
+  ```jsx
+  animationDuration={1500}
+  animationEasing="ease-out"
+  ```
+- mount 시 자동 재생. 토글 시 재생을 위해 차트 컨테이너 한 단계 바깥 div에 `key={상태}` 부여 → 상태 변경 시 remount → 애니메이션 재실행.
+
+### 4. 적용 내역 (10개 파일 + globals.css)
+
+| 파일 | 변경 |
+|------|------|
+| `SalesChartNew.tsx` | Line 1개 / `key={viewMode-channelFilter}` |
+| `ChannelSalesChartNew.tsx` | Line 2개 (false→true) / `key={viewMode-timeUnit-selectedChannel}` |
+| `DetailedSalesChartNew.tsx` | Line 2개 (false→true) / `key={viewMode-timeUnit-필터들}` |
+| `ProductSearchChart.tsx` | Line 2개 (false→true) / `key={viewMode-검색어-필터들}` |
+| `ProductGroupChartNew.tsx` | Line 1개 / `key={viewMode-selectedGroups}` |
+| `DynamicAnalysisSection.tsx` | Line 3개 / `key={mode-channel}` |
+| `monthly-review/Chart1Achievement.tsx` | Bar 1개 / `key={month}` |
+| `monthly-review/Chart2YoYTrend.tsx` | Line 2개 / `key={data[0].month-data.length}` |
+| `monthly-review/Chart3MainVsCoupang.tsx` | Line 2개 / `key={data[0].month-data.length}` |
+| `app/custom-dashboard/details/page.tsx` | Line 6개 (페이지 1차 차트 2개 + 브랜드 비교 4개) |
+| `app/globals.css` | `@keyframes chartFadeIn` + `.chart-fade-in` 클래스 완전 제거 |
+
+총 `<Line>`·`<Bar>` 22개에 표준 props 1:1 적용 — `animationDuration={1500}` grep 카운트 22로 검증.
+
+### 5. 검증
+
+- `chart-fade-in` 잔재: 0건
+- `isAnimationActive={false}` 잔재: 0건
+- `animationDuration={1500}` 적용 개수: 22 (예상치와 정확히 일치)
+- TS 에러는 기존부터 있던 것만 (Tooltip formatter / comparisonData 타입) — 빌드는 `Skip TypeScript build errors` 설정으로 통과
+
+### 6. 산출물
+
+- 수정: 10개 컴포넌트/페이지 + globals.css
+- 신규 문서: design_document.md §8.10 / error.md §18 / history.md 6회차
+
+### 7. 후속 권장 항목
+
+1. 시각적 reference 사전 특정 SOP — 추측 금지 (error.md §18 권장 1번)
+2. 애니메이션 옵션 제시 시 추상어 대신 동작 단위 분해 (§18 권장 2번)
+3. 외부 라이브러리 기본 동작을 통일의 정답으로 우선 검토 (§18 권장 3번)
+4. `--chart-anim-duration` / `--chart-anim-easing` CSS 변수 토큰화 검토 (§18 권장 4번)
+
+---
+
 ## 2026-05-18 (5회차) — 월 리뷰 (Monthly Review) 페이지 Phase 1 구축
 
 ### 1. 배경

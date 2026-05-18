@@ -433,6 +433,41 @@ echo "NEXT_PUBLIC_API_URL=https://api.gongbaksoo.com" > frontend/.env.local
 
 ---
 
+## 18. 차트 등장 애니메이션 — 사용자 의도 오해로 3차 시행착오 (라운드 6)
+
+### 🚨 증상 / 사용자 피드백
+
+- "각 그래프들이 등장할때 애니메이션이 다 다르거든?" — 일부 차트는 stroke 좌→우, 일부는 즉시 표시 (`isAnimationActive={false}` 차트 vs Recharts 기본 차트).
+- 통일 요청을 받고 옵션 A (CSS opacity 페이드인) 제안 → 사용자 승인 → 구현.
+- 이후 "아래에서 위로 서서히 올라오는 방식으로 변경해볼래?" → CSS translateY(20px) slide-up으로 변경.
+- 다시 "아니 배경은 가만히 있고 선만 천천히 올라오는 형식. 기존에 어떤 그래프가 이런 애니매이션이였는데" → 의도 재명확화.
+- 최종: Recharts 기본 Bar(아래→위 grow) + Line(좌→우 reveal)을 원하셨음. 일관된 속도로 통일하면 됨.
+
+### 🧭 원인 (의도 매핑 실패)
+
+1. **첫 라운드 (옵션 A)** — "페이드인 통일"이라는 표현을 글자 그대로 받아 CSS opacity 0→1 전환으로 구현. 사용자가 떠올린 reference가 무엇인지 사전 확인 부족.
+2. **두 번째 라운드 (translateY)** — "아래에서 위로 올라오는"을 컨테이너 단위 슬라이드로 해석. 배경(축·그리드)이 함께 움직이는 결과 → 사용자가 거부.
+3. **세 번째 라운드 (Recharts 기본)** — 사용자가 "선만 올라오는"이라고 명시한 뒤에야 Bar(아래→위), Line(좌→우)이라는 Recharts 내장 동작이 정답임을 확인. "올라오는"이 "Bar의 grow-from-baseline" 또는 "Line의 좌→우 draw"를 묶어서 표현한 것이었음.
+
+핵심 원인: **"기존에 어떤 그래프가 이런 애니매이션이였는데"라는 단서가 있었음에도 어느 차트의 어느 동작을 가리키는지 묻지 않고 추측한 것.** 사용자의 reference를 먼저 특정했다면 1라운드에 끝났을 작업.
+
+### ✅ 해결 (라운드 6 최종)
+
+- 모든 `<Line>`·`<Bar>` 22개에 `animationDuration={1500}` `animationEasing="ease-out"` 일괄 적용.
+- 기존 `isAnimationActive={false}` (ChannelSales/DetailedSales/ProductSearch) 모두 제거 → Recharts 기본(`true`) 활성화로 통일.
+- 토글 시 재생을 위해 각 차트 컨테이너의 한 단계 바깥 div에 `key={viewMode-...}` 부여 → 상태 변경 시 remount → mount 애니메이션 재실행.
+- CSS 시행착오 산물(`@keyframes chartFadeIn` / `.chart-fade-in`)은 `globals.css`에서 완전 제거.
+- 상세 규약은 `design_document.md §8.10`에 박제.
+
+### 💡 향후 권장
+
+1. **시각적 reference 사전 확인** — 사용자가 "기존에 어떤 그래프가 ~", "예전 사이트처럼", "지난번 본 거" 같은 단서를 줄 때는 **구체 위치(파일/페이지/스크린샷)부터 묻기**. 추측으로 구현하면 라운드가 누적됨.
+2. **애니메이션 옵션 제시 시 실제 동작을 명시** — "fade-in" 같은 추상어가 아니라 "(A) opacity 0→1 / (B) Bar의 grow-from-baseline / (C) Line의 좌→우 draw" 식으로 동작 단위로 분해해 제시.
+3. **Recharts 내장 동작이 통일의 정답일 가능성을 먼저 검토** — 외부 라이브러리(여기서는 Recharts)의 기본 애니메이션이 이미 일관되어 있다면, 그것을 유지·활성화하는 것이 커스텀 CSS보다 단순하고 안전. `isAnimationActive={false}`로 끈 코드가 있을 때는 "왜 껐는지" 먼저 확인.
+4. **`docs/design_document.md`에 애니메이션 토큰 추가 검토** — duration/easing 상수를 `--chart-anim-duration`, `--chart-anim-easing` 같은 CSS 변수로 빼면 일괄 조정 용이.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -442,3 +477,4 @@ echo "NEXT_PUBLIC_API_URL=https://api.gongbaksoo.com" > frontend/.env.local
 6. **페이지 로컬 동명 컴포넌트 통합** — `details/page.tsx`의 자체 `DynamicAnalysisSection`을 `components/DynamicAnalysisSection.tsx`로 통합 또는 다른 이름으로 리네임 권장 (혼동 방지).
 7. **차트 컴포넌트 적용 체크리스트** — wrapper / 컨트롤 / stroke·fill 3축 동시 검증 (§14 권장 1번 참조).
 8. **차트 매핑 의미 체계 합의 사전화** — 디자인 시스템 적용 초기 단계에 "위계 기반 vs 데이터 종류 기반"을 먼저 결정 (§15 권장 1번 참조).
+9. **시각적 reference 사전 특정 SOP** — 사용자가 과거 동작을 언급할 때 추측 금지, 위치부터 확인 (§18 권장 1번 참조).

@@ -26,19 +26,3 @@ body {
   font-family: "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 
-@keyframes chartFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.chart-fade-in {
-  animation: chartFadeIn 450ms ease-out;
-  width: 100%;
-  height: 100%;
-}

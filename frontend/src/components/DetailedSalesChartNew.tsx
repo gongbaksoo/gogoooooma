@@ -681,8 +681,8 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
             ) : (
                 <>
                     <h4 className="text-md font-semibold text-gray-600 mb-2 text-center">{chartTitle}</h4>
-                    <div key={`${viewMode}-${timeUnit}-${selectedGroup}-${selectedCategory}-${selectedSubCategory}-${selectedChannel}-${selectedAccount}`} className="chart-fade-in" style={{ height: 400 }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                    <div key={`${viewMode}-${timeUnit}-${selectedGroup}-${selectedCategory}-${selectedSubCategory}-${selectedChannel}-${selectedAccount}`}>
+                    <ResponsiveContainer width="100%" height={400}>
                         <ComposedChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                             <XAxis
@@ -750,7 +750,8 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                         strokeWidth={timeUnit === 'day' ? 1.5 : 2.5}
                                         dot={timeUnit === 'day' ? false : { fill: mainColor, r: 4 }}
                                         activeDot={{ r: 6 }}
-                                        isAnimationActive={false}
+                                        animationDuration={1500}
+                                        animationEasing="ease-out"
                                     >
                                         {timeUnit === 'month' && (
                                             <LabelList
@@ -776,7 +777,8 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                     strokeWidth={1.5}
                                     dot={timeUnit === 'day' ? false : { fill: "#ff0066", r: 3 }}
                                     activeDot={{ r: 5 }}
-                                    isAnimationActive={false}
+                                    animationDuration={1500}
+                                    animationEasing="ease-out"
                                 >
                                     {timeUnit === 'month' && (
                                         <LabelList

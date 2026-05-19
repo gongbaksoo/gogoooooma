@@ -514,6 +514,55 @@ def get_summary(
             })
         brand_products[brand] = items
 
+    # ----- channel_issue: 주요 채널 이슈 섹션용 (P열 × R열·D열 12개월 pivot) -----
+    # 프론트가 사용자 정의 그룹(P열 매핑)으로 vendor·brand 데이터를 동적 집계
+    def _build_channel_issue(scope_df: pd.DataFrame) -> dict:
+        channels_out = []
+        for chan in sorted(scope_df["채널구분"].dropna().unique().tolist()):
+            cdf = scope_df[scope_df["채널구분"] == chan]
+
+            # R열 거래처 unique × 12개월
+            vendors = []
+            v_counts = cdf["거래처명"].value_counts() if "거래처명" in cdf.columns else {}
+            for vendor, count in v_counts.items():
+                if pd.isna(vendor) or str(vendor).strip() == "":
+                    continue
+                vdf = cdf[cdf["거래처명"] == vendor]
+                values = [float(vdf[vdf["월구분"] == yymm]["판매액"].sum()) for yymm in last12_yymm]
+                vendors.append({
+                    "name": str(vendor),
+                    "row_count": int(count),
+                    "values": values,
+                })
+
+            # D열 브랜드 unique × 12개월
+            brands = []
+            b_counts = cdf["품목그룹1"].value_counts() if "품목그룹1" in cdf.columns else {}
+            for brand, count in b_counts.items():
+                if pd.isna(brand) or str(brand).strip() == "":
+                    continue
+                bdf = cdf[cdf["품목그룹1"] == brand]
+                values = [float(bdf[bdf["월구분"] == yymm]["판매액"].sum()) for yymm in last12_yymm]
+                brands.append({
+                    "name": str(brand),
+                    "row_count": int(count),
+                    "values": values,
+                })
+
+            channels_out.append({
+                "name": str(chan),
+                "row_count": int(len(cdf)),
+                "vendors": vendors,
+                "brands": brands,
+            })
+        return {"channels": channels_out}
+
+    channel_issue = {
+        "all": _build_channel_issue(df),
+        "ecommerce": _build_channel_issue(df[df["파트구분"] == "이커머스"]),
+        "offline": _build_channel_issue(df[df["파트구분"] == "오프라인"]),
+    }
+
     return {
         "month": month,
         "part": part,
@@ -531,4 +580,6 @@ def get_summary(
         "channel_options": channel_options,
         "channel_defaults": channel_defaults,
         "channel_months": last12_labels,
+        "channel_issue": channel_issue,
+        "channel_issue_months": last12_labels,
     }

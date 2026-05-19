@@ -252,6 +252,101 @@ PPT slide 14의 채널 유형 분석을 단일 재사용 컴포넌트로 구현.
 **PDF 출력 영향 없음**:
 - `html2canvas`는 `chartGridRef` 영역만 캡처. sticky 바는 `fixed` 포지셔닝으로 grid 바깥에 위치하여 PDF 결과물에 포함되지 않음.
 
+#### 2.3.3.11 주요 채널 이슈 섹션 (ChannelIssueSection, 2026-05-20 19회차 신설)
+
+PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적 컴포넌트로 구현. **3 컬럼 × 2 row = 6 차트** 기본 구성, 사용자가 그룹 수·이름·소속 채널 모두 편집 가능.
+
+**구조 (N그룹 × 2 차트)**:
+- 헤더: 좌 "주요 채널 이슈" + 우측 상단 `그룹 설정 ▾` 버튼 (모달 트리거)
+- N-column grid (그룹 수에 따라 동적 — 1/2/3+):
+  - 각 컬럼 = 사용자 정의 그룹 (예: 사입몰 / 위탁몰 / 자사몰)
+  - 그룹 라벨 (`그룹 이름` text + 채널 미지정 경고)
+  - **상단 차트** = 거래처별 매출 트렌드 (R열 거래처명, 그룹 내 채널 필터 집계)
+  - **하단 차트** = 브랜드별 매출 트렌드 (D열 `품목그룹1`, 그룹 내 채널 필터 집계)
+- 각 차트는 자체 `표시 거래처/브랜드 수정 ▾` 버튼 → ProductSelectionModal 재사용
+
+**그룹 정의 (사용자 편집)**:
+- `그룹 설정 ▾` → `GroupConfigModal` (신규)
+- 테이블 매트릭스: 행 = 그룹, 열 = P열 채널구분 unique values, 셀 = 체크박스 (포함 여부)
+- 기능: 그룹 이름 변경 / 추가(`+ 그룹 추가`) / 삭제(`×`) / 순서 변경(`↑↓`)
+- **좌측(그룹 이름) / 우측(순서·삭제) 컬럼은 sticky** — 채널 18개 가로 스크롤 시 항상 보이게 (가독성 fix, error §27)
+
+**기본 그룹 (3개, 모든 파트 공통)**:
+| 그룹 이름 | 소속 채널 (P열) |
+|---|---|
+| 사입몰 | 오픈마켓(사입) |
+| 위탁몰 | 오픈마켓(위탁) / 종합몰 / 버티컬커머스 |
+| 자사몰 | 자사몰 |
+
+**파트별 독립 저장**: ChannelSection·BrandSection 패턴 따라 `all/ecommerce/offline` 3 파트가 각각 별도 그룹 정의 + selection 보유. 파트 토글 시 즉시 전환.
+
+**파일 구조**:
+| 파일 | 역할 |
+|---|---|
+| `ChannelIssueSection.tsx` | N그룹 동적 grid + 그룹별 vendor·brand 집계 + 모달 트리거 |
+| `GroupConfigModal.tsx` | 그룹 추가/삭제/이름변경/순서변경 + P열 매핑 매트릭스 |
+| `channelIssueStorage.ts` | localStorage CRUD + PartScopedGroups + defaults |
+| (재사용) `ProductSelectionModal.tsx` | 표시 거래처/브랜드 수정 모달 |
+
+**localStorage 규약**:
+- 키: `avk_monthly_review_channel_issue`
+- 구조: `{ all: GroupDef[], ecommerce: GroupDef[], offline: GroupDef[] }`
+- 각 `GroupDef = { id, name, channels: string[], vendorSelection: string[], brandSelection: string[] }`
+
+**색 매핑**: 모노 8단계 팔레트 (ChannelSection과 동일). 첫 시리즈 2px / 나머지 1.5px.
+
+**백엔드 응답 신규 필드** (`api/monthly_review.py`):
+```json
+"channel_issue": {
+  "all": {
+    "channels": [
+      {
+        "name": "오픈마켓(사입)",
+        "row_count": 23048,
+        "vendors": [{"name": "쿠팡(로켓)", "row_count": 22150, "values": [...12]}, ...],
+        "brands":  [{"name": "마이비", "row_count": 5289, "values": [...12]}, ...]
+      },
+      ...
+    ]
+  },
+  "ecommerce": {...},
+  "offline": {...}
+},
+"channel_issue_months": ["2025-06", ..., "2026-05"]
+```
+
+프론트는 그룹 정의의 `channels[]`에 해당하는 channel을 모두 더해 vendor / brand 별로 합산해 차트 렌더링.
+
+#### 2.3.3.12 차트 표시 모달 평면 구조 + 섹션 토글 통합 (2026-05-20 19회차)
+
+기존 모달이 "종합·브랜드 종합" (chart 토글) vs "섹션 표시" (브랜드 상세/채널 종합/주요 채널 이슈) 2단 분리 구조였음. 사용자 피드백 ("토글이 목업과 다르다"): 평면 리스트로 재구성.
+
+**신규 구조 (모달 내부, 위→아래)**:
+```
+☑ 종합           (섹션 토글, bold)
+   ☑ 목표비 실적 (Chart 1)
+   ☑ 전년비 트렌드 (Chart 2)
+   ☑ 파트별 동적 비교 (Chart 3)
+☑ 브랜드 종합   (섹션 토글, bold)
+   ☑ 브랜드별 트렌드 (Chart 4)
+   ☑ 브랜드별 비중 (Chart 5)
+   ☑ 브랜드 월평균 vs 당월 (Chart 6)
+☑ 브랜드 상세   (섹션 토글, bold)
+☑ 채널 종합     (섹션 토글, bold)
+☑ 주요 채널 이슈 (섹션 토글, bold)
+```
+
+**규약**:
+- **5섹션 모두 section-level 체크박스** (bold, 동일 위계)
+- 종합·브랜드 종합은 sub-chart 토글 들여쓰기 (ml-6)
+- **섹션 토글 OFF 시 sub-chart 토글 자동 disabled** (시각적 disabled + click 비활성)
+- `SectionId = "overview" | "brandOverview" | "brandDetail" | "channelOverview" | "channelIssue"`
+- localStorage 키 그대로 (`avk_monthly_review_visible_charts`) — 키만 추가, 기존 chart1~6 유지
+
+**page.tsx 영향**:
+- `visibility.overview === false` → 종합 섹션 통째 숨김 (chart1/2/3 visibility 무시)
+- `visibility.brandOverview === false` → 브랜드 종합 섹션 통째 숨김
+
 #### 2.3.3.10 스크롤 위치 보존 규약 (2026-05-19 17회차)
 
 파트 토글·월 변경 등 재페치 트리거 시 페이지 스크롤 위치가 맨 위로 리셋되지 않도록 차트 그리드를 **언마운트하지 않는** 패턴 적용.

@@ -3,6 +3,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     ComposedChart, Legend, LabelList
 } from 'recharts';
+import { getMultiSeriesStyle, getDataTypeSeriesStyle } from '@/lib/chartPalette';
 
 export interface CategoryData {
     monthly: { Month: string; 판매액: number; 이익률: number; 일평균매출: number }[];
@@ -286,19 +287,12 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
 
                         {isSingleView ? (
                             (() => {
-                                // 데이터 종류별 베이스 색 (4단계 명도)
-                                const palette = mode === 'profit_only'
-                                    ? ['#ff0066', '#ff3385', '#ff66a3', '#ff99c1']  // 이익률 분홍 계열
-                                    : ['#000000', '#5d5d5d', '#7d7d7d', '#b8b8b8']; // 매출/일평균 검정 계열
-
-                                // 시리즈 순서 → 패턴 (8가지: 4단계 명도 × 실선/점선)
-                                const seriesStyle = (i: number) => ({
-                                    stroke: palette[Math.floor(i / 2)] || palette[palette.length - 1],
-                                    strokeDasharray: (i % 2 === 1) ? '4 4' : undefined,
-                                    strokeWidth: i === 0 ? 2.5 : 1.5,
-                                    dotR: i === 0 ? 4 : 3,
-                                    activeR: i === 0 ? 6 : 5,
-                                });
+                                // 이익률(profit_only)은 §8.5 데이터 종류 매핑(분홍) 유지,
+                                // 매출/일평균/일매출은 B-6 다중 시리즈 팔레트
+                                const seriesStyle = (i: number) =>
+                                    mode === 'profit_only'
+                                        ? getDataTypeSeriesStyle(i, 'profitRate')
+                                        : getMultiSeriesStyle(i);
 
                                 // 채널별 시리즈 매핑 (1번째=합계/메인, 이후 분해 순)
                                 const totalSeries = [

@@ -6,37 +6,66 @@ export type ChartId =
   | "chart1" | "chart2" | "chart3"
   | "chart4" | "chart5" | "chart6";
 
-export type VisibilityMap = Record<ChartId, boolean>;
+/** 섹션 단위 토글 ID */
+export type SectionId =
+  | "overview"        // 종합 (chart1/2/3 묶음)
+  | "brandOverview"   // 브랜드 종합 (chart4/5/6 묶음)
+  | "brandDetail"     // 브랜드 상세 (BrandSection × 3)
+  | "channelOverview" // 채널 종합 (ChannelSection)
+  | "channelIssue";   // 주요 채널 이슈 (ChannelIssueSection)
+
+export type VisibilityMap = Record<ChartId | SectionId, boolean>;
 
 const ALL_CHART_IDS: ChartId[] = [
   "chart1", "chart2", "chart3",
   "chart4", "chart5", "chart6",
 ];
 
-const SECTIONS: { title: string; charts: { id: ChartId; label: string }[] }[] = [
-  {
-    title: "종합",
-    charts: [
-      { id: "chart1", label: "1. 목표비 실적" },
-      { id: "chart2", label: "2. 전년비 트렌드" },
-      { id: "chart3", label: "3. 파트별 동적 비교" },
-    ],
-  },
-  {
-    title: "브랜드 종합",
-    charts: [
-      { id: "chart4", label: "4. 브랜드별 매출 트렌드" },
-      { id: "chart5", label: "5. 브랜드별 매출 비중" },
-      { id: "chart6", label: "6. 브랜드 월평균 vs 당월" },
-    ],
-  },
+const ALL_SECTION_IDS: SectionId[] = [
+  "overview",
+  "brandOverview",
+  "brandDetail",
+  "channelOverview",
+  "channelIssue",
 ];
-// 주: "채널 종합"·"브랜드 상세" 섹션은 각 컴포넌트 내부에서 자체적으로 관리 (표시 채널/상품 수정 모달)
+
+interface SectionDef {
+  id: SectionId;
+  label: string;
+  charts?: { id: ChartId; label: string }[]; // 있으면 sub-toggle 노출
+}
+
+const SECTIONS: SectionDef[] = [
+  {
+    id: "overview",
+    label: "종합",
+    charts: [
+      { id: "chart1", label: "목표비 실적 (Chart 1)" },
+      { id: "chart2", label: "전년비 트렌드 (Chart 2)" },
+      { id: "chart3", label: "파트별 동적 비교 (Chart 3)" },
+    ],
+  },
+  {
+    id: "brandOverview",
+    label: "브랜드 종합",
+    charts: [
+      { id: "chart4", label: "브랜드별 트렌드 (Chart 4)" },
+      { id: "chart5", label: "브랜드별 비중 (Chart 5)" },
+      { id: "chart6", label: "브랜드 월평균 vs 당월 (Chart 6)" },
+    ],
+  },
+  { id: "brandDetail", label: "브랜드 상세" },
+  { id: "channelOverview", label: "채널 종합" },
+  { id: "channelIssue", label: "주요 채널 이슈" },
+];
 
 const STORAGE_KEY = "avk_monthly_review_visible_charts";
 
 export function defaultVisibility(): VisibilityMap {
-  return Object.fromEntries(ALL_CHART_IDS.map((id) => [id, true])) as VisibilityMap;
+  const base: Record<string, boolean> = {};
+  ALL_CHART_IDS.forEach((id) => (base[id] = true));
+  ALL_SECTION_IDS.forEach((id) => (base[id] = true));
+  return base as VisibilityMap;
 }
 
 export function loadVisibility(): VisibilityMap {
@@ -47,6 +76,9 @@ export function loadVisibility(): VisibilityMap {
     const parsed = JSON.parse(raw);
     const base = defaultVisibility();
     for (const id of ALL_CHART_IDS) {
+      if (typeof parsed[id] === "boolean") base[id] = parsed[id];
+    }
+    for (const id of ALL_SECTION_IDS) {
       if (typeof parsed[id] === "boolean") base[id] = parsed[id];
     }
     return base;
@@ -76,16 +108,12 @@ export default function ChartVisibilityModal({ open, onClose, visibility, onChan
 
   if (!open) return null;
 
-  const handleToggle = (id: ChartId) => {
+  const toggleChart = (id: ChartId) => {
     setDraft((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleSectionToggle = (charts: { id: ChartId }[], targetState: boolean) => {
-    setDraft((prev) => {
-      const next = { ...prev };
-      charts.forEach((c) => (next[c.id] = targetState));
-      return next;
-    });
+  const toggleSection = (id: SectionId) => {
+    setDraft((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const handleApply = () => {
@@ -100,11 +128,11 @@ export default function ChartVisibilityModal({ open, onClose, visibility, onChan
       onClick={onClose}
     >
       <div
-        className="bg-white border border-[#c4c4c4] max-w-md w-full max-h-[80vh] overflow-y-auto"
+        className="bg-white border border-[#c4c4c4] max-w-md w-full max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-5 border-b border-[#c4c4c4] sticky top-0 bg-white">
-          <h2 className="text-[18px] font-bold text-black">차트 표시 설정</h2>
+          <h2 className="text-[18px] font-bold text-black">차트 표시</h2>
           <button
             type="button"
             onClick={onClose}
@@ -114,42 +142,53 @@ export default function ChartVisibilityModal({ open, onClose, visibility, onChan
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
-          {SECTIONS.map((section) => {
-            const allOn = section.charts.every((c) => draft[c.id]);
-            return (
-              <div key={section.title}>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-[14px] font-bold text-black">{section.title}</h3>
-                  <button
-                    type="button"
-                    onClick={() => handleSectionToggle(section.charts, !allOn)}
-                    className="text-[12px] text-[#5d5d5d] hover:text-black underline"
-                  >
-                    {allOn ? "모두 끄기" : "모두 켜기"}
-                  </button>
+        <p className="px-5 pt-4 text-[12px] text-[#5d5d5d]">
+          표시할 차트와 섹션을 선택하세요. 변경은 적용 시 저장됩니다.
+        </p>
+
+        <div className="p-5 pt-2 space-y-3">
+          {SECTIONS.map((section) => (
+            <div key={section.id}>
+              {/* Section-level toggle */}
+              <label className="flex items-center gap-2 cursor-pointer hover:bg-[#f5f5f5] px-1 py-1.5 rounded">
+                <input
+                  type="checkbox"
+                  checked={draft[section.id]}
+                  onChange={() => toggleSection(section.id)}
+                  className="w-4 h-4 accent-black"
+                />
+                <span className={`text-[14px] font-bold ${draft[section.id] ? "text-black" : "text-[#5d5d5d]"}`}>
+                  {section.label}
+                </span>
+              </label>
+              {/* Sub-charts (if any) — section이 켜져 있을 때만 활성 */}
+              {section.charts && (
+                <div className="ml-6 mt-1 space-y-1">
+                  {section.charts.map((c) => {
+                    const sectionOn = draft[section.id];
+                    return (
+                      <label
+                        key={c.id}
+                        className={`flex items-center gap-2 px-1 py-1 rounded text-[13px] ${
+                          sectionOn ? "cursor-pointer hover:bg-[#f5f5f5]" : "opacity-50 cursor-not-allowed"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={draft[c.id]}
+                          onChange={() => sectionOn && toggleChart(c.id)}
+                          disabled={!sectionOn}
+                          className="w-4 h-4 accent-black"
+                        />
+                        <span className={draft[c.id] ? "text-black" : "text-[#5d5d5d]"}>{c.label}</span>
+                      </label>
+                    );
+                  })}
                 </div>
-                <div className="space-y-1.5">
-                  {section.charts.map((c) => (
-                    <label
-                      key={c.id}
-                      className="flex items-center gap-2 text-[13px] cursor-pointer hover:bg-[#f5f5f5] px-2 py-1 rounded"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={draft[c.id]}
-                        onChange={() => handleToggle(c.id)}
-                        className="w-4 h-4 accent-black"
-                      />
-                      <span className={draft[c.id] ? "text-black" : "text-[#5d5d5d]"}>
-                        {c.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+              )}
+              <div className="border-b border-dashed border-[#c4c4c4] mt-2" />
+            </div>
+          ))}
         </div>
 
         <div className="p-5 border-t border-[#c4c4c4] flex justify-end gap-2 sticky bottom-0 bg-white">

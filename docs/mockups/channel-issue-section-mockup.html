@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>월 리뷰 — 주요 채널 이슈 섹션 목업 v1</title>
+  <style>
+    :root {
+      --ink: #000000;
+      --bg: #ffffff;
+      --outline: #c4c4c4;
+      --muted: #5d5d5d;
+      --soft-muted: #7d7d7d;
+      --line-1: #000000;
+      --line-2: #5d5d5d;
+      --line-3: #7d7d7d;
+      --line-4: #9d9d9d;
+      --line-5: #b8b8b8;
+      --grid: #f0f0f0;
+      --soft-bg: #fafafa;
+      --accent-bg: #f5f5f5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard Variable", "Pretendard", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      margin: 0;
+      padding: 32px 20px 80px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .container { max-width: 1280px; margin: 0 auto; }
+    .mockup-banner {
+      background: #fff8e1;
+      border: 1px solid #f5d76e;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #806000;
+    }
+    h1 { font-size: 24px; font-weight: 700; margin: 0 0 4px; }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 40px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--outline);
+    }
+    .section-header h2 { font-size: 15px; font-weight: 700; margin: 0; }
+    .section-header .actions { display: flex; gap: 8px; }
+    .ghost-btn {
+      font-size: 11px;
+      padding: 4px 10px;
+      background: var(--bg);
+      color: var(--ink);
+      border: 1px solid var(--outline);
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .ghost-btn:hover { border-color: var(--ink); }
+
+    .group-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .group-col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .group-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 4px 0;
+      border-bottom: 1px dashed var(--outline);
+    }
+    .chart-card {
+      background: var(--bg);
+      border: 1px solid var(--outline);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .card-header-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .chart-card h3 { font-size: 14px; font-weight: 700; margin: 0; }
+    .chart-card .meta { font-size: 11px; color: var(--muted); }
+    .edit-btn {
+      font-size: 11px;
+      padding: 3px 8px;
+      background: var(--bg);
+      color: var(--ink);
+      border: 1px solid var(--outline);
+      border-radius: 2px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .edit-btn:hover { border-color: var(--ink); }
+
+    .chart-svg-wrap {
+      width: 100%;
+      height: 160px;
+      position: relative;
+    }
+    .chart-svg-wrap svg { width: 100%; height: 100%; }
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .legend-item { display: inline-flex; align-items: center; gap: 4px; }
+    .legend-dot { width: 8px; height: 8px; display: inline-block; }
+
+    .modal-preview {
+      margin-top: 48px;
+      padding: 20px;
+      background: var(--soft-bg);
+      border: 1px solid var(--outline);
+    }
+    .modal-preview h2 { font-size: 14px; font-weight: 700; margin: 0 0 12px; }
+    .modal-fake {
+      background: var(--bg);
+      border: 1px solid var(--ink);
+      padding: 16px;
+      max-width: 480px;
+      margin-bottom: 16px;
+    }
+    .modal-fake .modal-title {
+      font-size: 13px;
+      font-weight: 700;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--outline);
+      margin-bottom: 8px;
+    }
+    .modal-fake .modal-desc { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+      font-size: 12px;
+    }
+    .checkbox-row .label { flex: 1; }
+    .checkbox-row .count { font-size: 10px; color: var(--muted); }
+    .modal-fake .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--outline);
+    }
+    .btn-primary {
+      background: var(--ink);
+      color: #fff;
+      border: 1px solid var(--ink);
+      padding: 4px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .toggle-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .toggle-list .section-toggle {
+      font-weight: 700;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px dashed var(--outline);
+    }
+    .toggle-list .chart-toggle {
+      padding-left: 16px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .note-block {
+      margin-top: 24px;
+      padding: 16px;
+      background: var(--soft-bg);
+      border-left: 4px solid var(--muted);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .note-block strong { color: var(--ink); }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="mockup-banner">
+    📋 <strong>HTML 목업 v1</strong> — 「월 리뷰 → 주요 채널 이슈」 섹션 신설 + 차트 표시 모달에 섹션 토글 추가. 실제 데이터/차트는 추후 Recharts로 구현. 모달은 정적 미리보기.
+  </div>
+
+  <h1>월 리뷰</h1>
+  <p style="font-size: 11px; color: var(--muted);">… (기존 컨트롤·sticky 바·종합·브랜드 종합·브랜드 상세·채널 종합 섹션은 생략) …</p>
+
+  <!-- ============ 새 섹션: 주요 채널 이슈 ============ -->
+  <div class="section-header">
+    <h2>주요 채널 이슈</h2>
+    <div class="actions">
+      <button class="ghost-btn">그룹 설정 ▾</button>
+    </div>
+  </div>
+
+  <div class="group-grid">
+
+    <!-- ============ Column 1: 사입몰 그룹 ============ -->
+    <div class="group-col">
+      <div class="group-label">사입몰</div>
+
+      <!-- 거래처 트렌드 -->
+      <div class="chart-card">
+        <div class="card-header-row">
+          <h3>거래처별 매출 트렌드</h3>
+          <button class="edit-btn">표시 거래처 수정 ▾</button>
+        </div>
+        <div class="meta">최근 12개월 (백만) · R열 거래처명 기준</div>
+        <div class="chart-svg-wrap">
+          <svg viewBox="0 0 300 160" preserveAspectRatio="none">
+            <line x1="0" y1="40" x2="300" y2="40" stroke="#f0f0f0" stroke-width="1"/>
+            <line x1="0" y1="80" x2="300" y2="80" stroke="#f0f0f0" stroke-width="1"/>
+            <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" stroke-width="1"/>
+            <!-- 쿠팡_로켓 -->
+            <polyline fill="none" stroke="#000000" stroke-width="2"
+              points="0,42 25,55 50,18 75,15 100,80 125,32 150,55 175,55 200,38 225,60 250,42 275,90 300,55"/>
+            <!-- 쿠팡_제트 -->
+            <polyline fill="none" stroke="#5d5d5d" stroke-width="1.5"
+              points="0,140 25,140 50,140 75,138 100,138 125,135 150,132 175,128 200,128 225,125 250,120 275,115 300,115"/>
+            <!-- 11번가 -->
+            <polyline fill="none" stroke="#7d7d7d" stroke-width="1.5"
+              points="150,138 175,138 200,135 225,135 250,134 275,132 300,130"/>
+          </svg>
+        </div>
+        <div class="legend-row">
+          <span class="legend-item"><i class="legend-dot" style="background:#000"></i>쿠팡_로켓</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#5d5d5d"></i>쿠팡_제트</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#7d7d7d"></i>11번가</span>
+        </div>
+      </div>
+
+      <!-- 브랜드 트렌드 -->
+      <div class="chart-card">
+        <div class="card-header-row">
+          <h3>브랜드별 매출 트렌드</h3>
+          <button class="edit-btn">표시 브랜드 수정 ▾</button>
+        </div>
+        <div class="meta">최근 12개월 (백만) · D열 브랜드 기준 · 사입몰 그룹 필터</div>
+        <div class="chart-svg-wrap">
+          <svg viewBox="0 0 300 160" preserveAspectRatio="none">
+            <line x1="0" y1="40" x2="300" y2="40" stroke="#f0f0f0" stroke-width="1"/>
+            <line x1="0" y1="80" x2="300" y2="80" stroke="#f0f0f0" stroke-width="1"/>
+            <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" stroke-width="1"/>
+            <!-- 마이비 -->
+            <polyline fill="none" stroke="#000000" stroke-width="2"
+              points="0,50 25,52 50,20 75,18 100,75 125,22 150,55 175,52 200,42 225,55 250,42 275,80 300,42"/>
+            <!-- 누비 -->
+            <polyline fill="none" stroke="#5d5d5d" stroke-width="1.5"
+              points="0,130 25,132 50,128 75,130 100,135 125,132 150,135 175,134 200,128 225,132 250,130 275,131 300,134"/>
+            <!-- 쏭레브 -->
+            <polyline fill="none" stroke="#7d7d7d" stroke-width="1.5"
+              points="0,148 25,146 50,144 75,148 100,146 125,148 150,146 175,146 200,148 225,146 250,144 275,146 300,144"/>
+            <!-- 물티슈 -->
+            <polyline fill="none" stroke="#9d9d9d" stroke-width="1.5"
+              points="0,149 25,148 50,148 75,148 100,148 125,148 150,148 175,148 200,147 225,147 250,147 275,148 300,148"/>
+          </svg>
+        </div>
+        <div class="legend-row">
+          <span class="legend-item"><i class="legend-dot" style="background:#000"></i>마이비</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#5d5d5d"></i>누비</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#7d7d7d"></i>쏭레브</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#9d9d9d"></i>물티슈</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Column 2: 위탁몰 그룹 ============ -->
+    <div class="group-col">
+      <div class="group-label">위탁몰</div>
+
+      <div class="chart-card">
+        <div class="card-header-row">
+          <h3>거래처별 매출 트렌드</h3>
+          <button class="edit-btn">표시 거래처 수정 ▾</button>
+        </div>
+        <div class="meta">최근 12개월 (백만) · R열 거래처명 기준</div>
+        <div class="chart-svg-wrap">
+          <svg viewBox="0 0 300 160" preserveAspectRatio="none">
+            <line x1="0" y1="40" x2="300" y2="40" stroke="#f0f0f0" stroke-width="1"/>
+            <line x1="0" y1="80" x2="300" y2="80" stroke="#f0f0f0" stroke-width="1"/>
+            <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" stroke-width="1"/>
+            <!-- 11st -->
+            <polyline fill="none" stroke="#000000" stroke-width="2"
+              points="0,40 25,90 50,80 75,28 100,65 125,110 150,108 175,42 200,108 225,118 250,124 275,82 300,8"/>
+            <!-- 이베이 -->
+            <polyline fill="none" stroke="#5d5d5d" stroke-width="1.5"
+              points="0,70 25,60 50,55 75,118 100,108 125,118 150,80 175,108 200,90 225,68 250,98 275,92 300,90"/>
+            <!-- 위메프 -->
+            <polyline fill="none" stroke="#7d7d7d" stroke-width="1.5"
+              points="0,140 25,138 50,140 75,138 100,140 125,138 150,138 175,140 200,138 225,140 250,140 275,142 300,142"/>
+            <!-- 티몬 -->
+            <polyline fill="none" stroke="#9d9d9d" stroke-width="1.5"
+              points="0,156 25,156 50,156 75,154 100,154 125,154 150,156 175,156 200,156 225,156 250,156 275,156 300,156"/>
+            <!-- 카카오 -->
+            <polyline fill="none" stroke="#b8b8b8" stroke-width="1.5"
+              points="0,156 25,155 50,155 75,153 100,150 125,148 150,146 175,152 200,144 225,148 250,150 275,152 300,152"/>
+          </svg>
+        </div>
+        <div class="legend-row">
+          <span class="legend-item"><i class="legend-dot" style="background:#000"></i>11st</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#5d5d5d"></i>이베이</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#7d7d7d"></i>위메프</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#9d9d9d"></i>티몬</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#b8b8b8"></i>카카오</span>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="card-header-row">
+          <h3>브랜드별 매출 트렌드</h3>
+          <button class="edit-btn">표시 브랜드 수정 ▾</button>
+        </div>
+        <div class="meta">최근 12개월 (백만) · D열 브랜드 기준 · 위탁몰 그룹 필터</div>
+        <div class="chart-svg-wrap">
+          <svg viewBox="0 0 300 160" preserveAspectRatio="none">
+            <line x1="0" y1="40" x2="300" y2="40" stroke="#f0f0f0" stroke-width="1"/>
+            <line x1="0" y1="80" x2="300" y2="80" stroke="#f0f0f0" stroke-width="1"/>
+            <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" stroke-width="1"/>
+            <!-- 마이비 -->
+            <polyline fill="none" stroke="#000000" stroke-width="2"
+              points="0,18 25,52 50,58 75,90 100,28 125,80 150,72 175,62 200,82 225,78 250,72 275,108 300,52"/>
+            <!-- 누비 -->
+            <polyline fill="none" stroke="#5d5d5d" stroke-width="1.5"
+              points="0,140 25,140 50,140 75,140 100,138 125,140 150,140 175,138 200,140 225,140 250,142 275,140 300,140"/>
+            <!-- 쏭레브 -->
+            <polyline fill="none" stroke="#7d7d7d" stroke-width="1.5"
+              points="0,154 25,152 50,152 75,150 100,150 125,150 150,148 175,148 200,148 225,150 250,150 275,150 300,148"/>
+            <!-- 에코보 -->
+            <polyline fill="none" stroke="#9d9d9d" stroke-width="1.5"
+              points="0,156 25,156 50,156 75,156 100,156 125,156 150,156 175,154 200,154 225,154 250,154 275,154 300,154"/>
+          </svg>
+        </div>
+        <div class="legend-row">
+          <span class="legend-item"><i class="legend-dot" style="background:#000"></i>마이비</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#5d5d5d"></i>누비</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#7d7d7d"></i>쏭레브</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#9d9d9d"></i>에코보</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Column 3: 자사몰 그룹 ============ -->
+    <div class="group-col">
+      <div class="group-label">자사몰</div>
+
+      <div class="chart-card">
+        <div class="card-header-row">
+          <h3>거래처별 매출 트렌드</h3>
+          <button class="edit-btn">표시 거래처 수정 ▾</button>
+        </div>
+        <div class="meta">최근 12개월 (백만) · R열 거래처명 기준</div>
+        <div class="chart-svg-wrap">
+          <svg viewBox="0 0 300 160" preserveAspectRatio="none">
+            <line x1="0" y1="40" x2="300" y2="40" stroke="#f0f0f0" stroke-width="1"/>
+            <line x1="0" y1="80" x2="300" y2="80" stroke="#f0f0f0" stroke-width="1"/>
+            <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" stroke-width="1"/>
+            <!-- 네이버_제제 -->
+            <polyline fill="none" stroke="#000000" stroke-width="2"
+              points="0,90 25,120 50,108 75,72 100,90 125,82 150,62 175,90 200,72 225,38 250,98 275,18 300,40"/>
+            <!-- 네이버_쏭 -->
+            <polyline fill="none" stroke="#5d5d5d" stroke-width="1.5"
+              points="0,108 25,128 50,134 75,128 100,140 125,108 150,118 175,124 200,118 225,118 250,108 275,138 300,138"/>
+            <!-- 제제몰 -->
+            <polyline fill="none" stroke="#7d7d7d" stroke-width="1.5"
+              points="0,150 25,150 50,154 75,154 100,154 125,154 150,154 175,156 200,156 225,156 250,156 275,156 300,156"/>
+            <!-- 쏭몰 -->
+            <polyline fill="none" stroke="#9d9d9d" stroke-width="1.5"
+              points="0,154 25,154 50,154 75,154 100,154 125,154 150,154 175,154 200,154 225,156 250,156 275,156 300,156"/>
+          </svg>
+        </div>
+        <div class="legend-row">
+          <span class="legend-item"><i class="legend-dot" style="background:#000"></i>네이버_제제</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#5d5d5d"></i>네이버_쏭</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#7d7d7d"></i>제제몰</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#9d9d9d"></i>쏭몰</span>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="card-header-row">
+          <h3>브랜드별 매출 트렌드</h3>
+          <button class="edit-btn">표시 브랜드 수정 ▾</button>
+        </div>
+        <div class="meta">최근 12개월 (백만) · D열 브랜드 기준 · 자사몰 그룹 필터</div>
+        <div class="chart-svg-wrap">
+          <svg viewBox="0 0 300 160" preserveAspectRatio="none">
+            <line x1="0" y1="40" x2="300" y2="40" stroke="#f0f0f0" stroke-width="1"/>
+            <line x1="0" y1="80" x2="300" y2="80" stroke="#f0f0f0" stroke-width="1"/>
+            <line x1="0" y1="120" x2="300" y2="120" stroke="#f0f0f0" stroke-width="1"/>
+            <!-- 마이비 -->
+            <polyline fill="none" stroke="#000000" stroke-width="2"
+              points="0,100 25,108 50,104 75,104 100,108 125,100 150,104 175,116 200,104 225,32 250,116 275,92 300,32"/>
+            <!-- 누비 -->
+            <polyline fill="none" stroke="#5d5d5d" stroke-width="1.5"
+              points="0,128 25,148 50,148 75,116 100,100 125,124 150,116 175,116 200,108 225,80 250,140 275,12 300,28"/>
+            <!-- 쏭레브 -->
+            <polyline fill="none" stroke="#7d7d7d" stroke-width="1.5"
+              points="0,92 25,108 50,124 75,108 100,128 125,68 150,60 175,96 200,96 225,8 250,132 275,48 300,16"/>
+            <!-- 에코보 -->
+            <polyline fill="none" stroke="#9d9d9d" stroke-width="1.5"
+              points="0,156 25,156 50,156 75,156 100,156 125,154 150,156 175,156 200,156 225,156 250,156 275,156 300,156"/>
+          </svg>
+        </div>
+        <div class="legend-row">
+          <span class="legend-item"><i class="legend-dot" style="background:#000"></i>마이비</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#5d5d5d"></i>누비</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#7d7d7d"></i>쏭레브</span>
+          <span class="legend-item"><i class="legend-dot" style="background:#9d9d9d"></i>에코보</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 모달 미리보기 ============ -->
+  <div class="modal-preview">
+    <h2>📦 모달 미리보기 (정적)</h2>
+
+    <p style="font-size: 12px; color: var(--muted);"><strong>1. 차트 표시 모달</strong> — 섹션 ON/OFF + 세부 차트 ON/OFF (확장)</p>
+    <div class="modal-fake">
+      <div class="modal-title">차트 표시</div>
+      <div class="modal-desc">표시할 차트와 섹션을 선택하세요. 변경은 즉시 저장됩니다.</div>
+      <div class="toggle-list">
+        <div class="section-toggle">☑ 종합</div>
+        <div class="chart-toggle">☑ 목표비 실적 (Chart 1)</div>
+        <div class="chart-toggle">☑ 전년비 트렌드 (Chart 2)</div>
+        <div class="chart-toggle">☑ 파트별 동적 비교 (Chart 3)</div>
+        <div class="section-toggle">☑ 브랜드 종합</div>
+        <div class="chart-toggle">☑ 브랜드별 트렌드 (Chart 4)</div>
+        <div class="chart-toggle">☑ 브랜드별 비중 (Chart 5)</div>
+        <div class="chart-toggle">☑ 브랜드 월평균 vs 당월 (Chart 6)</div>
+        <div class="section-toggle">☑ <strong>브랜드 상세</strong> <span style="font-weight:400;color:var(--muted);">(NEW — 토글)</span></div>
+        <div class="section-toggle">☑ 채널 종합</div>
+        <div class="section-toggle">☑ <strong>주요 채널 이슈</strong> <span style="font-weight:400;color:var(--muted);">(NEW — 토글)</span></div>
+      </div>
+      <div class="modal-buttons">
+        <button class="ghost-btn">취소</button>
+        <button class="btn-primary">적용</button>
+      </div>
+    </div>
+
+    <p style="font-size: 12px; color: var(--muted);"><strong>2. 그룹 설정 모달</strong> — P열 채널구분 → 그룹 매핑 정의 (사용자 편집)</p>
+    <div class="modal-fake">
+      <div class="modal-title">주요 채널 이슈 — 그룹 설정</div>
+      <div class="modal-desc">P열 채널구분 값을 어느 그룹에 포함시킬지 설정합니다. 그룹명/순서 편집 가능.</div>
+      <div style="display:flex;gap:8px;font-size:12px;font-weight:700;border-bottom:1px solid var(--outline);padding-bottom:6px;margin-bottom:6px;">
+        <span style="flex:1;">P열 채널구분</span>
+        <span style="width:80px;text-align:center;">사입몰</span>
+        <span style="width:80px;text-align:center;">위탁몰</span>
+        <span style="width:80px;text-align:center;">자사몰</span>
+      </div>
+      <div class="checkbox-row">
+        <span class="label">오픈마켓(사입)</span>
+        <span style="width:80px;text-align:center;">●</span>
+        <span style="width:80px;text-align:center;">○</span>
+        <span style="width:80px;text-align:center;">○</span>
+      </div>
+      <div class="checkbox-row">
+        <span class="label">오픈마켓(위탁)</span>
+        <span style="width:80px;text-align:center;">○</span>
+        <span style="width:80px;text-align:center;">●</span>
+        <span style="width:80px;text-align:center;">○</span>
+      </div>
+      <div class="checkbox-row">
+        <span class="label">종합몰</span>
+        <span style="width:80px;text-align:center;">○</span>
+        <span style="width:80px;text-align:center;">●</span>
+        <span style="width:80px;text-align:center;">○</span>
+      </div>
+      <div class="checkbox-row">
+        <span class="label">버티컬커머스</span>
+        <span style="width:80px;text-align:center;">○</span>
+        <span style="width:80px;text-align:center;">●</span>
+        <span style="width:80px;text-align:center;">○</span>
+      </div>
+      <div class="checkbox-row">
+        <span class="label">자사몰</span>
+        <span style="width:80px;text-align:center;">○</span>
+        <span style="width:80px;text-align:center;">○</span>
+        <span style="width:80px;text-align:center;">●</span>
+      </div>
+      <div class="checkbox-row">
+        <span class="label">폐쇄몰 / 사내판매 / 해외 …</span>
+        <span style="width:80px;text-align:center;">○</span>
+        <span style="width:80px;text-align:center;">○</span>
+        <span style="width:80px;text-align:center;">○</span>
+      </div>
+      <div class="modal-buttons">
+        <button class="ghost-btn">취소</button>
+        <button class="btn-primary">저장</button>
+      </div>
+    </div>
+
+    <p style="font-size: 12px; color: var(--muted);"><strong>3. 표시 거래처 수정 모달</strong> — 해당 그룹에 속한 R열 거래처명만 옵션으로 노출</p>
+    <div class="modal-fake">
+      <div class="modal-title">사입몰 — 표시 거래처 수정</div>
+      <div class="modal-desc">사입몰 그룹의 P열 row 중 R열 거래처명 unique 목록. 체크된 항목만 차트에 표시.</div>
+      <div class="checkbox-row"><input type="checkbox" checked /><span class="label">쿠팡_로켓</span><span class="count">22,150</span></div>
+      <div class="checkbox-row"><input type="checkbox" checked /><span class="label">쿠팡_제트</span><span class="count">8,420</span></div>
+      <div class="checkbox-row"><input type="checkbox" checked /><span class="label">11번가</span><span class="count">3,180</span></div>
+      <div class="checkbox-row"><input type="checkbox" /><span class="label">기타 거래처…</span><span class="count">—</span></div>
+      <div class="modal-buttons">
+        <button class="ghost-btn">취소</button>
+        <button class="btn-primary">적용</button>
+      </div>
+    </div>
+
+    <p style="font-size: 12px; color: var(--muted);"><strong>4. 표시 브랜드 수정 모달</strong> — 해당 그룹 내 D열 브랜드 unique 목록</p>
+    <div class="modal-fake">
+      <div class="modal-title">사입몰 — 표시 브랜드 수정</div>
+      <div class="modal-desc">사입몰 그룹의 row 중 D열 브랜드 unique 목록. 체크된 항목만 차트에 표시.</div>
+      <div class="checkbox-row"><input type="checkbox" checked /><span class="label">마이비</span><span class="count">5,289</span></div>
+      <div class="checkbox-row"><input type="checkbox" checked /><span class="label">누비</span><span class="count">1,800</span></div>
+      <div class="checkbox-row"><input type="checkbox" checked /><span class="label">쏭레브</span><span class="count">1,250</span></div>
+      <div class="checkbox-row"><input type="checkbox" checked /><span class="label">물티슈</span><span class="count">920</span></div>
+      <div class="checkbox-row"><input type="checkbox" /><span class="label">에코보</span><span class="count">450</span></div>
+      <div class="modal-buttons">
+        <button class="ghost-btn">취소</button>
+        <button class="btn-primary">적용</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="note-block">
+    <strong>설계 결정 요약:</strong>
+    <ul style="margin: 8px 0 0 16px; padding: 0;">
+      <li>섹션 위치 — 채널 종합 ↘ 바로 아래. 토글 OFF 시 통째로 숨김.</li>
+      <li>그리드 = 3 컬럼 × 2 row (총 6 차트). 컬럼당 채널 그룹 1개 (사입/위탁/자사) — 그룹은 사용자 정의 가능 (P열 채널구분 매핑).</li>
+      <li>거래처 차트 = R열 거래처명 기준 (영구 규약 §2.3.3.2). 브랜드 차트 = D열 브랜드 기준.</li>
+      <li>각 차트는 자체 "표시 항목 수정" 모달 (ProductSelectionModal 재사용 패턴) — 옵션 풀은 해당 그룹의 row 필터 후 R/D열 unique.</li>
+      <li>part 토글(전체/이커머스/오프라인) 영향: 미정 — 18회차의 brand selection part 분기 패턴 따를지 사용자 확인 필요.</li>
+      <li>localStorage 저장 키: `avk_monthly_review_channel_issue_section` (그룹 정의 + 차트별 selection 통합).</li>
+      <li>"브랜드 상세" 섹션도 차트 표시 모달의 섹션 토글 대상으로 추가 (한 줄 토글로 통째 숨김).</li>
+    </ul>
+  </div>
+
+  <div class="note-block" style="border-left-color: var(--accent-bg); background: #fff8e1;">
+    <strong>⚠ 추가 확인 필요</strong>
+    <ul style="margin: 8px 0 0 16px; padding: 0;">
+      <li>part 토글(전체/이커머스/오프라인) 적용 여부 — 적용하면 selection도 part 분기 필요.</li>
+      <li>그룹 default 정의 — 사입몰=`오픈마켓(사입)`, 위탁몰=`오픈마켓(위탁)+종합몰+버티컬커머스`, 자사몰=`자사몰` 으로 시작할지.</li>
+      <li>그룹 추가/삭제/이름 변경 허용 여부 (지금 목업은 3 그룹 고정 가정).</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

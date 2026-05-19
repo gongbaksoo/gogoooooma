@@ -743,6 +743,63 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 
 ---
 
+## 27. GroupConfigModal 가독성 문제 — 좌측 그룹 이름 input 잘림 + 우측 컬럼 시야 밖
+
+작성일: 2026-05-20 (19회차)
+
+### 🚨 증상
+- 주요 채널 이슈의 "그룹 설정" 모달 첫 렌더링 시:
+  - 좌측 "그룹 이름" 컬럼의 input이 거의 안 보일 정도로 좁아짐 (사입몰/위탁몰/자사몰 텍스트도 안 보임).
+  - 우측 끝 채널 (자사몰/종합몰/할인점/해외 등 18개 중 후반부 5~6개)이 시야 밖으로 잘림.
+  - 사용자가 어떤 row가 어떤 그룹인지 식별 불가.
+- Playwright 자체 검증 중 캡처로 발견.
+
+### 🧭 원인
+- 모달 width `max-w-4xl` (≈896px)인데 18개 채널 컬럼 × ~70px + 그룹 이름 + 순서/삭제 합치면 ~1500px 필요 → 가로 압축으로 input·텍스트가 짜부라짐.
+- `w-full table` 자동 layout이라 좁은 너비 안에서 모든 컬럼이 비례로 줄어듦.
+- 가로 스크롤 wrapper 없음.
+
+### ✅ 해결
+1. 모달 width `max-w-4xl` → **`max-w-6xl`** 확대.
+2. table 컨테이너에 **`overflow-auto`** 적용 → 가로 스크롤 가능.
+3. **좌측 (그룹 이름) / 우측 (순서·삭제) 컬럼 `sticky left-0` / `sticky right-0`** + 흰 배경 + border-r/l → 가로 스크롤 중에도 항상 보임.
+4. 채널 컬럼 `min-width: 80px` + `whitespace-nowrap` 보장.
+5. table에 `style={{ minWidth: "100%" }}` → 표가 모달보다 넓어지면 스크롤로 처리.
+
+### 💡 향후 권장
+1. **N-column 매트릭스 UI 사전 검토 체크리스트** — 컬럼 수가 ~10개 이상일 때 `overflow-auto` + sticky 컬럼 패턴 디폴트 적용.
+2. **HTML 목업에 실제 컬럼 수 반영** — 본 19회차의 목업에서는 P열 채널구분 6개만 가정했지만 실제 데이터는 18개. 다음 목업부터 실제 카디널리티 확인.
+3. **모달 width 토큰화** — 컨텐츠 폭이 변동 가능한 모달은 `max-w-sm/md/lg/xl/2xl/4xl/6xl` 중 컨텐츠 기준으로 선택 (지금은 케이스별 산발).
+
+---
+
+## 28. ChartVisibilityModal 구조가 목업과 어긋남 — 섹션 토글 별도 그룹으로 분리
+
+작성일: 2026-05-20 (19회차)
+
+### 🚨 증상
+- 19회차 신규 섹션 통합 시 ChartVisibilityModal에 섹션 토글 3개(`brandDetail`/`channelOverview`/`channelIssue`)를 추가했으나, **별도의 "[섹션 표시]" 그룹**으로 모달 하단에 분리 배치.
+- 목업에서는 `종합 → Chart 1/2/3 → 브랜드 종합 → Chart 4/5/6 → 브랜드 상세 → 채널 종합 → 주요 채널 이슈` 5섹션 모두 동일 위계의 평면 리스트였음.
+- 사용자 피드백: "토글이 없다고" (= 목업과 다른 위치/구조라 사용자가 인지 못 함).
+
+### 🧭 원인
+- 초기 구현 시 "체크박스 위치"만 맞추고 "위계"는 다르게 둠 (`SECTIONS`에 chart 묶음만 정의, 섹션 토글은 `SECTION_TOGGLES` 별도 배열).
+- 종합/브랜드 종합은 chart-level만 있고 section-level 토글 없음 → 5섹션 중 3섹션만 section-level 토글 가능 → 비대칭.
+- 목업 마지막 컨펌 단계에서 사용자가 본 것은 "평면 리스트 + 일부 indent"인데, 구현은 "2개 chart 그룹 + 별도 섹션 그룹".
+
+### ✅ 해결
+1. `SECTIONS` 배열을 5섹션 평면화로 재정의 (`{id, label, charts?}`). 종합·브랜드 종합만 `charts` 필드 보유.
+2. `SectionId`에 `overview` / `brandOverview` 추가 → 종합·브랜드 종합도 섹션 단위 토글 가능.
+3. **섹션 토글 OFF 시 sub-chart 토글 자동 disabled** (`opacity-50 cursor-not-allowed` + `input disabled`).
+4. page.tsx에 `visibility.overview` / `visibility.brandOverview` 분기 추가 → 섹션 헤더 단위로 통째 숨김.
+
+### 💡 향후 권장
+1. **목업 ↔ 구현 위계 1:1 매칭 SOP** — HTML 목업의 들여쓰기/순서/그룹핑이 곧 구현 위계임을 명시. 자체 판단으로 그룹 분리 금지.
+2. **섹션 토글 위계 통일 규약** — 다 차트 보유 섹션이든 단일 컴포넌트 섹션이든 section-level 체크박스는 동일 위계로 노출.
+3. **사용자 피드백 "토글이 없다고" 류 모호한 문구 → 즉시 캡처/위치 확인 요청** — 추측 금지 (CLAUDE.md). 본 회차에서 가능성 A/B/C로 분기 질문 사용.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -756,3 +813,5 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 10. **차트 매트릭스 점검 SOP** — "모든 차트 적용" 지시는 파일 × viewMode × timeUnit 매트릭스로 자가검증 (§20 권장 1·2번 참조).
 11. **타이포 단일 패밀리 lint** — `font-mono`/비-Pretendard 패밀리 클래스 사용을 pre-commit/CI에서 차단 (§25 권장 1번 참조).
 12. **재페치 시 그리드 unmount 금지** — refetch 트리거 컨트롤이 있는 페이지의 차트/리스트 그리드는 `!loading` 조건과 결합 금지 (§26 권장 1번 참조).
+13. **N-column 매트릭스 UI 패턴** — 10개 이상 컬럼은 `overflow-auto` + sticky 컬럼 (좌/우) 디폴트 적용 (§27 권장 1번 참조).
+14. **목업 ↔ 구현 위계 1:1 매칭** — HTML 목업의 들여쓰기·순서·그룹핑이 구현 위계임을 명시 (§28 권장 1번 참조).

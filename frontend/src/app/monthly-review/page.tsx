@@ -32,6 +32,14 @@ import {
   saveBrandSelections,
   DEFAULT_BRAND_SELECTIONS,
 } from "@/components/monthly-review/brandSelectionStorage";
+import ChannelIssueSection from "@/components/monthly-review/ChannelIssueSection";
+import {
+  GroupDef,
+  PartScopedGroups,
+  DEFAULT_CHANNEL_ISSUE_GROUPS,
+  loadChannelIssueGroups,
+  saveChannelIssueGroups,
+} from "@/components/monthly-review/channelIssueStorage";
 
 type Part = "all" | "ecommerce" | "offline";
 
@@ -77,6 +85,15 @@ interface SummaryResponse {
   }[]>;
   channel_defaults: Record<"all" | "ecommerce" | "offline", string[]>;
   channel_months: string[];
+  channel_issue: Record<"all" | "ecommerce" | "offline", {
+    channels: {
+      name: string;
+      row_count: number;
+      vendors: { name: string; row_count: number; values: number[] }[];
+      brands: { name: string; row_count: number; values: number[] }[];
+    }[];
+  }>;
+  channel_issue_months: string[];
 }
 
 interface TargetFile {
@@ -110,12 +127,14 @@ export default function MonthlyReviewPage() {
   const [visibilityModalOpen, setVisibilityModalOpen] = useState(false);
   const [brandSelections, setBrandSelections] = useState<PartScopedBrandSelections>(DEFAULT_BRAND_SELECTIONS);
   const [channelSelections, setChannelSelections] = useState<ChannelSelections>(DEFAULT_CHANNEL_SELECTIONS);
+  const [channelIssueGroups, setChannelIssueGroups] = useState<PartScopedGroups>(DEFAULT_CHANNEL_ISSUE_GROUPS);
 
   // 마운트 시 localStorage에서 모든 selections 복원 (SSR 안전)
   useEffect(() => {
     setVisibility(loadVisibility());
     setBrandSelections(loadBrandSelections());
     setChannelSelections(loadChannelSelections());
+    setChannelIssueGroups(loadChannelIssueGroups());
   }, []);
 
   const updateBrandSelection = (p: Part, brand: Brand, next: BrandSelection) => {
@@ -133,6 +152,14 @@ export default function MonthlyReviewPage() {
     setChannelSelections((prev) => {
       const updated = { ...prev, [p]: next };
       saveChannelSelections(updated);
+      return updated;
+    });
+  };
+
+  const updateChannelIssueGroups = (p: Part, next: GroupDef[]) => {
+    setChannelIssueGroups((prev) => {
+      const updated = { ...prev, [p]: next };
+      saveChannelIssueGroups(updated);
       return updated;
     });
   };
@@ -545,9 +572,17 @@ export default function MonthlyReviewPage() {
             누비: summary.chart12,
             쏭레브: summary.chart14,
           };
+          // 섹션별 sectionId mapping for visibility
+          const sectionVisibilityIds: Record<string, "overview" | "brandOverview"> = {
+            "종합": "overview",
+            "브랜드 종합": "brandOverview",
+          };
           return (
             <div ref={chartGridRef} className="bg-white space-y-8">
               {sectionGroups.map((section) => {
+                const secVisId = sectionVisibilityIds[section.title];
+                // 섹션 자체가 OFF면 통째로 숨김
+                if (secVisId && !visibility[secVisId]) return null;
                 const visibleCharts = section.charts.filter((c) => visibility[c.id]);
                 if (visibleCharts.length === 0) return null;
                 return (
@@ -564,34 +599,51 @@ export default function MonthlyReviewPage() {
                 );
               })}
 
-              {/* 채널 종합 — 파트별 동적 카테고리 */}
-              <section>
-                <ChannelSection
-                  part={part}
-                  options={summary.channel_options[part] ?? []}
-                  months={summary.channel_months}
-                  selected={channelSelections[part]}
-                  onSelectedChange={(next) => updateChannelSelection(part, next)}
-                />
-              </section>
+              {/* 브랜드 상세 — 브랜드 종합 바로 아래 (16-18회차 토글 + 파트별 selection) */}
+              {visibility.brandDetail && (
+                <div className="space-y-8 pt-4">
+                  <h2 className="text-[15px] font-bold text-black mb-3 pb-2 border-b border-[#c4c4c4]">
+                    브랜드 상세
+                  </h2>
+                  {(["마이비", "누비", "쏭레브"] as Brand[]).map((brand) => (
+                    <BrandSection
+                      key={`${part}-${brand}`}
+                      brand={brand}
+                      totalChart={brandTotalMap[brand]}
+                      products={summary.brand_products[brand] ?? []}
+                      months={summary.brand_products_months}
+                      selection={brandSelections[part][brand]}
+                      onSelectionChange={(next) => updateBrandSelection(part, brand, next)}
+                    />
+                  ))}
+                </div>
+              )}
 
-              {/* 브랜드 상세 — 각 브랜드별 BrandSection */}
-              <div className="space-y-8 pt-4">
-                <h2 className="text-[15px] font-bold text-black mb-3 pb-2 border-b border-[#c4c4c4]">
-                  브랜드 상세
-                </h2>
-                {(["마이비", "누비", "쏭레브"] as Brand[]).map((brand) => (
-                  <BrandSection
-                    key={`${part}-${brand}`}
-                    brand={brand}
-                    totalChart={brandTotalMap[brand]}
-                    products={summary.brand_products[brand] ?? []}
-                    months={summary.brand_products_months}
-                    selection={brandSelections[part][brand]}
-                    onSelectionChange={(next) => updateBrandSelection(part, brand, next)}
+              {/* 채널 종합 */}
+              {visibility.channelOverview && (
+                <section>
+                  <ChannelSection
+                    part={part}
+                    options={summary.channel_options[part] ?? []}
+                    months={summary.channel_months}
+                    selected={channelSelections[part]}
+                    onSelectedChange={(next) => updateChannelSelection(part, next)}
                   />
-                ))}
-              </div>
+                </section>
+              )}
+
+              {/* 주요 채널 이슈 — 채널 종합 아래 (신규) */}
+              {visibility.channelIssue && (
+                <section>
+                  <ChannelIssueSection
+                    part={part}
+                    channels={summary.channel_issue?.[part]?.channels ?? []}
+                    months={summary.channel_issue_months ?? summary.channel_months}
+                    groups={channelIssueGroups[part]}
+                    onGroupsChange={(next) => updateChannelIssueGroups(part, next)}
+                  />
+                </section>
+              )}
             </div>
           );
         })()}

@@ -19,6 +19,7 @@ import {
 } from "recharts";
 import ProductSelectionModal, { ProductOption } from "./ProductSelectionModal";
 import { Part } from "./channelSelectionStorage";
+import { getMultiSeriesStyle } from "@/lib/chartPalette";
 
 interface ChannelOption {
   name: string;
@@ -42,8 +43,6 @@ const shortLabel = (m: string) => {
   return t ? `${t[1].slice(-2)}.${t[2]}` : m;
 };
 
-const PALETTE = ["#000000", "#5d5d5d", "#7d7d7d", "#9d9d9d", "#b8b8b8", "#c4c4c4", "#d0d0d0", "#dcdcdc"];
-
 export default function ChannelSection({ part, options, months, selected, onSelectedChange }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -53,7 +52,8 @@ export default function ChannelSection({ part, options, months, selected, onSele
     return options.filter((o) => set.has(o.name));
   }, [options, selected]);
 
-  const colors = selectedOptions.map((_, i) => PALETTE[i] ?? "#000000");
+  const styles = selectedOptions.map((_, i) => getMultiSeriesStyle(i));
+  const colors = styles.map((s) => s.stroke);
 
   // 트렌드 데이터
   const trendData = months.map((m, idx) => {
@@ -127,18 +127,22 @@ export default function ChannelSection({ part, options, months, selected, onSele
                     formatter={(v: number, name: string) => [`${v.toLocaleString()} 백만`, name]}
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  {selectedOptions.map((o, i) => (
-                    <Line
-                      key={o.name}
-                      type="monotone"
-                      dataKey={o.name}
-                      stroke={colors[i]}
-                      strokeWidth={i === 0 ? 2 : 1.5}
-                      dot={{ r: 2, fill: colors[i] }}
-                      animationDuration={1500}
-                      animationEasing="ease-out"
-                    />
-                  ))}
+                  {selectedOptions.map((o, i) => {
+                    const s = styles[i];
+                    return (
+                      <Line
+                        key={o.name}
+                        type="monotone"
+                        dataKey={o.name}
+                        stroke={s.stroke}
+                        strokeWidth={s.strokeWidth}
+                        strokeDasharray={s.strokeDasharray}
+                        dot={{ r: 2, fill: s.stroke }}
+                        animationDuration={1500}
+                        animationEasing="ease-out"
+                      />
+                    );
+                  })}
                 </LineChart>
               </ResponsiveContainer>
             </div>

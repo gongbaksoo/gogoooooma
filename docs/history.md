@@ -4,6 +4,60 @@
 
 ---
 
+## 2026-05-20 (19회차) — 주요 채널 이슈 섹션 신설 + 섹션 재배치 + 차트 표시 모달 평면화
+
+### 1. 배경
+- 사용자 지적: PPT slide 3 "매출 리뷰 - 주요채널 이슈" 페이지가 구현 누락.
+- 사용자 요청: 3 채널 그룹(사입몰/위탁몰/자사몰) × 거래처/브랜드 2종 차트 = 6 차트, **그룹 정의·차트별 카테고리 모두 사용자 편집 가능**.
+
+### 2. 사용자 합의 사항
+1. **그룹 매핑**: P열 채널구분 기반, 컬럼 = 채널 그룹 필터. 거래처 = R열 거래처명, 브랜드 = D열 `품목그룹1`.
+2. **그룹 설정**: 그룹 이름 변경 / 추가 / 삭제 / 순서 변경 모두 허용.
+3. **part 토글 분기**: 전체/이커머스/오프라인 각 파트가 독립 그룹 정의 + selection.
+4. **레이아웃 재배치**: 브랜드 상세 → 브랜드 종합 바로 아래, 주요 채널 이슈 → 채널 종합 바로 아래. 두 신규 위치 모두 토글로 숨김 가능.
+5. **HTML 목업 워크플로우**: §2.3.3.7 SOP 따라 목업 → 사용자 컨펌 → 코드 진행.
+
+### 3. 구현
+#### 백엔드 (`api/monthly_review.py`)
+- summary 응답에 `channel_issue` 추가: per-part × per-channel(P열) × {vendors(R열), brands(D열)} × 12개월 pivot.
+- `channel_issue_months` (last12 라벨) 추가.
+
+#### 프론트엔드 신규
+- `channelIssueStorage.ts` — `GroupDef` 타입 (id/name/channels/vendorSelection/brandSelection) + `PartScopedGroups` + localStorage CRUD + defaults (사입/위탁/자사).
+- `GroupConfigModal.tsx` — 그룹 추가/삭제/이름변경/순서변경 + P열 매핑 매트릭스. 좌측(그룹 이름) / 우측(순서·삭제) **sticky 컬럼** + 가로 스크롤로 18채널 처리.
+- `ChannelIssueSection.tsx` — N그룹 동적 grid (1/2/3+ column 자동 전환) + 그룹별 vendor·brand 집계 (frontend aggregation) + ProductSelectionModal 재사용.
+
+#### 프론트엔드 수정
+- `ChartVisibilityModal.tsx` — 평면 5섹션 구조로 재구성 (`SectionId` = overview/brandOverview/brandDetail/channelOverview/channelIssue). 종합·브랜드 종합도 section-level 토글 추가. sub-chart 토글은 ml-6 들여쓰기 + section OFF 시 자동 disabled.
+- `page.tsx` — 섹션 재배치 (브랜드 상세 → 브랜드 종합 아래) + ChannelIssueSection 통합 + `visibility.overview/brandOverview` 분기 추가.
+
+### 4. 검증 (Playwright 자체 검증)
+- 초기 로드: 5섹션 정상 마운트.
+- 사입몰 거래처 모달: 쿠팡(로켓) 23048 / 쿠팡 360 / 11st 102 / 십일번가풀필먼트 21 - 그룹 필터 정상.
+- 4개 거래처 체크 → 적용 → 차트에 4 시리즈 legend 표시.
+- 파트 토글 (전체→이커머스): 그룹 정의 유지 / selection 빈 상태로 전환 (파트별 독립 저장 확인).
+- 차트 표시 모달: 5섹션 평면 + 종합/브랜드 종합 sub-chart 들여쓰기, 섹션 OFF → 통째 숨김 / 다시 ON → 복원.
+- 콘솔 에러 0건.
+
+### 5. 검증 중 발견 + 수정 (회차 내)
+- **GroupConfigModal 가독성** (error.md §27): `max-w-4xl`에서 input 짜부라짐 + 우측 컬럼 잘림 → `max-w-6xl` + sticky 컬럼 + overflow-auto.
+- **ChartVisibilityModal 위계 어긋남** (error.md §28): 별도 "섹션 표시" 그룹으로 분리했던 구조 → 목업대로 평면 5섹션 재구성.
+
+### 6. 산출물
+- 신규: `api/monthly_review.py` (channel_issue 추가) / `channelIssueStorage.ts` / `GroupConfigModal.tsx` / `ChannelIssueSection.tsx` / `docs/mockups/channel-issue-section-mockup.html`.
+- 수정: `ChartVisibilityModal.tsx` (평면 5섹션 + section toggle 통합) / `page.tsx` (재배치 + 신규 섹션 + visibility 분기).
+- 문서: design_document §2.3.3.11 (신규 섹션) + §2.3.3.12 (모달 평면화) / project_plan §4.7 (레이아웃 5섹션·신규 섹션) / error.md §27·§28 / history 본 19회차.
+
+### 7. Phase 후속 항목 (변동)
+1. **이번 회차 운영 배포** — 백엔드(Mac Mini) git pull + uvicorn 재시작 → Vercel 자동 빌드 (§22 SOP 따라 백엔드 먼저 검증).
+2. storage 마이그레이션 시 옵션 풀 검증 로직 — 누적 권장 (channel/brand/channelIssue 통합).
+3. xlsx 직접 업로드 (보류).
+4. Mac Mini 자동 배포 (누적 권장 4회).
+5. chart3 컴포넌트 리네임.
+6. **신규**: ChannelIssueSection의 default vendor/brand selection (현재 빈 배열) — top N by row_count 자동 선택 옵션 검토.
+
+---
+
 ## 2026-05-19 (18회차) — 브랜드 상세 파트별 selection + 스크롤 위치 보존
 
 ### 1. 배경

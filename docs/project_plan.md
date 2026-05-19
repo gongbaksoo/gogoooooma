@@ -149,7 +149,20 @@ sales-analysis-site/
     - `channel_months`: 12개월 라벨 배열
   - **localStorage 저장 키**: `avk_monthly_review_channel_selections` — `{ all: string[], ecommerce: string[], offline: string[] }`
   - 사용 안 하는 Chart7/8/9 컴포넌트 + chart7/8/9 응답 키 제거
-- **레이아웃**: 4개 섹션 — `종합` (chart 1~3) / `브랜드 종합` (chart 4~6) / `채널 종합` (ChannelSection) / `브랜드 상세` (BrandSection × 3). 각 섹션 자체 헤더 + grid.
+- **레이아웃 (2026-05-20 19회차 재배치)**: 5개 섹션 — `종합` (chart 1~3) / `브랜드 종합` (chart 4~6) / `브랜드 상세` (BrandSection × 3) / `채널 종합` (ChannelSection) / `주요 채널 이슈` (ChannelIssueSection). 각 섹션 자체 헤더 + grid + 모달 토글.
+- **주요 채널 이슈 (2026-05-20 19회차 신설)**:
+  - PPT slide 3 "매출 리뷰 - 주요채널 이슈" 재현. N그룹 × 2차트 (거래처 / 브랜드) 동적 grid.
+  - 기본 3 그룹: 사입몰(오픈마켓(사입)) / 위탁몰(오픈마켓(위탁)+종합몰+버티컬커머스) / 자사몰(자사몰).
+  - 사용자 편집 가능: 그룹 추가/삭제/이름변경/순서변경 + P열 채널 매핑 매트릭스 (`GroupConfigModal`).
+  - 각 차트별 표시 항목 사용자 선택 (거래처=R열, 브랜드=D열 `품목그룹1`).
+  - 백엔드 응답 신규 필드: `channel_issue` (per-part × per-channel × vendor/brand 12개월 pivot) + `channel_issue_months`.
+  - localStorage: `avk_monthly_review_channel_issue` (PartScopedGroups). 파트 토글 시 독립 저장.
+  - 상세: `docs/design_document.md §2.3.3.11`
+- **차트 표시 모달 평면 구조 (2026-05-20 19회차 재구성)**:
+  - 5섹션 모두 평면 체크박스 (위계 통일) + 종합·브랜드 종합은 sub-chart 들여쓰기.
+  - 섹션 OFF 시 sub-chart 자동 disabled.
+  - `SectionId` 5개 추가: overview / brandOverview / brandDetail / channelOverview / channelIssue.
+  - 상세: `docs/design_document.md §2.3.3.12`
 - **Sticky 컴팩트 바 (2026-05-19 16회차)**: 원본 컨트롤 영역이 화면 밖으로 나가면 페이지 상단에 고정 노출. 포함: `← 뒤로 / 월 리뷰` + `대상 월 / 파트` + `차트 표시 / PDF 다운로드`. 매출/목표 파일은 제외 (한 번 선택 후 자주 변경되지 않음). IntersectionObserver 기반 fade-in 200ms. 상세: `docs/design_document.md §2.3.3.9`
 - **Phase 3 브랜드 상세 (2026-05-19 구현, 동적 컴포넌트)**:
   - 단일 컴포넌트 `BrandSection` × 3 (마이비 / 누비 / 쏭레브). 각 브랜드 섹션이 자체적으로 3종류 차트 그룹 렌더:

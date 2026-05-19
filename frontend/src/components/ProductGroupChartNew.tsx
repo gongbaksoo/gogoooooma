@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
+import { getMultiSeriesStyle, getDataTypeSeriesStyle } from '@/lib/chartPalette';
 
 interface ProductGroupChartProps {
     filename: string | null;
@@ -17,24 +18,14 @@ interface ChartData {
 }
 
 
-// 데이터 종류별 베이스 색 (4단계 명도) — 8-pattern 매핑 (4단계 × 실선/점선)
-const PALETTES: Record<string, string[]> = {
-    sales: ['#000000', '#5d5d5d', '#7d7d7d', '#b8b8b8'],
-    daily: ['#000000', '#5d5d5d', '#7d7d7d', '#b8b8b8'],
-    profitRate: ['#ff0066', '#ff3385', '#ff66a3', '#ff99c1'],
-    growth: ['#065f46', '#10b981', '#34d399', '#6ee7b7'],
-};
-
-// 시리즈 순서 i → 패턴 (0: 진함 실선, 1: 진함 점선, 2: 중간 실선, 3: 중간 점선, 4: 옅음 실선, ...)
-const getSeriesStyle = (i: number, palette: string[]) => ({
-    stroke: palette[Math.floor(i / 2)] || palette[palette.length - 1],
-    strokeDasharray: (i % 2 === 1) ? '4 4' : undefined,
-    strokeWidth: i === 0 ? 2.5 : 1.5,
-    dotR: i === 0 ? 4 : 3,
-    activeR: i === 0 ? 6 : 5,
-});
-
 type ViewMode = 'sales' | 'growth' | 'daily' | 'profitRate';
+
+// 시리즈 i번째 스타일 — sales/daily는 B-6 다중 hue 팔레트, 의미색(이익률/증감률)은 데이터 종류 매핑 유지
+const seriesStyleForMode = (i: number, mode: ViewMode) => {
+    if (mode === 'sales' || mode === 'daily') return getMultiSeriesStyle(i);
+    if (mode === 'profitRate') return getDataTypeSeriesStyle(i, 'profitRate');
+    return getDataTypeSeriesStyle(i, 'growth');
+};
 
 const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) => {
     const [data, setData] = useState<ChartData[]>([]);
@@ -433,8 +424,6 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                         iconType="line"
                     />
                     {(() => {
-                        // 데이터 종류별 베이스 색 + 8-pattern (4단계 명도 × 실선/점선)
-                        const palette = PALETTES[viewMode] || PALETTES.sales;
                         // 합계가 1번째(메인), 나머지는 정의 순서대로 2~N번째
                         const visibleGroups = groups.filter(g => selectedGroups.includes(g));
                         const combinedGroup = visibleGroups.find(g => g === '마이비+누비+쏭레브');
@@ -443,7 +432,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                         const lastIdx = chartData.length - 1;
                         const labelFormatter = viewMode === 'growth' || viewMode === 'profitRate' ? formatPercent : formatMillions;
                         return ordered.map((group, i) => {
-                            const style = getSeriesStyle(i, palette);
+                            const style = seriesStyleForMode(i, viewMode);
                             return (
                                 <Line
                                     key={group}

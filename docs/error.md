@@ -499,6 +499,44 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 
 ---
 
+## 20. 차트 라벨 통일 — "모든 차트 적용" 지시에 viewMode/timeUnit 조건 차단 케이스 누락 (자가검증 실패)
+
+작성일: 2026-05-19
+
+### 🚨 증상
+- 사용자 요청: "차트마다 데이터 포인트 라벨이 너무 많아서 지저분하니 가장 최근 1개만 표시. 모든 그래프 다 적용."
+- 1차 작업: 8개 파일의 `LabelList`/인라인 `label` prop에 `lastIndex` 기반 콜백 적용 후 푸시(`077ec14`).
+- 사용자가 `/monthly-review`, `/custom-dashboard`에서 확인 → "마지막 레이블이 표현 안 된 것들이 있다"며 스크린샷 2장 제시.
+  - 이미지 1: `details/page.tsx` 브랜드 비교 차트 (이커머스 브랜드별) → 라벨 자체가 없음
+  - 이미지 2: `/custom-dashboard` 메인 차트 (매출액 모드) → 라벨 미표시
+
+### 🧭 원인
+3가지 차단 패턴이 1차 작업에 반영되지 않음:
+
+| 패턴 | 차단 메커니즘 | 해당 차트 |
+|---|---|---|
+| 1. LabelList 자체가 없음 | 원래 라벨이 정의되지 않은 차트 (변경 없음으로 분류) | `details/page.tsx` 브랜드 비교 4 Line, `Chart2YoYTrend`, `Chart3MainVsCoupang` |
+| 2. viewMode 조건 차단 | `showLabel = viewMode !== 'sales' && viewMode !== 'daily'` | `SalesChartNew` (매출액/일평균 모드) |
+| 3. day/daily 모드 차단 | `{timeUnit === 'month' && (...)}` 또는 `{!isDaily && (...)}` | `ChannelSalesChartNew`, `DetailedSalesChartNew`, `ProductSearchChart`, `DynamicAnalysisSection`, `details/page.tsx` 첫 차트 |
+
+이전 코드에서 위 조건들은 "데이터 포인트가 N개 다 찍히면 dense해서 가독성 ↓"를 우려해 막아둔 것. 마지막 1개만 표시하는 새 규약에서는 무효한 조건. 그러나 1차 작업 시 "조건 안의 LabelList"만 수정하고 "조건 자체"는 그대로 둠.
+
+핵심 실수: "모든 차트에 적용" 지시를 "각 차트 파일의 LabelList 컴포넌트에 적용"으로 좁게 해석. mode/timeUnit이 라벨 자체를 막고 있는 차트는 적용 범위에서 누락됨을 자가검증하지 못함.
+
+### ✅ 해결 (보강 작업, 커밋 `12a4277`)
+- 패턴 2/3: 모든 mode/timeUnit/isDaily 조건 제거 — 어떤 보기에서도 마지막 라벨 노출.
+- 패턴 1: `LabelList` 신규 추가 (lastIndex 콜백). 2 Line 차트(`Chart2YoYTrend`, `Chart3MainVsCoupang`)는 라인이 가까이 위치할 수 있어 1번째 라인 `position="top"`, 2번째 `position="bottom"`으로 분리.
+- 영향 파일 8개, 문서: `design_document.md §8.11-A` 보강 섹션, `history.md 8회차 §8` 추가.
+
+### 💡 향후 권장
+
+1. **"모든 차트 적용" 지시 시 차트 매트릭스 작성** — 적용 직후 (a) 파일 × (b) viewMode × (c) timeUnit 조합을 표로 만들고 각 셀에서 라벨/스타일/애니메이션 등 변경이 실제 가시화되는지 1회 점검. 코드 grep만으로는 "조건문이 차단하고 있는 경우"가 안 잡힘.
+2. **`viewMode/timeUnit/isDaily` 조건문 우선 탐지** — 가시성 변경 작업 전에 `grep -E "viewMode|timeUnit|isDaily.*(LabelList|label=)"` 같은 패턴으로 조건 차단을 먼저 식별.
+3. **"라벨이 없는 차트도 적용 대상"** — 사용자가 "모든 그래프"라고 했을 때, 기존에 라벨이 있던 차트만이 아니라 라벨이 아예 없던 차트도 신규 추가 후보. 1차 분류에서 "변경 없음"으로 떨어진 차트는 사용자 의도와 어긋날 수 있으므로 별도 컬럼으로 표기하고 명시적 합의받기.
+4. **자가검증 보고서 포맷** — 적용 후 사용자에게 보고할 때 "적용 완료" 한 줄이 아니라 "(파일 N개, 라벨 K개) + 조건문 영향 받는 케이스 별도 명시"로 구체화. 사용자가 "이 케이스는 의도 맞아?"를 자기 검토할 여지를 남김.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -509,3 +547,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 7. **차트 컴포넌트 적용 체크리스트** — wrapper / 컨트롤 / stroke·fill 3축 동시 검증 (§14 권장 1번 참조).
 8. **차트 매핑 의미 체계 합의 사전화** — 디자인 시스템 적용 초기 단계에 "위계 기반 vs 데이터 종류 기반"을 먼저 결정 (§15 권장 1번 참조).
 9. **시각적 reference 사전 특정 SOP** — 사용자가 과거 동작을 언급할 때 추측 금지, 위치부터 확인 (§18 권장 1번 참조).
+10. **차트 매트릭스 점검 SOP** — "모든 차트 적용" 지시는 파일 × viewMode × timeUnit 매트릭스로 자가검증 (§20 권장 1·2번 참조).

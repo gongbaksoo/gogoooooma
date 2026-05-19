@@ -20,7 +20,7 @@ interface SummaryResponse {
     title: string;
     series_names: string[];
     colors: string[];
-    data: { month: string; value1: number; value2: number }[];
+    data: { month: string; values: number[] }[];
   };
 }
 

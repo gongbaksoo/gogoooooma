@@ -266,19 +266,35 @@ def get_summary(
         })
 
     # ----- chart3: 파트별 동적 비교 — 최근 12개월 -----
-    # part=all → 이커머스 vs 오프라인 (파트구분 기반)
-    # part=ecommerce/offline → 주력채널 vs 쿠팡(사입) (주력채널 컬럼 기반)
+    # part=all      → 이커머스 vs 오프라인 (파트구분 기반)
+    # part=ecommerce → 주력채널 vs 쿠팡(사입) (주력채널 컬럼 기반)
+    # part=offline  → 이마트 vs 롯데마트 vs 다이소 (거래처명 R열 기준)
     if part == "all":
-        df_a = df[df["파트구분"] == "이커머스"]
-        df_b = df[df["파트구분"] == "오프라인"]
+        series_frames = [
+            df[df["파트구분"] == "이커머스"],
+            df[df["파트구분"] == "오프라인"],
+        ]
         title = "이커머스 vs 오프라인"
         series_names = ["이커머스", "오프라인"]
         colors = ["#000000", "#5d5d5d"]
-    else:
+    elif part == "offline":
+        if "거래처명" not in df.columns:
+            raise HTTPException(status_code=400, detail="CSV에 '거래처명' 컬럼(R열)이 없습니다.")
+        series_frames = [
+            df_part[df_part["거래처명"] == "이마트"],
+            df_part[df_part["거래처명"] == "롯데마트"],
+            df_part[df_part["거래처명"] == "다이소"],
+        ]
+        title = "이마트 vs 롯데마트 vs 다이소"
+        series_names = ["이마트", "롯데마트", "다이소"]
+        colors = ["#000000", "#5d5d5d", "#7d7d7d"]
+    else:  # ecommerce
         if "주력 채널" not in df.columns:
             raise HTTPException(status_code=400, detail="CSV에 '주력 채널' 컬럼이 없습니다.")
-        df_a = df_part[df_part["주력 채널"] == "주력"]
-        df_b = df_part[df_part["주력 채널"] == "주력(쿠팡)"]
+        series_frames = [
+            df_part[df_part["주력 채널"] == "주력"],
+            df_part[df_part["주력 채널"] == "주력(쿠팡)"],
+        ]
         title = "주력채널 vs 쿠팡(사입)"
         series_names = ["주력채널", "쿠팡(사입)"]
         colors = ["#000000", "#ff0066"]
@@ -288,8 +304,7 @@ def get_summary(
         yymm = f"{str(y)[-2:]}{str(m).zfill(2)}"
         chart3_data.append({
             "month": f"{y}-{str(m).zfill(2)}",
-            "value1": float(df_a[df_a["월구분"] == yymm]["판매액"].sum()),
-            "value2": float(df_b[df_b["월구분"] == yymm]["판매액"].sum()),
+            "values": [float(f[f["월구분"] == yymm]["판매액"].sum()) for f in series_frames],
         })
 
     chart3 = {

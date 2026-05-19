@@ -573,6 +573,44 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 
 ---
 
+## 22. 백엔드 미배포 상태에서 API 구조 변경 → Vercel 프론트 client-side crash (화이트스크린)
+
+작성일: 2026-05-19
+
+### 🚨 증상
+- Vercel 프론트 `gogoooooma.vercel.app/monthly-review` 접속 시 화이트스크린.
+- 브라우저 콘솔: "Application error: a client-side exception has occurred"
+- 직전 작업: chart3 응답 구조를 array → object `{title, series_names, colors, data}`로 변경, `git push` 완료.
+
+### 🧭 원인
+- **§19와 동일한 Mac Mini 비자동 배포** + **이번엔 API 응답 스키마가 변했다는 점이 결합**.
+- 시퀀스:
+  1. `git push` → Vercel은 자동 빌드 (프론트는 신규 object 구조 기대).
+  2. Mac Mini는 자동 배포 안 됨 — 백엔드는 옛 array 구조 응답.
+  3. 프론트가 `chart3.title` / `chart3.series_names`를 읽는데 array에는 그 키 없음 → `undefined` 액세스 → React 렌더 중 throw → client-side crash.
+- §19는 404 (네트워크 레벨), 본 §22는 200 응답 + JS 런타임 크래시 — **더 나쁜 UX**.
+
+### ✅ 해결
+1. `curl`로 운영 응답 구조 확인 (`OLD (array)` 검출).
+2. 사용자가 Mac Mini에서 직접:
+   ```bash
+   cd ~/Desktop/Vibe\ Coding/AVK_Sales
+   git pull origin main
+   launchctl kickstart -k gui/$(id -u)/com.avk.backend
+   ```
+3. 외부 curl로 `NEW (object)` 확인 + Vercel 페이지 200 OK 재확인.
+
+### 💡 향후 권장 (배포 운영 SOP)
+1. **API 구조 변경 시 배포 순서 명문화**:
+   - Breaking change면 **백엔드 먼저** 배포 → 검증 → 프론트 배포 순서로 분리.
+   - Non-breaking(필드 추가)이면 동시 배포 가능.
+   - 본 케이스는 array → object 라 명백한 breaking — 원칙 어김.
+2. **Mac Mini 자동 배포 도입** (§19 권장 누적 반복) — 더 미룰수록 비슷한 incident 누적. webhook 또는 cron `git pull && launchctl kickstart`.
+3. **프론트엔드 방어 코드**: `chart3 && typeof chart3 === 'object' && !Array.isArray(chart3)` 같은 타입 가드로 크래시 대신 "데이터 로드 실패" 메시지 표시. 운영 incident에서 화이트스크린 대신 readable error.
+4. **배포 후 헬스체크 자동화**: 백엔드 재시작 후 curl로 신규 엔드포인트 응답 구조까지 점검하는 간단한 smoke test 스크립트 (`scripts/deploy-check.sh`).
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.

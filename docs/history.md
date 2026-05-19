@@ -4,6 +4,50 @@
 
 ---
 
+## 2026-05-19 (10회차) — Vercel client-side crash 응급 복구 + 배포 SOP 명문화
+
+### 1. 배경
+- 9회차에서 chart3 응답 구조를 array → object로 변경 + 문서 커밋·푸시 완료.
+- 사용자가 `gogoooooma.vercel.app/monthly-review` 접속 → **화이트스크린 + "Application error: client-side exception"**.
+
+### 2. 원인 진단
+- `curl` 즉시 점검 → 운영 백엔드 응답이 여전히 OLD array 구조 (12-row 배열).
+- 프론트(Vercel)는 자동 빌드되어 신규 object 구조 기대 → 백엔드/프론트 스키마 미스매치 → React 렌더 중 `undefined.title` 액세스 → throw → crash.
+- 본질적으로는 §19의 "Mac Mini 비자동 배포" 함정이지만, 이번엔 단순 404가 아니라 **JS 런타임 크래시(화이트스크린)** 라는 더 나쁜 UX로 표출.
+
+### 3. 응급 복구
+사용자가 Mac Mini에 물리적으로 있어 명령만 전달:
+```bash
+cd ~/Desktop/Vibe\ Coding/AVK_Sales
+git pull origin main
+launchctl kickstart -k gui/$(id -u)/com.avk.backend
+```
+사용자 보고 후 외부 검증:
+
+| 검증 | 결과 |
+|---|---|
+| `/api/health` | 200 OK |
+| `summary?part=all` chart3 | NEW object — `title="이커머스 vs 오프라인"`, series `[이커머스, 오프라인]`, colors `[#000, #5d5d5d]`, data 12개 |
+| `summary?part=ecommerce` chart3 | NEW object — `title="주력채널 vs 쿠팡(사입)"` |
+| 2026-02 last point (all) | 이커머스 355.8M / 오프라인 7.0M |
+| Vercel `/monthly-review` | 200 OK + 정상 렌더 |
+
+### 4. 회고 (error.md §22)
+- breaking API 변경의 배포 순서를 잘못 잡은 책임 — 본래 백엔드 먼저 배포·검증 후 프론트 배포가 안전.
+- §19(2회차 발생) + §22(3회차 발생) — 동일 함정이 3회 반복. Mac Mini 자동 배포가 사실상 필수.
+
+### 5. 산출물 (코드 변경 없음, 운영 + 문서만)
+- 운영: Mac Mini `git pull` + `launchctl kickstart` 1회.
+- 문서: `project_plan.md` 운영 동작 상태 보강 (배포 운영 규칙 한 줄 추가) / `error.md §22 신규` (incident postmortem + 4가지 권장) / `history.md` 본 10회차.
+
+### 6. 후속 권장 (우선순위)
+1. **Mac Mini 자동 배포 도입** — webhook 또는 cron `*/2 * * * * cd ... && git pull -q && launchctl kickstart -k gui/$(id -u)/com.avk.backend`. 3회 반복된 함정 차단.
+2. **프론트엔드 방어 코드** — `chart3 && typeof chart3 === 'object' && !Array.isArray(chart3)` 같은 타입 가드로 크래시 대신 fallback UI.
+3. **smoke test 스크립트** — 배포 후 신규 엔드포인트 응답 구조까지 자동 점검 (`scripts/deploy-check.sh`).
+4. **API 구조 변경 배포 SOP** — breaking change는 백엔드 먼저, non-breaking은 동시 배포 가능. project_plan / 새 SOP 문서에 명문화.
+
+---
+
 ## 2026-05-19 (9회차) — Chart 3 파트별 동적 전환 + 운영 목표 파일 동기화
 
 ### 1. 배경

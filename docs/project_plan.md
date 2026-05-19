@@ -125,10 +125,12 @@ sales-analysis-site/
     - `part=all` (전체) → **이커머스 vs 오프라인** (파트구분 기반, 색 `#000`/`#5d5d5d`)
     - `part=ecommerce|offline` → **주력채널 vs 쿠팡(사입)** (주력채널 컬럼 기반, 색 `#000`/`#ff0066`)
     - 백엔드 응답: `{title, series_names, colors, data: [{month, value1, value2}]}` 객체 구조 — 프론트엔드가 메타데이터로 동적 렌더링
-- **운영 동작 상태** (2026-05-19 검증):
+- **운영 동작 상태** (2026-05-19 최종 검증):
   - Mac Mini 백엔드 `launchctl kickstart -k gui/$(id -u)/com.avk.backend` 으로 코드 반영
   - `https://api.gongbaksoo.com/api/monthly-review/{months, targets, summary}` 모두 200 OK
+  - chart3 신규 object 구조(`{title, series_names, colors, data}`) 응답 — `all`/`ecommerce` 양쪽 모드 검증 완료
   - Vercel 프론트 `https://gogoooooma.vercel.app/monthly-review` 200 OK + 차트 정상 렌더
+  - **배포 운영 규칙**: API 응답 구조 변경 시 백엔드(Mac Mini)와 프론트(Vercel)를 **동시 배포** 필요 — 미스매치 시 client-side crash. 운영 절차는 `docs/error.md §22` 참조.
 - **Phase 2 차트 (예정)**: 브랜드별, 상품별, 채널 유형별 — PPT 잔여 12개 차트 추가 구현
 - **매핑 규약**:
   - 파트 필터: `all` → 필터X / `ecommerce` → `파트구분 == '이커머스'` / `offline` → `파트구분 == '오프라인'`

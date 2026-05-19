@@ -26,7 +26,8 @@ import ChartVisibilityModal, {
 import BrandSection from "@/components/monthly-review/BrandSection";
 import {
   Brand,
-  BrandSelections,
+  BrandSelection,
+  PartScopedBrandSelections,
   loadBrandSelections,
   saveBrandSelections,
   DEFAULT_BRAND_SELECTIONS,
@@ -107,7 +108,7 @@ export default function MonthlyReviewPage() {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [visibility, setVisibility] = useState<VisibilityMap>(defaultVisibility());
   const [visibilityModalOpen, setVisibilityModalOpen] = useState(false);
-  const [brandSelections, setBrandSelections] = useState<BrandSelections>(DEFAULT_BRAND_SELECTIONS);
+  const [brandSelections, setBrandSelections] = useState<PartScopedBrandSelections>(DEFAULT_BRAND_SELECTIONS);
   const [channelSelections, setChannelSelections] = useState<ChannelSelections>(DEFAULT_CHANNEL_SELECTIONS);
 
   // 마운트 시 localStorage에서 모든 selections 복원 (SSR 안전)
@@ -117,9 +118,12 @@ export default function MonthlyReviewPage() {
     setChannelSelections(loadChannelSelections());
   }, []);
 
-  const updateBrandSelection = (brand: Brand, next: BrandSelections[Brand]) => {
+  const updateBrandSelection = (p: Part, brand: Brand, next: BrandSelection) => {
     setBrandSelections((prev) => {
-      const updated = { ...prev, [brand]: next };
+      const updated = {
+        ...prev,
+        [p]: { ...prev[p], [brand]: next },
+      };
       saveBrandSelections(updated);
       return updated;
     });
@@ -511,12 +515,12 @@ export default function MonthlyReviewPage() {
           </div>
         )}
 
-        {salesFile && loading && (
+        {salesFile && !summary && loading && (
           <div className="text-center text-[13px] text-[#5d5d5d] py-12">불러오는 중...</div>
         )}
 
         {/* 차트 그리드 — 섹션 내 visible 차트만 렌더, 섹션 안에 visible 차트 0개면 섹션도 숨김 */}
-        {summary && !loading && (() => {
+        {summary && (() => {
           const sectionGroups: { title: string; charts: { id: keyof VisibilityMap; el: React.ReactNode }[] }[] = [
             {
               title: "종합",
@@ -578,13 +582,13 @@ export default function MonthlyReviewPage() {
                 </h2>
                 {(["마이비", "누비", "쏭레브"] as Brand[]).map((brand) => (
                   <BrandSection
-                    key={brand}
+                    key={`${part}-${brand}`}
                     brand={brand}
                     totalChart={brandTotalMap[brand]}
                     products={summary.brand_products[brand] ?? []}
                     months={summary.brand_products_months}
-                    selection={brandSelections[brand]}
-                    onSelectionChange={(next) => updateBrandSelection(brand, next)}
+                    selection={brandSelections[part][brand]}
+                    onSelectionChange={(next) => updateBrandSelection(part, brand, next)}
                   />
                 ))}
               </div>

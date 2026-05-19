@@ -4,6 +4,60 @@
 
 ---
 
+## 2026-05-19 (18회차) — 브랜드 상세 파트별 selection + 스크롤 위치 보존
+
+### 1. 배경
+- 사용자 요청 1: "브랜드 상세 내역들도 전체/이커머스/오프라인마다 다르게 사용자가 설정하고 싶은데"
+- 사용자 요청 2 (버그 리포트): "파트 클릭할 때마다 다시 화면이 맨 위로 올라가는데 위치 변경 없이 그 자리에서 변경할 수 있니"
+
+### 2. 사용자 합의 사항
+1. **브랜드 selection 파트별 독립 저장** — ChannelSection의 part-scoped 패턴과 통일.
+2. **마이그레이션**: 기존 단일 selection을 3 파트 모두에 복사 (a안 — 자연스러운 사용자 경험).
+3. **스크롤 버그 해결 방식**: A안 (차트 그리드 unmount 안 함).
+
+### 3. 구현
+#### 브랜드 selection 파트별 독립 저장
+- `brandSelectionStorage.ts`:
+  - 타입 신설: `PartScopedBrandSelections = Record<Part, BrandSelections>`
+  - `loadBrandSelections()`에 **v1→v2 마이그레이션** 추가:
+    - 최상위 키에 `all/ecommerce/offline` 없고 브랜드 키만 있으면 v1으로 판별
+    - 3 파트(`all/ecommerce/offline`)에 동일 selection 복사 → v2로 즉시 저장
+    - 다음 로드부터 자동으로 v2 인식
+  - `DEFAULT_BRAND_SELECTIONS` 구조 변경: 3 파트 모두 PPT 언급 상품 default 유지
+- `page.tsx`:
+  - state 타입: `BrandSelections` → `PartScopedBrandSelections`
+  - 헬퍼: `updateBrandSelection(part, brand, next)` 시그니처
+  - BrandSection 렌더: `selection={brandSelections[part][brand]}`, `key={\`${part}-${brand}\`}` (part 전환 시 깔끔 remount)
+- `BrandSection.tsx`: **변경 없음** (props 기반이라 영향 없음)
+
+#### 스크롤 위치 보존
+- `page.tsx`:
+  - 차트 그리드 조건: `{summary && !loading && (...)}` → `{summary && (...)}` (loading 무시)
+  - "불러오는 중..." 조건: `{salesFile && loading}` → `{salesFile && !summary && loading}` (초기 로드만)
+- 결과: 파트 토글 시 이전 차트가 그대로 보인 채 새 데이터 도착 → 페이지 높이 변동 없음 → 스크롤 위치 보존
+
+### 4. 검증
+- `npm run build` 통과 (TypeScript 타입 검증).
+- 로컬 dev 서버에서 브라우저 검증 — 파트 토글 시 스크롤 위치 그대로 + 각 파트별 brand selection 독립 저장 확인 예정.
+
+### 5. 산출물
+- 수정: `brandSelectionStorage.ts` (PartScopedBrandSelections + 마이그레이션) / `page.tsx` (state 타입·헬퍼·조건부 렌더)
+- 문서: design_document §2.3.3.6 localStorage v2 + §2.3.3.10 스크롤 보존 규약 신설 / project_plan §4.7 v2 구조 명기 / error.md §26 스크롤 리셋 회고 / history 본 18회차
+
+### 6. 알려진 제약 (§24 동일 패턴)
+- 전체 탭에서 선택한 상품이 이커머스/오프라인 옵션 풀에 없으면 그 파트에서 빈 selection으로 보일 수 있음.
+- 해결: 해당 파트 탭에서 "표시 상품 수정"으로 재선택.
+- 향후: storage 마이그레이션 시 옵션 풀 검증 + default fallback 로직 (§24 권장 1번과 통합).
+
+### 7. Phase 후속 항목 (변동 없음)
+1. 이번 회차 운영 배포 — 프론트만 변경이라 `git push` 후 Vercel 자동 빌드.
+2. storage 마이그레이션 시 옵션 풀 검증 로직 (channel + brand 통합).
+3. xlsx 직접 업로드 (보류).
+4. Mac Mini 자동 배포.
+5. chart3 컴포넌트 리네임.
+
+---
+
 ## 2026-05-19 (17회차) — 타이포 단일 패밀리 강제: `font-mono` 4개소 일괄 제거
 
 ### 1. 배경

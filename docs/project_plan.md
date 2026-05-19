@@ -160,7 +160,9 @@ sales-analysis-site/
   - **백엔드 응답 신규 필드**:
     - `brand_products`: `{ "마이비": [{name, row_count, values[12]}], "누비": [...], "쏭레브": [...] }` — 각 브랜드의 모든 S열 옵션 + 12개월 매출 데이터
     - `brand_products_months`: `["2025-01", ...]` 12개월 라벨 배열
-  - **localStorage 저장 키**: `avk_monthly_review_brand_selections` — `{ 마이비: { mainLine, individual }, 누비, 쏭레브 }`
+  - **localStorage 저장 키**: `avk_monthly_review_brand_selections`
+    - **v2 구조 (2026-05-19 17회차 — 파트별 독립 저장)**: `{ all: {마이비, 누비, 쏭레브}, ecommerce: {...}, offline: {...} }` 각 브랜드 = `{ mainLine, individual }`
+    - **v1 → v2 마이그레이션**: 기존 단일 selection을 3 파트 모두에 복사 후 v2로 저장 (자동)
   - **기본 선택값** (PPT 언급 상품): 마이비 5(순한라인/얼룩제거제/삶기세제/건조기시트/구강티슈) / 누비 3(롱핸들/스텐 물병/정글 물병) / 쏭레브 4(키즈 샴푸/핸드워시/클렌징 젤/바디 크림)
 - **차트 표시 모달 (ChartVisibilityModal)**:
   - 종합 / 브랜드 종합 / 채널 종합 (chart 1~9)만 토글 대상

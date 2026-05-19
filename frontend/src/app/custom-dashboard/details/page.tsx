@@ -44,8 +44,9 @@ interface ComprehensiveData {
 }
 
 const CustomLabel = (props: any) => {
-    const { x, y, value, fill, formatter } = props;
+    const { x, y, value, fill, formatter, index, lastIndex } = props;
     if (value === undefined || value === null) return null;
+    if (typeof lastIndex === 'number' && index !== lastIndex) return null;
     return (
         <text
             x={x}
@@ -166,7 +167,7 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             animationDuration={1500}
                             animationEasing="ease-out"
                         >
-                            {!isDaily && <LabelList dataKey={mode === 'total' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} />} />}
+                            {!isDaily && <LabelList dataKey={mode === 'total' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} lastIndex={chartData.length - 1} />} />}
                         </Line>
 
                         <Line
@@ -181,7 +182,7 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             animationDuration={1500}
                             animationEasing="ease-out"
                         >
-                            {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ff0066" formatter={formatPercent} />} />}
+                            {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ff0066" formatter={formatPercent} lastIndex={chartData.length - 1} />} />}
                         </Line>
                     </ComposedChart>
                 </ResponsiveContainer>

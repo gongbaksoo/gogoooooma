@@ -4,6 +4,53 @@
 
 ---
 
+## 2026-05-19 (8회차) — 차트 데이터 값 레이블 정리 (마지막 시점만 표시)
+
+### 1. 배경
+- 사용자가 `/monthly-review` 페이지에서 그래프 확인 중 "레이블이 너무 많아서 지저분해보인다" 지적.
+- 모든 시계열 차트의 데이터 포인트마다 값 레이블이 찍혀서 글자가 겹치고 가독성이 떨어짐.
+- 트렌드는 선/막대 모양으로 충분히 보이고, 실제로 알고 싶은 값은 "가장 최근" 시점 하나.
+
+### 2. 결정 사항
+- **"가장 최근 = 마지막 데이터 포인트 1개"** 에만 값 레이블 표시.
+- 적용 범위: 데이터 값 레이블(LabelList)만. X축 눈금이나 축 레이블은 그대로 유지.
+- 모든 시계열 차트에 일관 적용 (`/monthly-review`, `/custom-dashboard`, `/custom-dashboard/details`).
+
+### 3. 구현 방식
+- 각 차트 파일의 `CustomLabel` 컴포넌트에 `lastIndex` prop 추가.
+- `content` 콜백 안에서 `index !== lastIndex`이면 `null` 반환, 그 외 기존 `<text>` 렌더.
+- 인라인 `<Line label={{ ... }} />` 패턴은 `<LabelList content={(p) => ...}>` 자식 패턴으로 변환하여 통일.
+- `lastIndex={chartData.length - 1}` 형태로 각 차트가 사용 중인 데이터 배열 길이를 전달.
+
+### 4. 적용 내역 (8개 파일)
+
+| 파일 | 변경 |
+|------|------|
+| `frontend/src/components/SalesChartNew.tsx` | 인라인 label → LabelList 변환, lastIndex 적용 |
+| `frontend/src/components/ChannelSalesChartNew.tsx` | CustomLabel + lastIndex, LabelList 2곳 |
+| `frontend/src/components/DetailedSalesChartNew.tsx` | CustomLabel + lastIndex, LabelList 2곳 |
+| `frontend/src/components/ProductSearchChart.tsx` | CustomLabel + lastIndex, LabelList 2곳 |
+| `frontend/src/components/ProductGroupChartNew.tsx` | 인라인 label → LabelList 변환, lastIndex 적용 |
+| `frontend/src/components/DynamicAnalysisSection.tsx` | CustomLabel + lastIndex, LabelList 2곳 |
+| `frontend/src/components/monthly-review/Chart1Achievement.tsx` | LabelList content 콜백, 실적(마지막)에만 |
+| `frontend/src/app/custom-dashboard/details/page.tsx` | CustomLabel + lastIndex, LabelList 2곳 |
+
+### 5. 예외 처리
+- `Chart2YoYTrend`, `Chart3MainVsCoupang` — 원래 데이터 값 레이블이 없음 → 변경 없음.
+- 브랜드 비교 차트(`details/page.tsx` 내 4 Line) — 원래 라벨이 없음 → 변경 없음.
+- `Chart1Achievement` — 시계열은 아니지만 막대 2개(사업계획·실적) 중 마지막=실적에만 값 표시. 의도와 부합 (사업계획은 막대 높이와 별도 표시되는 달성률 %로 충분히 확인 가능).
+
+### 6. 검증
+- TypeScript: 기존 pre-existing 에러(Tooltip formatter types, comparisonData type) 외 새 에러 없음 확인.
+- Vercel 빌드 설정에 Skip TypeScript build errors 적용되어 있어 배포는 통과.
+
+### 7. 산출물
+- `docs/design_document.md` §8.11 신규 섹션 추가.
+- `docs/history.md` 본 섹션 추가.
+- 커밋: (다음 단계에서 작성).
+
+---
+
 ## 2026-05-19 (7회차) — 월 리뷰 Phase 1 운영 배포 + Production 검증
 
 ### 1. 배경

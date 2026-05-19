@@ -66,7 +66,26 @@ export default function Chart1Achievement({
                 {chartData.map((d, i) => (
                   <Cell key={i} fill={d.color} />
                 ))}
-                <LabelList dataKey="value" position="top" style={{ fontSize: 12, fill: "#000" }} />
+                <LabelList
+                  dataKey="value"
+                  position="top"
+                  content={(props: any) => {
+                    const { x, y, width, value, index } = props;
+                    if (index !== chartData.length - 1) return null;
+                    if (value === undefined || value === null) return null;
+                    return (
+                      <text
+                        x={Number(x) + Number(width) / 2}
+                        y={Number(y) - 6}
+                        fill="#000"
+                        fontSize={12}
+                        textAnchor="middle"
+                      >
+                        {value.toLocaleString()}
+                      </text>
+                    );
+                  }}
+                />
               </Bar>
             </BarChart>
           </ResponsiveContainer>

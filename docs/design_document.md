@@ -520,3 +520,62 @@ key 구성에 포함할 상태는 차트마다 다름:
 
 총 `<Line>`·`<Bar>` 22개에 동일 props 적용. 1:1 매칭으로 누락 없음 검증 완료.
 
+### 8.11 차트 데이터 값 레이블 — 최신 시점만 표시 규약 (2026-05-19 적용)
+
+#### 원칙
+
+차트가 시계열 데이터를 표시할 때, 각 데이터 포인트 위에 값을 모두 찍으면 글자가 겹치고 시각적으로 지저분해짐. **마지막(가장 최근) 데이터 포인트 하나에만** 값 레이블을 표시.
+
+- 의도: 트렌드는 선/막대 그래프의 형상으로 충분히 전달되며, 사용자가 가장 알고 싶어 하는 값은 "지금/최근" 값.
+- 적용: `LabelList`의 `content` 콜백에서 `index === lastIndex`일 때만 `<text>` 반환, 그 외 `null`.
+
+#### 표준 패턴
+
+각 차트 파일의 `CustomLabel` 컴포넌트에 `lastIndex` prop 추가:
+
+```jsx
+const CustomLabel = (props: any) => {
+    const { x, y, value, fill, formatter, index, lastIndex } = props;
+    if (value === undefined || value === null) return null;
+    if (typeof lastIndex === 'number' && index !== lastIndex) return null;
+    return (
+        <text x={x} y={y} dy={-10} fill={fill} fontSize={10} textAnchor="middle" fontWeight="bold">
+            {formatter ? formatter(value) : value}
+        </text>
+    );
+};
+```
+
+사용처:
+
+```jsx
+<LabelList
+    dataKey="..."
+    position="top"
+    content={<CustomLabel fill="#000" formatter={formatMillions} lastIndex={chartData.length - 1} />}
+/>
+```
+
+#### 인라인 label prop은 LabelList로 변환
+
+기존 `<Line label={{ position: 'top', formatter: ..., style: ... }} />` 인라인 패턴은 `<LabelList content={(p) => ...}>` 자식 패턴으로 통일. content 콜백 내에서 `index !== lastIdx`일 때 `null` 반환.
+
+#### 적용 범위
+
+| 파일 | 변경 |
+|------|------|
+| `SalesChartNew.tsx` | 인라인 `label` → `LabelList content` 변환, lastIndex 적용 |
+| `ChannelSalesChartNew.tsx` | CustomLabel에 lastIndex prop, LabelList 2곳 |
+| `DetailedSalesChartNew.tsx` | CustomLabel에 lastIndex prop, LabelList 2곳 |
+| `ProductSearchChart.tsx` | CustomLabel에 lastIndex prop, LabelList 2곳 |
+| `ProductGroupChartNew.tsx` | 인라인 `label` → `LabelList content` 변환, lastIndex 적용 |
+| `DynamicAnalysisSection.tsx` | CustomLabel에 lastIndex prop, LabelList 2곳 |
+| `monthly-review/Chart1Achievement.tsx` | LabelList content 콜백, 실적(마지막)에만 표시 |
+| `app/custom-dashboard/details/page.tsx` | CustomLabel에 lastIndex prop, LabelList 2곳 |
+
+브랜드 비교 차트(`details/page.tsx`의 4 Line) 및 `monthly-review/Chart2`·`Chart3`은 원래 데이터 값 레이블이 없어서 변경 없음.
+
+#### 예외
+
+`Chart1Achievement`은 시계열이 아니라 사업계획 vs 실적 비교(막대 2개). 규약을 그대로 적용하여 마지막(=실적)에만 값을 표시. 의도와 부합 (사업계획은 막대 높이와 달성률 %로 확인 가능).
+

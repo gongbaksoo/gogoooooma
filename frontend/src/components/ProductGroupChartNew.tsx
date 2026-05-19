@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
 
@@ -440,6 +440,8 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                         const combinedGroup = visibleGroups.find(g => g === '마이비+누비+쏭레브');
                         const otherGroups = visibleGroups.filter(g => g !== '마이비+누비+쏭레브');
                         const ordered = combinedGroup ? [combinedGroup, ...otherGroups] : otherGroups;
+                        const lastIdx = chartData.length - 1;
+                        const labelFormatter = viewMode === 'growth' || viewMode === 'profitRate' ? formatPercent : formatMillions;
                         return ordered.map((group, i) => {
                             const style = getSeriesStyle(i, palette);
                             return (
@@ -454,12 +456,30 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                                     activeDot={{ r: style.activeR }}
                                     animationDuration={1500}
                                     animationEasing="ease-out"
-                                    label={{
-                                        position: 'top',
-                                        formatter: viewMode === 'growth' || viewMode === 'profitRate' ? formatPercent : formatMillions,
-                                        style: { fontSize: '10px', fill: style.stroke, fontWeight: i === 0 ? 'bold' : 'normal' }
-                                    }}
-                                />
+                                >
+                                    <LabelList
+                                        dataKey={group}
+                                        position="top"
+                                        content={(p: any) => {
+                                            const { x, y, value, index } = p;
+                                            if (index !== lastIdx) return null;
+                                            if (value === undefined || value === null) return null;
+                                            return (
+                                                <text
+                                                    x={x}
+                                                    y={y}
+                                                    dy={-8}
+                                                    fill={style.stroke}
+                                                    fontSize={10}
+                                                    textAnchor="middle"
+                                                    fontWeight={i === 0 ? 'bold' : 'normal'}
+                                                >
+                                                    {labelFormatter(value)}
+                                                </text>
+                                            );
+                                        }}
+                                    />
+                                </Line>
                             );
                         });
                     })()}

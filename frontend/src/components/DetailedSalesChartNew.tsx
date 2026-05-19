@@ -28,8 +28,9 @@ interface OptionsTree {
 }
 
 const CustomLabel = (props: any) => {
-    const { x, y, value, fill, formatter } = props;
+    const { x, y, value, fill, formatter, index, lastIndex } = props;
     if (value === undefined || value === null) return null;
+    if (typeof lastIndex === 'number' && index !== lastIndex) return null;
     return (
         <text
             x={x}
@@ -760,6 +761,7 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                                     <CustomLabel
                                                         fill={mainColor}
                                                         formatter={labelFormatter}
+                                                        lastIndex={displayData.length - 1}
                                                     />
                                                 }
                                             />
@@ -787,6 +789,7 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
                                                 <CustomLabel
                                                     fill="#ff0066"
                                                     formatter={formatPercent}
+                                                    lastIndex={displayData.length - 1}
                                                 />
                                             }
                                         />

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
 
@@ -454,6 +454,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                                 .map(s => {
                                     const style = seriesStyle(s.idx);
                                     const showLabel = viewMode !== 'sales' && viewMode !== 'daily';
+                                    const lastIdx = chartData.length - 1;
                                     return (
                                         <Line
                                             key={s.key}
@@ -467,8 +468,32 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                                             activeDot={{ r: style.activeR }}
                                             animationDuration={1500}
                                             animationEasing="ease-out"
-                                            label={showLabel ? { position: 'top', formatter: yAxisFormatter, style: { fontSize: '10px', fill: style.stroke, fontWeight: s.idx === 0 ? 'bold' : 'normal' } } : undefined}
-                                        />
+                                        >
+                                            {showLabel && (
+                                                <LabelList
+                                                    dataKey={s.key}
+                                                    position="top"
+                                                    content={(p: any) => {
+                                                        const { x, y, value, index } = p;
+                                                        if (index !== lastIdx) return null;
+                                                        if (value === undefined || value === null) return null;
+                                                        return (
+                                                            <text
+                                                                x={x}
+                                                                y={y}
+                                                                dy={-8}
+                                                                fill={style.stroke}
+                                                                fontSize={10}
+                                                                textAnchor="middle"
+                                                                fontWeight={s.idx === 0 ? 'bold' : 'normal'}
+                                                            >
+                                                                {yAxisFormatter(value)}
+                                                            </text>
+                                                        );
+                                                    }}
+                                                />
+                                            )}
+                                        </Line>
                                     );
                                 });
                         })()}

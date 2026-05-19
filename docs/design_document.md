@@ -809,3 +809,37 @@ if (timeUnit === 'day') {
 월간 모드(`timeUnit === 'month'`/`!isDaily`)의 X축 라벨 로직은 기존 그대로 유지 (1월에만 연도 표시 `"25'1"` 형식).
 
 
+### 8.13 타이포그래피 단일 패밀리 강제 — `font-mono` 사용 금지 (2026-05-19 적용)
+
+#### 배경
+
+§8.2 타이포그래피 규약은 "**단일 패밀리: Pretendard Variable**"을 명시하고 있으나, 일부 화면에서 ID/코드 컬럼 또는 디버그/콘솔 출력에 Tailwind `font-mono` 클래스가 잔존하여 등폭 글꼴이 혼용됨. ProductSearchChart 검색 결과 테이블의 품목코드 셀에서 사용자가 시각 불일치를 지적 (스크린샷).
+
+#### 규약
+
+- **전체 UI에서 `font-mono`(또는 등가의 monospace family) 사용 금지.**
+- ID/코드 컬럼은 정렬이 필요하면 셀 `text-align` + 고정폭 컨테이너로 해결. 글꼴은 Pretendard 유지.
+- 콘솔 로그·디버그 패널도 예외 없음 (이전엔 "터미널 느낌"이 의도라고 판단했으나, 디자인 시스템 단일 패밀리 원칙 우선).
+
+#### 적용 (4개 파일, 4개소 모두 제거)
+
+| 파일 | 위치 | 이전 컨텍스트 |
+|------|------|---------------|
+| `components/ProductSearchChart.tsx:675` | 품목코드 셀 | 검색 결과 테이블 |
+| `app/coupang-orders/page.tsx:165` | 주문 ID 셀 | 쿠팡 주문 목록 |
+| `app/custom-dashboard/page.tsx:250` | 로그 출력 컨테이너 | 검정 배경 콘솔 (배경/색은 유지) |
+| `components/SalesChartNew.tsx:503` | 디버그 `<details>` | 개발 환경 전용 |
+
+#### 검증
+
+```bash
+grep -rn "font-mono" frontend/src --include="*.tsx" --include="*.ts"
+# → 잔여 없음
+```
+
+#### 관련 항목
+
+- §8.2 타이포그래피 단일 패밀리 규약 (원 규약)
+- error.md §25 (디자인 시스템 드리프트 회고)
+
+

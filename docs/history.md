@@ -4,6 +4,46 @@
 
 ---
 
+## 2026-05-19 (17회차) — 타이포 단일 패밀리 강제: `font-mono` 4개소 일괄 제거
+
+### 1. 배경
+- 사용자 캡처 지적: ProductSearchChart 검색 결과 테이블의 품목코드 셀이 "29cm 스타일 글씨체가 아닌 것 같다."
+- 원인: Tailwind `font-mono` 클래스가 4개소 잔존 — 디자인 시스템 §8.2 단일 패밀리(Pretendard) 규약 위반 누락.
+
+### 2. 사용자 합의 사항
+- 적용 범위 선택지 4개 제시 → "프로젝트 전체 (#1~#4)" 채택.
+- 콘솔/디버그 패널의 "터미널 느낌" 의도 예외 인정하지 않기로 결정.
+
+### 3. 수정 내역 (4개 파일, 4개소)
+
+| 파일 | 라인 | 위치 |
+|------|------|------|
+| `frontend/src/components/ProductSearchChart.tsx` | 675 | 품목코드 셀 |
+| `frontend/src/app/coupang-orders/page.tsx` | 165 | 주문 ID 셀 |
+| `frontend/src/app/custom-dashboard/page.tsx` | 250 | 로그 출력 컨테이너 |
+| `frontend/src/components/SalesChartNew.tsx` | 503 | 디버그 `<details>` 패널 |
+
+콘솔 패널은 배경(`bg-black`) + 글자색(`text-[#22c55e]`) 유지하되 글꼴만 Pretendard로.
+
+### 4. 검증
+```bash
+grep -rn "font-mono" frontend/src --include="*.tsx" --include="*.ts"
+# → 잔여 없음
+```
+
+### 5. 산출물
+- design_document.md **§8.13 추가** (타이포 단일 패밀리 강제, `font-mono` 금지 규약)
+- error.md **§25 추가** (디자인 시스템 드리프트 회고)
+- "향후 권장 사항" 11번 추가 (타이포 lint)
+
+### 6. Phase 후속 항목 (변동 없음, 16회차 유지)
+- `api/metadata.db` `.gitignore` 추가
+- 페이지 로컬 `DynamicAnalysisSection` 통합
+- 차트 컬러 토큰 (`#ff0066` 쿠팡) 별도 작업
+- (신규) 타이포·디자인 시스템 lint 도입 검토
+
+---
+
 ## 2026-05-19 (16회차) — 월 리뷰 Sticky 컴팩트 바 (스크롤 트리거 + 핵심 컨트롤 고정)
 
 ### 1. 배경

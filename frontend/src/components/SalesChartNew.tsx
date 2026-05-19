@@ -500,7 +500,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
 
                 {/* Debug Info Section - Only visible in development */}
                 {process.env.NODE_ENV === 'development' && debugLogs.length > 0 && (
-                    <details className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs font-mono text-slate-600">
+                    <details className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600">
                         <summary className="cursor-pointer font-bold mb-2 select-none hover:text-slate-900">
                             Calculation Debug Info (Click to expand)
                         </summary>

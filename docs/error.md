@@ -689,6 +689,33 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 
 ---
 
+## 25. 디자인 시스템 드리프트 — `font-mono` 4개소 잔존 (타이포 단일 패밀리 위반)
+
+작성일: 2026-05-19 (17회차)
+
+### 🚨 증상
+- ProductSearchChart 검색 결과 테이블의 품목코드 컬럼이 등폭(monospace) 글꼴로 렌더링됨.
+- 사용자 캡처 + 지적: "여기는 글씨체가 29cm 스타일이 아닌거같은데?"
+- 동일 패턴(코드/ID 컬럼·콘솔·디버그 패널)에 `font-mono`가 4개소 잔존.
+
+### 🧭 원인
+- design_document §8.2에 "단일 패밀리: Pretendard Variable" 규약이 있었으나, Tailwind 유틸리티(`font-mono`)는 클래스 단위라 규약 lint가 없으면 누락 가능.
+- 과거 작성된 코드(주문 ID 컬럼·디버그 패널)가 디자인 시스템 v8 적용 이전부터 존재했고, §8 도입 시 일괄 정리 SOP에서 grep 대상에서 빠짐.
+- 디버그/콘솔 케이스는 "터미널 느낌 의도" 판단으로 무의식 예외 처리. 사용자 합의는 "예외 없이 전부" 였음.
+
+### ✅ 해결
+1. `grep -rn "font-mono" frontend/src` → 4개소 위치 특정.
+2. 사용자에게 적용 범위 합의 (#1만 / 표 ID만 / 콘솔·디버그 제외 / 전체) → "프로젝트 전체" 선택.
+3. 4개소 모두 `font-mono` 토큰만 제거 (배경·색·사이즈는 유지). 콘솔 패널은 검정 배경 + 녹색 글씨 유지하되 글꼴만 Pretendard로.
+4. design_document §8.13 신설 — 향후 도입 차단.
+
+### 💡 향후 권장
+1. **타이포 토큰 lint** — pre-commit/CI에 `font-mono|font-serif|font-display` 등 비-Pretendard 패밀리 클래스 사용 시 fail. design_document §8.2/§8.13 위반 자동 차단.
+2. **디자인 시스템 도입 시 grep 일괄 점검 체크리스트화** — 새 §추가할 때마다 "기존 코드에 위반 사례 grep" 단계를 SOP에 포함.
+3. **"예외 없음" 명시 규약** — 단일 패밀리·단일 토큰 규약은 "콘솔/디버그도 예외 없음"을 본문에 명문화하여 작업자가 임의 예외 판단을 못 하도록 함.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -700,3 +727,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 8. **차트 매핑 의미 체계 합의 사전화** — 디자인 시스템 적용 초기 단계에 "위계 기반 vs 데이터 종류 기반"을 먼저 결정 (§15 권장 1번 참조).
 9. **시각적 reference 사전 특정 SOP** — 사용자가 과거 동작을 언급할 때 추측 금지, 위치부터 확인 (§18 권장 1번 참조).
 10. **차트 매트릭스 점검 SOP** — "모든 차트 적용" 지시는 파일 × viewMode × timeUnit 매트릭스로 자가검증 (§20 권장 1·2번 참조).
+11. **타이포 단일 패밀리 lint** — `font-mono`/비-Pretendard 패밀리 클래스 사용을 pre-commit/CI에서 차단 (§25 권장 1번 참조).

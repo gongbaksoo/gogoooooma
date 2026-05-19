@@ -672,7 +672,7 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                                     className="w-4 h-4 rounded-sm border-[#c4c4c4] text-black focus:ring-black cursor-pointer"
                                                 />
                                             </td>
-                                            <td className="px-4 py-2 text-black font-mono">{product.code}</td>
+                                            <td className="px-4 py-2 text-black">{product.code}</td>
                                             <td className="px-4 py-2 text-black">{product.name}</td>
                                         </tr>
                                     ))}

@@ -162,7 +162,7 @@ export default function CoupangOrdersPage() {
                                                     {new Date(order.paidAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 font-mono text-xs text-slate-500">
+                                            <td className="px-6 py-4 text-xs text-slate-500">
                                                 {order.orderId}
                                             </td>
                                             <td className="px-6 py-4 font-medium text-slate-800 max-w-xs truncate" title={order.productName || "상품명 없음"}>

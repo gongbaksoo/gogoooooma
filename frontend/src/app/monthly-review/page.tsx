@@ -136,6 +136,20 @@ export default function MonthlyReviewPage() {
   const chartGridRef = useRef<HTMLDivElement>(null);
   const targetInputRef = useRef<HTMLInputElement>(null);
   const salesInputRef = useRef<HTMLInputElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const [stickyVisible, setStickyVisible] = useState(false);
+
+  // 원본 컨트롤 영역이 화면 밖으로 나가면 sticky 바 등장
+  useEffect(() => {
+    const target = controlsRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setStickyVisible(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [summary]);
 
   // 매출 파일 + 목표 파일 목록 로드
   useEffect(() => {
@@ -278,6 +292,77 @@ export default function MonthlyReviewPage() {
 
   return (
     <div className="min-h-screen bg-white px-5 py-8 md:px-10">
+      {/* Sticky 컴팩트 바 — 원본 컨트롤 영역이 화면 밖일 때만 등장 */}
+      <div
+        className={`fixed top-0 left-0 right-0 z-40 bg-white border-b border-[#c4c4c4] shadow-sm transition-opacity duration-200 ${
+          stickyVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="max-w-6xl mx-auto px-5 md:px-10 py-2 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 pr-3 border-r border-[#c4c4c4]">
+              <Link href="/" className="text-[11px] text-[#5d5d5d] hover:text-black">
+                ← 뒤로
+              </Link>
+              <span className="text-[13px] font-bold text-black">월 리뷰</span>
+            </div>
+            <label className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-black">대상 월</span>
+              <select
+                className="border border-[#c4c4c4] bg-white text-black text-[12px] px-2 py-1 rounded hover:border-black focus:border-black focus:outline-none"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                disabled={!months.length}
+              >
+                {months.length === 0 && <option value="">— 매출 파일 먼저 —</option>}
+                {months.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-black">파트</span>
+              <div className="flex gap-1">
+                {(Object.keys(PART_LABELS) as Part[]).map((p) => {
+                  const active = p === part;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPart(p)}
+                      className={`text-[12px] px-2 py-1 rounded border transition ${
+                        active
+                          ? "bg-black text-white border-black"
+                          : "bg-white text-black border-[#c4c4c4] hover:border-black"
+                      }`}
+                    >
+                      {PART_LABELS[p]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setVisibilityModalOpen(true)}
+              className="border border-[#c4c4c4] bg-white text-black text-[12px] px-3 py-1 rounded hover:border-black"
+            >
+              차트 표시
+            </button>
+            <button
+              type="button"
+              onClick={handlePdfDownload}
+              disabled={pdfBusy || !summary}
+              className="bg-black text-white text-[12px] font-bold px-3 py-1 rounded-[2px] disabled:opacity-50"
+            >
+              {pdfBusy ? "생성 중..." : "PDF 다운로드"}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-6xl mx-auto">
         {/* 헤더 */}
         <div className="mb-6 flex items-center justify-between">
@@ -307,7 +392,7 @@ export default function MonthlyReviewPage() {
         </div>
 
         {/* 컨트롤 */}
-        <div className="border border-[#c4c4c4] p-4 mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div ref={controlsRef} className="border border-[#c4c4c4] p-4 mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="flex flex-col gap-1">
             <span className="text-[12px] font-bold text-black">매출 파일</span>
             <div className="flex gap-2">

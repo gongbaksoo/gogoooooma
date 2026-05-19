@@ -150,6 +150,7 @@ sales-analysis-site/
   - **localStorage 저장 키**: `avk_monthly_review_channel_selections` — `{ all: string[], ecommerce: string[], offline: string[] }`
   - 사용 안 하는 Chart7/8/9 컴포넌트 + chart7/8/9 응답 키 제거
 - **레이아웃**: 4개 섹션 — `종합` (chart 1~3) / `브랜드 종합` (chart 4~6) / `채널 종합` (ChannelSection) / `브랜드 상세` (BrandSection × 3). 각 섹션 자체 헤더 + grid.
+- **Sticky 컴팩트 바 (2026-05-19 16회차)**: 원본 컨트롤 영역이 화면 밖으로 나가면 페이지 상단에 고정 노출. 포함: `← 뒤로 / 월 리뷰` + `대상 월 / 파트` + `차트 표시 / PDF 다운로드`. 매출/목표 파일은 제외 (한 번 선택 후 자주 변경되지 않음). IntersectionObserver 기반 fade-in 200ms. 상세: `docs/design_document.md §2.3.3.9`
 - **Phase 3 브랜드 상세 (2026-05-19 구현, 동적 컴포넌트)**:
   - 단일 컴포넌트 `BrandSection` × 3 (마이비 / 누비 / 쏭레브). 각 브랜드 섹션이 자체적으로 3종류 차트 그룹 렌더:
     - **종합 트렌드** (단일 line, 12개월) — 백엔드 `chart10/12/14`

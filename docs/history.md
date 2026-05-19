@@ -4,6 +4,55 @@
 
 ---
 
+## 2026-05-19 (16회차) — 월 리뷰 Sticky 컴팩트 바 (스크롤 트리거 + 핵심 컨트롤 고정)
+
+### 1. 배경
+- 사용자 요청: "스크롤을 내려도 상단 고정하고 싶고, 다만 지금 보이는 모든 걸 고정할 필요는 없고 파트(전체/이커머스/오프라인) 그리고 차트표시 / PDF 다운로드만 따라오게 할 수 있니?"
+- 추가 요청: "B안(중복 노출)으로 하는데 스크롤을 내려서 원래 영역이 안 보일 때쯤 sticky 바가 등장하면 해결되는 거 아니니?" → **스크롤 트리거 + 양쪽 상태 동기화** 전략 채택.
+- 추가 요청: sticky 바 좌측에 "← 뒤로 / 월 리뷰" 네비 그룹도 포함.
+- 추가 요청: 대상 월도 sticky 바에 포함.
+
+### 2. 사용자 합의 사항
+1. **노출 방식**: 항상 표시 → 결국 스크롤 트리거로 결정 (원본 컨트롤 영역이 화면 밖일 때만 등장).
+2. **포함 컨트롤**: ← 뒤로 + 월 리뷰 타이틀 + 대상 월 + 파트 + 차트 표시 + PDF 다운로드.
+3. **미포함**: 매출 파일 / 목표 파일 (한 번 선택 후 자주 변경되지 않음).
+4. **원본 컨트롤은 유지** (B안 — 다만 sticky가 보일 때는 원본은 화면 밖이라 중복 노출 없음).
+
+### 3. 구현
+**파일**: `frontend/src/app/monthly-review/page.tsx`
+- `controlsRef` 추가: 원본 컨트롤 박스에 부착.
+- `stickyVisible` state + IntersectionObserver: 원본이 viewport 밖이면 `true`.
+- Sticky 바 JSX 추가:
+  - `fixed top-0 left-0 right-0 z-40 bg-white border-b border-[#c4c4c4] shadow-sm`
+  - `transition-opacity duration-200` + `pointer-events` 토글
+  - 내부 컨테이너 `max-w-6xl mx-auto px-5 md:px-10 py-2`
+- 좌→우: `← 뒤로 / 월 리뷰`(border-r 구분선) → 대상 월 select → 파트 토글 → 차트 표시 → PDF 다운로드.
+- 원본과 동일 React state(`month`, `part`) 공유 → 자동 동기화.
+
+### 4. 디자인 디테일
+- 컴팩트 크기: 폰트 11~12px, padding `py-2`, 버튼 `px-2/3 py-1`.
+- 모노톤 일관: 검은 텍스트, 회색 보조(#5d5d5d), PDF 버튼만 검은 배경 강조.
+- PDF 캡처 영향 없음: `html2canvas`는 `chartGridRef` 영역만 캡처하므로 `fixed` 포지셔닝의 sticky 바는 제외.
+
+### 5. 검증
+- 로컬 dev에서 새로고침 후 스크롤 → 원본이 화면 밖일 때만 sticky 바 등장 확인 예정 (사용자 브라우저 검증).
+
+### 6. 산출물
+- 수정: `frontend/src/app/monthly-review/page.tsx` (controlsRef + IntersectionObserver + Sticky 바 JSX 추가)
+- 문서: `design_document.md §2.3.3.9 Sticky 컴팩트 바` 신규 / `project_plan.md §4.7` Sticky 바 한 줄 추가 / `history.md` 본 16회차.
+
+### 7. 에러 없음
+- HTML 목업 SOP 대신 텍스트 제안 → 사용자 확인 → 코드 작성 패턴이 정상 동작. 의도 mis-interpretation 0건. error.md 새 엔트리 미발생.
+
+### 8. Phase 후속 항목 (변동 없음, 15회차 유지)
+1. **이번 회차 운영 배포** — 프론트만 변경이라 Mac Mini 작업 없이 `git push` 후 Vercel 자동 빌드.
+2. storage 마이그레이션 로직 추가.
+3. xlsx 직접 업로드 (보류).
+4. Mac Mini 자동 배포 (누적 권장).
+5. chart3 컴포넌트 리네임.
+
+---
+
 ## 2026-05-19 (15회차) — 채널 종합 동적화 (ChannelSection) + 이커머스 P열 통일
 
 ### 1. 배경

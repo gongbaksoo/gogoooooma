@@ -4,6 +4,80 @@
 
 ---
 
+## 2026-05-19 (13회차) — Phase 3: 브랜드 상세 동적 UI + HTML 목업 SOP 도입
+
+### 1. 배경
+- 12회차 직후 Phase 3 시작 — "브랜드별 상품 라인 6개 차트" 추가 작업.
+- 첫 구현(chart10~15 정적 차트) 후 사용자 피드백: **"내 의도를 정확히 파악 못했네, 앞으로 작업전에 html 로 예시를 만들어주고 내가 그걸보고 너한테 피드백 줘야할거같다"**
+- 사용자 실제 의도: **각 브랜드별로 ① 종합 + ② 주요 상품(사용자 선택) + ③ 개별 상품(추가/삭제 가능)** 동적 UI.
+
+### 2. 새 SOP 도입 — HTML 목업 우선 (design_document §2.3.3.7, error.md §23)
+- 복잡한 UI 변경 전: `docs/mockups/<feature>-mockup.html` 단일 파일 작성 → 사용자 브라우저 검토 → 피드백 → 합의 후 코딩.
+- 텍스트 표/플로우차트로는 인터랙션 의도 전달 어려움 → 시각화로 우회.
+
+### 3. 사용자 합의 사항 (5건)
+1. **차트 구성**: 브랜드당 ① 종합 + ② 주요 상품 라인 + ③ 개별 상품 카드들.
+2. **주요 상품 라인 선택**: S열(품목 구분) 값 중 해당 브랜드 품목만 옵션. 기본값 = PPT 언급 상품.
+3. **개별 상품**: 자유 추가/삭제. 기본값 = PPT 언급 5/3/4개.
+4. **저장**: localStorage, 새로고침 후 유지.
+5. **차트 표시 모달** 처리: 기존 chart1-9만 토글 대상, 브랜드 상세는 자체 모달로 분리.
+
+### 4. 구현
+
+#### HTML 목업 (`docs/mockups/brand-detail-mockup.html`)
+- 마이비/누비/쏭레브 3 섹션, 각각:
+  - Row 1: 종합 트렌드 (1열) + 주요 상품 라인 (2열 wide, "표시 상품 수정 ▾" 버튼)
+  - Row 2+: 개별 상품 카드 3-col grid + "+ 상품 추가" 카드
+- 모달 미리보기 (체크박스 + row 수 + 적용/취소)
+- 29CM 토큰 그대로 적용 (검정 ink, #c4c4c4 outline, 모노 그라데이션)
+- 사용자 한 줄 피드백: "딱 내가 원하는 형태다 바로 작업시작해"
+
+#### 백엔드 (`api/monthly_review.py`)
+- chart11/13/15 **제거** (이전 정적 multi-line)
+- `brand_products` 응답 신규: `{ "마이비": [{name, row_count, values[12]}], ... }` — 각 브랜드의 모든 S열 옵션 + 12개월 매출 데이터
+- `brand_products_months` 신규: 12개월 라벨 배열
+- 옵션 통계: 마이비 34개 / 누비 37개 / 쏭레브 17개
+
+#### 프론트엔드 신규 컴포넌트
+| 파일 | 역할 |
+|---|---|
+| `brandSelectionStorage.ts` | localStorage CRUD + Brand 타입 + DEFAULT_BRAND_SELECTIONS (PPT 기본값) |
+| `ProductSelectionModal.tsx` | 검색 + 체크박스 + row 수 표시 + "모두/해제" 토글 |
+| `BrandSection.tsx` | 1 브랜드 = 종합 + 주요 + 개별 통합 UI |
+
+#### 프론트엔드 수정
+- `page.tsx`:
+  - SummaryResponse 타입 갱신 (chart11/13/15 제거, brand_products/brand_products_months 추가)
+  - `brandSelections` state + `loadBrandSelections()` 마운트 시 복원
+  - `updateBrandSelection(brand, next)` — selection 변경 시 즉시 localStorage 저장
+  - 기존 "브랜드 상세" 섹션 9개 차트 → BrandSection × 3으로 교체
+- `ChartVisibilityModal.tsx`: chart10-15 항목 제거 (브랜드 상세는 자체 관리)
+- Chart10MaibiTotal ~ Chart15SongrebProducts 6개 파일은 그대로 두되 import 제거 (사용 안 함)
+
+### 5. 검증
+- 백엔드 로컬: brand_products 응답 — 마이비 34/누비 37/쏭레브 17 옵션 + 12개월 데이터 정상.
+- Next.js `npm run build` 통과 (9 routes, 모든 컴포넌트 컴파일).
+- 로컬 페이지 http://localhost:3000/monthly-review 200 OK.
+
+### 6. SOP 효과 입증
+- HTML 목업 → 사용자 검토 → 코드 작성 1회로 의도 100% 일치.
+- 이전 회차들의 "구현 → 피드백 → 재구현" 라운드를 한 번에 줄임.
+- error.md §23에 SOP 박제, design_document §2.3.3.7에 규약 명문화.
+
+### 7. 산출물
+- 신규: `docs/mockups/brand-detail-mockup.html` / `BrandSection.tsx` / `ProductSelectionModal.tsx` / `brandSelectionStorage.ts`
+- 수정: `api/monthly_review.py` (chart11/13/15 제거, brand_products 추가), `frontend/src/app/monthly-review/page.tsx`, `ChartVisibilityModal.tsx`
+- 문서: project_plan §4.7 Phase 3 재정의 + ChartVisibilityModal 분리 / design_document §2.3.3.6 BrandSection 디자인 + §2.3.3.7 HTML 목업 SOP / error.md §23 mis-interpretation 회고 / history 본 13회차.
+
+### 8. Phase 3 후속 항목 (변동)
+1. **운영 배포 (이번 회차분)** — Mac Mini git pull + uvicorn 재시작 + git push.
+2. **사용 안 하는 Chart10~15 파일 정리** — 향후 정리 작업 시.
+3. **xlsx 직접 업로드** (전사 시트 파서) — 보류 중.
+4. **Mac Mini 자동 배포** (누적 권장).
+5. **chart3 컴포넌트 리네임**.
+
+---
+
 ## 2026-05-19 (12회차) — Phase 2: 브랜드·채널 종합 6개 차트 추가 + 로컬 워크플로우 확립
 
 ### 1. 배경

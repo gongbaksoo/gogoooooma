@@ -14,6 +14,19 @@ import Chart6BrandVsAvg from "@/components/monthly-review/Chart6BrandVsAvg";
 import Chart7ChannelTrend from "@/components/monthly-review/Chart7ChannelTrend";
 import Chart8ChannelShare from "@/components/monthly-review/Chart8ChannelShare";
 import Chart9ChannelVsAvg from "@/components/monthly-review/Chart9ChannelVsAvg";
+import ChartVisibilityModal, {
+  VisibilityMap,
+  defaultVisibility,
+  loadVisibility,
+} from "@/components/monthly-review/ChartVisibilityModal";
+import BrandSection from "@/components/monthly-review/BrandSection";
+import {
+  Brand,
+  BrandSelections,
+  loadBrandSelections,
+  saveBrandSelections,
+  DEFAULT_BRAND_SELECTIONS,
+} from "@/components/monthly-review/brandSelectionStorage";
 
 type Part = "all" | "ecommerce" | "offline";
 
@@ -48,6 +61,11 @@ interface SummaryResponse {
   chart7: TrendChart;
   chart8: ShareChart;
   chart9: BarChart;
+  chart10: TrendChart;
+  chart12: TrendChart;
+  chart14: TrendChart;
+  brand_products: Record<Brand, { name: string; row_count: number; values: number[] }[]>;
+  brand_products_months: string[];
 }
 
 interface TargetFile {
@@ -77,6 +95,23 @@ export default function MonthlyReviewPage() {
   const [uploadingTarget, setUploadingTarget] = useState(false);
   const [uploadingSales, setUploadingSales] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [visibility, setVisibility] = useState<VisibilityMap>(defaultVisibility());
+  const [visibilityModalOpen, setVisibilityModalOpen] = useState(false);
+  const [brandSelections, setBrandSelections] = useState<BrandSelections>(DEFAULT_BRAND_SELECTIONS);
+
+  // 마운트 시 localStorage에서 visibility & brand selections 복원 (SSR 안전)
+  useEffect(() => {
+    setVisibility(loadVisibility());
+    setBrandSelections(loadBrandSelections());
+  }, []);
+
+  const updateBrandSelection = (brand: Brand, next: BrandSelections[Brand]) => {
+    setBrandSelections((prev) => {
+      const updated = { ...prev, [brand]: next };
+      saveBrandSelections(updated);
+      return updated;
+    });
+  };
 
   const chartGridRef = useRef<HTMLDivElement>(null);
   const targetInputRef = useRef<HTMLInputElement>(null);
@@ -232,14 +267,23 @@ export default function MonthlyReviewPage() {
             </Link>
             <h1 className="text-[24px] font-bold text-black">월 리뷰</h1>
           </div>
-          <button
-            type="button"
-            onClick={handlePdfDownload}
-            disabled={pdfBusy || !summary}
-            className="bg-black text-white text-[13px] font-bold px-4 py-2 rounded-[2px] disabled:opacity-50"
-          >
-            {pdfBusy ? "생성 중..." : "PDF 다운로드"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setVisibilityModalOpen(true)}
+              className="border border-[#c4c4c4] bg-white text-black text-[13px] px-3 py-2 rounded hover:border-black"
+            >
+              차트 표시
+            </button>
+            <button
+              type="button"
+              onClick={handlePdfDownload}
+              disabled={pdfBusy || !summary}
+              className="bg-black text-white text-[13px] font-bold px-4 py-2 rounded-[2px] disabled:opacity-50"
+            >
+              {pdfBusy ? "생성 중..." : "PDF 다운로드"}
+            </button>
+          </div>
         </div>
 
         {/* 컨트롤 */}
@@ -366,46 +410,86 @@ export default function MonthlyReviewPage() {
           <div className="text-center text-[13px] text-[#5d5d5d] py-12">불러오는 중...</div>
         )}
 
-        {/* 차트 그리드 */}
-        {summary && !loading && (
-          <div ref={chartGridRef} className="bg-white space-y-8">
-            {/* 종합 */}
-            <section>
-              <h2 className="text-[15px] font-bold text-black mb-3 pb-2 border-b border-[#c4c4c4]">
-                종합
-              </h2>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Chart1Achievement data={summary.chart1} month={month} />
-                <Chart2YoYTrend data={summary.chart2} />
-                <Chart3MainVsCoupang chart3={summary.chart3} />
-              </div>
-            </section>
+        {/* 차트 그리드 — 섹션 내 visible 차트만 렌더, 섹션 안에 visible 차트 0개면 섹션도 숨김 */}
+        {summary && !loading && (() => {
+          const sectionGroups: { title: string; charts: { id: keyof VisibilityMap; el: React.ReactNode }[] }[] = [
+            {
+              title: "종합",
+              charts: [
+                { id: "chart1", el: <Chart1Achievement data={summary.chart1} month={month} /> },
+                { id: "chart2", el: <Chart2YoYTrend data={summary.chart2} /> },
+                { id: "chart3", el: <Chart3MainVsCoupang chart3={summary.chart3} /> },
+              ],
+            },
+            {
+              title: "브랜드 종합",
+              charts: [
+                { id: "chart4", el: <Chart4BrandTrend chart4={summary.chart4} /> },
+                { id: "chart5", el: <Chart5BrandShare chart5={summary.chart5} /> },
+                { id: "chart6", el: <Chart6BrandVsAvg chart6={summary.chart6} /> },
+              ],
+            },
+            {
+              title: "채널 종합",
+              charts: [
+                { id: "chart7", el: <Chart7ChannelTrend chart7={summary.chart7} /> },
+                { id: "chart8", el: <Chart8ChannelShare chart8={summary.chart8} /> },
+                { id: "chart9", el: <Chart9ChannelVsAvg chart9={summary.chart9} /> },
+              ],
+            },
+          ];
+          // 브랜드 상세 섹션은 BrandSection 컴포넌트 3개 (마이비/누비/쏭레브)
+          const brandTotalMap: Record<Brand, TrendChart> = {
+            마이비: summary.chart10,
+            누비: summary.chart12,
+            쏭레브: summary.chart14,
+          };
+          return (
+            <div ref={chartGridRef} className="bg-white space-y-8">
+              {sectionGroups.map((section) => {
+                const visibleCharts = section.charts.filter((c) => visibility[c.id]);
+                if (visibleCharts.length === 0) return null;
+                return (
+                  <section key={section.title}>
+                    <h2 className="text-[15px] font-bold text-black mb-3 pb-2 border-b border-[#c4c4c4]">
+                      {section.title}
+                    </h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      {visibleCharts.map((c) => (
+                        <div key={c.id}>{c.el}</div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
 
-            {/* 브랜드 종합 */}
-            <section>
-              <h2 className="text-[15px] font-bold text-black mb-3 pb-2 border-b border-[#c4c4c4]">
-                브랜드 종합
-              </h2>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Chart4BrandTrend chart4={summary.chart4} />
-                <Chart5BrandShare chart5={summary.chart5} />
-                <Chart6BrandVsAvg chart6={summary.chart6} />
+              {/* 브랜드 상세 — 각 브랜드별 BrandSection */}
+              <div className="space-y-8 pt-4">
+                <h2 className="text-[15px] font-bold text-black mb-3 pb-2 border-b border-[#c4c4c4]">
+                  브랜드 상세
+                </h2>
+                {(["마이비", "누비", "쏭레브"] as Brand[]).map((brand) => (
+                  <BrandSection
+                    key={brand}
+                    brand={brand}
+                    totalChart={brandTotalMap[brand]}
+                    products={summary.brand_products[brand] ?? []}
+                    months={summary.brand_products_months}
+                    selection={brandSelections[brand]}
+                    onSelectionChange={(next) => updateBrandSelection(brand, next)}
+                  />
+                ))}
               </div>
-            </section>
+            </div>
+          );
+        })()}
 
-            {/* 채널 종합 */}
-            <section>
-              <h2 className="text-[15px] font-bold text-black mb-3 pb-2 border-b border-[#c4c4c4]">
-                채널 종합
-              </h2>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Chart7ChannelTrend chart7={summary.chart7} />
-                <Chart8ChannelShare chart8={summary.chart8} />
-                <Chart9ChannelVsAvg chart9={summary.chart9} />
-              </div>
-            </section>
-          </div>
-        )}
+        <ChartVisibilityModal
+          open={visibilityModalOpen}
+          onClose={() => setVisibilityModalOpen(false)}
+          visibility={visibility}
+          onChange={setVisibility}
+        />
       </div>
     </div>
   );

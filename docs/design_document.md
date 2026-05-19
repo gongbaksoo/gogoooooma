@@ -139,6 +139,48 @@ PPT 월간 리뷰 보고서를 화면에서 재현하고 PDF로 출력하는 정
 - 예외 Chart 1 (BarChart with single dataKey `value`): `formatter={(v, _n, item) => [..., item.payload.name]}` — payload에서 카테고리명("사업계획"/"실적") 추출
 - 예외 Chart 2: 기존 closure 패턴 유지 (전년 라벨에 비교 월 추가 표시)
 
+#### 2.3.3.6 브랜드 상세 섹션 (BrandSection, 2026-05-19 도입)
+
+PPT slides 4~10의 마이비/누비/쏭레브 브랜드별 상세 분석을 단일 재사용 컴포넌트로 구현.
+
+**레이아웃** (브랜드당 1 섹션, 헤더 + 2 row):
+- Row 1 (1 + 2-wide grid):
+  - **종합 트렌드 카드** (1열): 단일 라인 12개월
+  - **주요 상품 라인 카드** (2열 wide): 사용자 선택 multi-line + 우측 상단 `표시 상품 수정 ▾` 버튼
+- Row 2+ (3-col grid):
+  - **개별 상품 카드들** (각 1열): 카드당 단일 상품 라인 차트 + `×` 제거 버튼
+  - 마지막 슬롯: `+ 상품 추가` 카드 (dashed border, hover 시 highlight)
+
+**상호작용**:
+- `표시 상품 수정 ▾` → 모달 (해당 브랜드 S열 옵션 체크박스, 검색 가능)
+- `+ 상품 추가` → 같은 모달 (단, 이미 추가된 항목은 옵션에서 제외)
+- 카드 `×` → 즉시 individual 리스트에서 제거 + localStorage 저장
+- 모든 selection 변경은 즉시 localStorage 저장 (적용 클릭 시)
+
+**파일 구조**:
+| 파일 | 역할 |
+|---|---|
+| `BrandSection.tsx` | 1 브랜드 = 종합 + 주요 + 개별 통합 |
+| `ProductSelectionModal.tsx` | 모달 (검색 + 체크박스 리스트 + row 수 표기) |
+| `brandSelectionStorage.ts` | localStorage CRUD + 기본값 + Brand 타입 |
+
+**localStorage 규약**:
+- 키: `avk_monthly_review_brand_selections`
+- 구조: `{ 마이비: { mainLine: string[], individual: string[] }, 누비: {...}, 쏭레브: {...} }`
+- 기본값: PPT 언급 상품 (마이비 5/누비 3/쏭레브 4)
+
+**색 매핑**:
+- 종합/개별 단일 라인: `#000000`
+- 주요 상품 multi-line: 모노 7단계 팔레트 (`#000`, `#5d5d5d`, `#7d7d7d`, `#9d9d9d`, `#b8b8b8`, `#c4c4c4`, `#d0d0d0`) — 첫 시리즈만 2px, 나머지 1.5px
+
+#### 2.3.3.7 HTML 목업 SOP (2026-05-19 도입)
+
+복잡한 UI 변경(레이아웃 전체 재구성, 신규 인터랙션 도입 등) 전 **HTML 목업 → 사용자 피드백 → 구현** 워크플로우 도입.
+
+- 위치: `docs/mockups/<feature>-mockup.html` — 단일 파일, 정적, 브라우저로 직접 열기
+- 포함: 레이아웃, 인터랙션 표현(버튼/모달 시각화), 색·간격 토큰, 상호작용 메모 (placeholder 차트는 SVG 미니 라인)
+- 효과: 코드 작성 후 의도 어긋남 ↓, rework 1라운드 절약. 본 §2.3.3.6 구현 전 검증 (참조: `docs/mockups/brand-detail-mockup.html`).
+
 #### 2.3.3.1 차트 전환 애니메이션
 - **§8.10 차트 등장 애니메이션 통일 규약** 적용 (Recharts 기본 활성화 + `animationDuration={1500}` `animationEasing="ease-out"`).
 - 데이터 시그니처 기반 `key` (월 리뷰는 `month` 또는 `data[0].month + data.length`)로 파트·월 전환 시 차트 remount → 애니메이션 재생.

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>월 리뷰 — 브랜드 상세 섹션 목업 v1</title>
+  <style>
+    :root {
+      --ink: #000000;
+      --bg: #ffffff;
+      --outline: #c4c4c4;
+      --muted: #5d5d5d;
+      --sale-red: #ff0066;
+      --grid: #f0f0f0;
+      --soft-bg: #fafafa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard Variable", "Pretendard", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      margin: 0;
+      padding: 32px 20px 80px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .container { max-width: 1280px; margin: 0 auto; }
+    .mockup-banner {
+      background: #fff8e1;
+      border: 1px solid #f5d76e;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #806000;
+    }
+    h1 { font-size: 24px; font-weight: 700; margin: 0 0 4px; }
+    h2.brand {
+      font-size: 18px; font-weight: 700;
+      margin: 32px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--ink);
+    }
+    h3.subhead {
+      font-size: 13px; font-weight: 700;
+      color: var(--muted);
+      margin: 24px 0 12px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-3.wide-mid > .chart-card:nth-child(2) { grid-column: span 2; }
+    .chart-card {
+      background: var(--bg);
+      border: 1px solid var(--outline);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .card-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .chart-card h3 { font-size: 14px; font-weight: 700; margin: 0; }
+    .chart-card h4 { font-size: 13px; font-weight: 700; margin: 0; }
+    .chart-card .meta { font-size: 11px; color: var(--muted); }
+    .edit-btn, .remove-btn {
+      font-size: 11px;
+      padding: 4px 8px;
+      background: var(--bg);
+      color: var(--ink);
+      border: 1px solid var(--outline);
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .edit-btn:hover, .remove-btn:hover { border-color: var(--ink); }
+    .remove-btn {
+      padding: 2px 6px;
+      color: var(--muted);
+    }
+    .chart-placeholder {
+      background: var(--soft-bg);
+      border: 1px dashed var(--outline);
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 12px;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px;
+    }
+    .chart-placeholder.small { height: 140px; }
+    .chart-placeholder svg { width: 100%; height: 100%; }
+    .chart-placeholder.small svg { height: 120px; }
+    .series-list {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .series-list .dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .add-card {
+      border: 1px dashed var(--outline);
+      background: var(--soft-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      cursor: pointer;
+    }
+    .add-card:hover { border-color: var(--ink); background: #f5f5f5; }
+    .add-card button {
+      background: transparent;
+      border: none;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .add-card button strong {
+      display: block;
+      font-size: 24px;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+
+    /* Inline mini chart svg styles */
+    .mini-line { stroke-width: 2; fill: none; }
+    .mini-grid line { stroke: var(--grid); stroke-width: 1; }
+    .mini-axis text { fill: var(--muted); font-size: 9px; }
+
+    /* Modal preview */
+    .modal-section {
+      margin-top: 48px;
+      padding: 20px;
+      background: var(--soft-bg);
+      border: 1px solid var(--outline);
+    }
+    .modal-section h3 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .modal-preview {
+      max-width: 460px;
+      background: var(--bg);
+      border: 1px solid var(--outline);
+      margin: 0 auto;
+    }
+    .modal-preview .modal-head {
+      padding: 16px;
+      border-bottom: 1px solid var(--outline);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-preview .modal-head h4 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .modal-preview .modal-body {
+      padding: 16px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .modal-preview label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .modal-preview label:hover { background: #f5f5f5; }
+    .modal-preview input[type="checkbox"] { accent-color: var(--ink); width: 14px; height: 14px; }
+    .modal-preview .muted { color: var(--muted); }
+    .modal-preview .modal-foot {
+      padding: 16px;
+      border-top: 1px solid var(--outline);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .modal-preview button.ghost {
+      background: var(--bg);
+      border: 1px solid var(--outline);
+      padding: 8px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .modal-preview button.primary {
+      background: var(--ink);
+      color: var(--bg);
+      border: 1px solid var(--ink);
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .note {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 8px 0 0;
+      padding-left: 12px;
+      border-left: 2px solid var(--outline);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="mockup-banner">
+      <strong>📐 HTML 목업 (시각적 검토용)</strong> — 실제 동작 X. 차트는 placeholder. 피드백 받은 후 실제 구현.
+    </div>
+
+    <h1>월 리뷰 — 브랜드 상세 섹션</h1>
+    <p style="color: var(--muted); font-size: 13px; margin-top: 4px;">
+      마이비 / 누비 / 쏭레브 — 각 브랜드: ① 종합 트렌드 + ② 주요 상품 라인(수정 가능) + ③ 개별 상품 차트(추가/삭제 가능)
+    </p>
+
+    <!-- ====== 마이비 ====== -->
+    <h2 class="brand">마이비</h2>
+
+    <!-- 종합 + 주요 상품 라인 -->
+    <div class="grid-3 wide-mid">
+      <!-- ① 종합 트렌드 -->
+      <div class="chart-card">
+        <div class="card-header-row">
+          <h3>마이비 종합 트렌드</h3>
+          <span class="meta">최근 12개월 (백만)</span>
+        </div>
+        <div class="chart-placeholder">
+          <svg viewBox="0 0 280 120" preserveAspectRatio="none">
+            <g class="mini-grid">
+              <line x1="0" y1="30" x2="280" y2="30"/>
+              <line x1="0" y1="60" x2="280" y2="60"/>
+              <line x1="0" y1="90" x2="280" y2="90"/>
+            </g>
+            <polyline class="mini-line" stroke="#000" points="0,40 25,38 50,45 75,35 100,30 125,42 150,50 175,40 200,38 225,42 250,35 280,40"/>
+          </svg>
+        </div>
+        <div class="series-list">
+          <span><span class="dot" style="background:#000"></span>마이비</span>
+        </div>
+      </div>
+
+      <!-- ② 주요 상품 라인 (사용자 선택) -->
+      <div class="chart-card">
+        <div class="card-header-row">
+          <h3>마이비 주요 상품 라인</h3>
+          <button class="edit-btn" type="button">표시 상품 수정 ▾</button>
+        </div>
+        <div class="chart-placeholder">
+          <svg viewBox="0 0 580 160" preserveAspectRatio="none">
+            <g class="mini-grid">
+              <line x1="0" y1="40" x2="580" y2="40"/>
+              <line x1="0" y1="80" x2="580" y2="80"/>
+              <line x1="0" y1="120" x2="580" y2="120"/>
+            </g>
+            <polyline class="mini-line" stroke="#000" points="0,50 50,48 100,55 150,45 200,40 250,52 300,60 350,50 400,48 450,52 500,45 580,50"/>
+            <polyline class="mini-line" stroke="#5d5d5d" points="0,70 50,75 100,68 150,70 200,80 250,78 300,72 350,68 400,75 450,70 500,68 580,72"/>
+            <polyline class="mini-line" stroke="#7d7d7d" points="0,100 50,105 100,98 150,102 200,110 250,108 300,100 350,98 400,102 450,108 500,100 580,105"/>
+            <polyline class="mini-line" stroke="#9d9d9d" points="0,118 50,120 100,115 150,118 200,125 250,122 300,120 350,118 400,122 450,128 500,120 580,122"/>
+            <polyline class="mini-line" stroke="#b8b8b8" points="0,135 50,140 100,138 150,140 200,142 250,140 300,138 350,140 400,142 450,138 500,140 580,142"/>
+          </svg>
+        </div>
+        <div class="series-list">
+          <span><span class="dot" style="background:#000"></span>순한라인</span>
+          <span><span class="dot" style="background:#5d5d5d"></span>얼룩제거제</span>
+          <span><span class="dot" style="background:#7d7d7d"></span>삶기세제</span>
+          <span><span class="dot" style="background:#9d9d9d"></span>건조기시트</span>
+          <span><span class="dot" style="background:#b8b8b8"></span>구강티슈</span>
+        </div>
+        <p class="note">"표시 상품 수정" 버튼 클릭 시 모달 열림 → S열 값 중 마이비 품목만 체크박스로 선택 → 적용 시 localStorage 저장</p>
+      </div>
+    </div>
+
+    <h3 class="subhead">개별 상품 차트 (마이비 — 기본 5개 + 사용자 추가)</h3>
+    <div class="grid-3">
+      <div class="chart-card">
+        <div class="card-header-row">
+          <h4>순한라인</h4>
+          <button class="remove-btn" type="button" title="이 차트 제거">×</button>
+        </div>
+        <div class="chart-placeholder small">
+          <svg viewBox="0 0 280 100" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,50 25,45 50,55 75,40 100,38 125,50 150,55 175,48 200,42 225,50 250,48 280,52"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>순한라인 매출</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header-row"><h4>얼룩제거제</h4><button class="remove-btn">×</button></div>
+        <div class="chart-placeholder small">
+          <svg viewBox="0 0 280 100" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,30 25,28 50,40 75,32 100,28 125,45 150,38 175,35 200,30 225,32 250,28 280,30"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>얼룩제거제 매출</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header-row"><h4>삶기세제</h4><button class="remove-btn">×</button></div>
+        <div class="chart-placeholder small">
+          <svg viewBox="0 0 280 100" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,65 25,68 50,72 75,60 100,55 125,68 150,75 175,65 200,60 225,68 250,72 280,68"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>삶기세제 매출</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header-row"><h4>건조기시트</h4><button class="remove-btn">×</button></div>
+        <div class="chart-placeholder small">
+          <svg viewBox="0 0 280 100" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,75 25,72 50,78 75,68 100,65 125,72 150,80 175,72 200,68 225,72 250,68 280,70"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>건조기시트 매출</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header-row"><h4>구강티슈</h4><button class="remove-btn">×</button></div>
+        <div class="chart-placeholder small">
+          <svg viewBox="0 0 280 100" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,82 25,80 50,85 75,78 100,72 125,80 150,85 175,80 200,75 225,78 250,75 280,78"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>구강티슈 매출</span></div>
+      </div>
+
+      <!-- + 추가 카드 -->
+      <div class="add-card">
+        <button type="button">
+          <strong>+</strong>
+          상품 추가
+        </button>
+      </div>
+    </div>
+    <p class="note">"+상품 추가" 클릭 시 드롭다운 또는 모달 — 마이비 S열 값 중 아직 추가 안 된 것 표시. 추가/삭제 모두 localStorage 저장.</p>
+
+    <!-- ====== 누비 ====== -->
+    <h2 class="brand">누비</h2>
+    <div class="grid-3 wide-mid">
+      <div class="chart-card">
+        <div class="card-header-row"><h3>누비 종합 트렌드</h3><span class="meta">최근 12개월</span></div>
+        <div class="chart-placeholder">
+          <svg viewBox="0 0 280 120" preserveAspectRatio="none">
+            <g class="mini-grid">
+              <line x1="0" y1="30" x2="280" y2="30"/>
+              <line x1="0" y1="60" x2="280" y2="60"/>
+              <line x1="0" y1="90" x2="280" y2="90"/>
+            </g>
+            <polyline class="mini-line" stroke="#000" points="0,70 25,72 50,68 75,65 100,75 125,70 150,68 175,72 200,75 225,68 250,72 280,70"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>누비</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header-row"><h3>누비 주요 상품 라인</h3><button class="edit-btn">표시 상품 수정 ▾</button></div>
+        <div class="chart-placeholder">
+          <svg viewBox="0 0 580 160" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,80 50,78 100,82 150,75 200,72 250,80 300,85 350,80 400,75 450,80 500,75 580,78"/>
+            <polyline class="mini-line" stroke="#5d5d5d" points="0,100 50,98 100,105 150,100 200,95 250,100 300,108 350,100 400,98 450,100 500,95 580,100"/>
+            <polyline class="mini-line" stroke="#7d7d7d" points="0,120 50,118 100,125 150,118 200,115 250,120 300,125 350,120 400,118 450,120 500,115 580,120"/>
+          </svg>
+        </div>
+        <div class="series-list">
+          <span><span class="dot" style="background:#000"></span>롱핸들</span>
+          <span><span class="dot" style="background:#5d5d5d"></span>스텐 물병</span>
+          <span><span class="dot" style="background:#7d7d7d"></span>정글 물병</span>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="subhead">개별 상품 차트 (누비 — 기본 3개)</h3>
+    <div class="grid-3">
+      <div class="chart-card">
+        <div class="card-header-row"><h4>롱핸들</h4><button class="remove-btn">×</button></div>
+        <div class="chart-placeholder small">
+          <svg viewBox="0 0 280 100" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,80 25,78 50,82 75,75 100,72 125,80 150,85 175,80 200,75 225,80 250,75 280,78"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>롱핸들 매출</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header-row"><h4>스텐 물병</h4><button class="remove-btn">×</button></div>
+        <div class="chart-placeholder small">
+          <svg viewBox="0 0 280 100" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,70 25,68 50,75 75,65 100,60 125,68 150,75 175,68 200,65 225,68 250,60 280,65"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>스텐 물병 매출</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header-row"><h4>정글 물병</h4><button class="remove-btn">×</button></div>
+        <div class="chart-placeholder small">
+          <svg viewBox="0 0 280 100" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,60 25,58 50,65 75,55 100,52 125,60 150,68 175,60 200,55 225,60 250,52 280,58"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>정글 물병 매출</span></div>
+      </div>
+      <div class="add-card">
+        <button type="button"><strong>+</strong>상품 추가</button>
+      </div>
+    </div>
+
+    <!-- ====== 쏭레브 ====== -->
+    <h2 class="brand">쏭레브</h2>
+    <div class="grid-3 wide-mid">
+      <div class="chart-card">
+        <div class="card-header-row"><h3>쏭레브 종합 트렌드</h3><span class="meta">최근 12개월</span></div>
+        <div class="chart-placeholder">
+          <svg viewBox="0 0 280 120" preserveAspectRatio="none">
+            <g class="mini-grid">
+              <line x1="0" y1="30" x2="280" y2="30"/>
+              <line x1="0" y1="60" x2="280" y2="60"/>
+              <line x1="0" y1="90" x2="280" y2="90"/>
+            </g>
+            <polyline class="mini-line" stroke="#000" points="0,85 25,82 50,88 75,80 100,75 125,82 150,90 175,85 200,80 225,82 250,75 280,80"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>쏭레브</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header-row"><h3>쏭레브 주요 상품 라인</h3><button class="edit-btn">표시 상품 수정 ▾</button></div>
+        <div class="chart-placeholder">
+          <svg viewBox="0 0 580 160" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,90 50,88 100,92 150,85 200,82 250,90 300,95 350,90 400,85 450,90 500,85 580,88"/>
+            <polyline class="mini-line" stroke="#5d5d5d" points="0,115 50,113 100,120 150,115 200,110 250,115 300,123 350,115 400,113 450,115 500,110 580,115"/>
+            <polyline class="mini-line" stroke="#7d7d7d" points="0,135 50,133 100,140 150,135 200,130 250,135 300,140 350,135 400,133 450,135 500,130 580,135"/>
+            <polyline class="mini-line" stroke="#9d9d9d" points="0,150 50,148 100,152 150,148 200,145 250,148 300,152 350,148 400,145 450,148 500,145 580,148"/>
+          </svg>
+        </div>
+        <div class="series-list">
+          <span><span class="dot" style="background:#000"></span>키즈 샴푸</span>
+          <span><span class="dot" style="background:#5d5d5d"></span>핸드워시</span>
+          <span><span class="dot" style="background:#7d7d7d"></span>클렌징 젤</span>
+          <span><span class="dot" style="background:#9d9d9d"></span>바디 크림</span>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="subhead">개별 상품 차트 (쏭레브 — 기본 4개)</h3>
+    <div class="grid-3">
+      <div class="chart-card">
+        <div class="card-header-row"><h4>키즈 샴푸</h4><button class="remove-btn">×</button></div>
+        <div class="chart-placeholder small">
+          <svg viewBox="0 0 280 100" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,75 25,72 50,78 75,68 100,65 125,72 150,80 175,72 200,68 225,72 250,65 280,70"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>키즈 샴푸 매출</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header-row"><h4>핸드워시</h4><button class="remove-btn">×</button></div>
+        <div class="chart-placeholder small">
+          <svg viewBox="0 0 280 100" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,85 25,82 50,88 75,80 100,75 125,82 150,90 175,85 200,80 225,82 250,75 280,82"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>핸드워시 매출</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header-row"><h4>클렌징 젤</h4><button class="remove-btn">×</button></div>
+        <div class="chart-placeholder small">
+          <svg viewBox="0 0 280 100" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,90 25,88 50,92 75,85 100,82 125,88 150,93 175,88 200,85 225,88 250,82 280,85"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>클렌징 젤 매출</span></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header-row"><h4>바디 크림</h4><button class="remove-btn">×</button></div>
+        <div class="chart-placeholder small">
+          <svg viewBox="0 0 280 100" preserveAspectRatio="none">
+            <polyline class="mini-line" stroke="#000" points="0,92 25,90 50,93 75,88 100,85 125,90 150,93 175,90 200,87 225,90 250,85 280,88"/>
+          </svg>
+        </div>
+        <div class="series-list"><span><span class="dot" style="background:#000"></span>바디 크림 매출</span></div>
+      </div>
+      <div class="add-card" style="grid-column: span 2">
+        <button type="button"><strong>+</strong>상품 추가</button>
+      </div>
+    </div>
+
+    <!-- ====== 모달 미리보기 ====== -->
+    <div class="modal-section">
+      <h3>상호작용 미리보기 — 모달</h3>
+      <p style="color: var(--muted); font-size: 12px; margin-bottom: 16px;">
+        "표시 상품 수정 ▾" 또는 "+ 상품 추가" 클릭 시 열리는 모달의 모습.
+      </p>
+
+      <div class="modal-preview">
+        <div class="modal-head">
+          <h4>마이비 주요 상품 라인 — 표시 상품 수정</h4>
+          <button class="ghost" style="padding: 4px 8px; font-size: 12px;">× 닫기</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 12px; color: var(--muted); margin: 0 0 8px;">
+            엑셀 S열(품목 구분) 중 마이비 품목만 표시 — 33개. 체크된 항목이 차트에 라인으로 추가됨.
+          </p>
+          <label><input type="checkbox" checked> <span>순한라인 <span class="muted">(7,937 row)</span></span></label>
+          <label><input type="checkbox" checked> <span>얼룩제거제 <span class="muted">(7,030)</span></span></label>
+          <label><input type="checkbox" checked> <span>삶기세제 <span class="muted">(2,180)</span></span></label>
+          <label><input type="checkbox" checked> <span>건조기시트 <span class="muted">(2,076)</span></span></label>
+          <label><input type="checkbox"> <span>사탕수수 아기칫솔 <span class="muted">(1,244)</span></span></label>
+          <label><input type="checkbox"> <span>주방 세제 <span class="muted">(1,219)</span></span></label>
+          <label><input type="checkbox" checked> <span>구강티슈 <span class="muted">(1,052)</span></span></label>
+          <label><input type="checkbox"> <span>면봉 <span class="muted">(993)</span></span></label>
+          <label><input type="checkbox"> <span>손가락칫솔 <span class="muted">(856)</span></span></label>
+          <label><input type="checkbox"> <span>사탕수수 치실 <span class="muted">(846)</span></span></label>
+          <label><span class="muted" style="padding-left: 22px;">...(이하 23개 더, 스크롤)</span></label>
+        </div>
+        <div class="modal-foot">
+          <button class="ghost">취소</button>
+          <button class="primary">적용</button>
+        </div>
+      </div>
+
+      <p class="note" style="margin-top: 24px;">
+        "+ 상품 추가" 모달도 같은 UI 사용. 차이: <strong>아직 차트로 추가 안 된 항목만 체크 가능</strong>. 선택 후 "적용" → 새 카드가 그리드에 추가됨.
+      </p>
+    </div>
+
+    <!-- ====== 종합 메모 ====== -->
+    <div class="modal-section" style="background: #f5f8ff; border-color: #c4d4ff;">
+      <h3>레이아웃·동작 요약</h3>
+      <ul style="font-size: 13px; line-height: 1.7; padding-left: 20px; margin: 0;">
+        <li><strong>섹션 헤더</strong> — 브랜드명 (마이비 / 누비 / 쏭레브), 검은색 굵은 underline</li>
+        <li><strong>row 1</strong> — 종합 트렌드 (1열) + 주요 상품 라인 (2열 wide)</li>
+        <li><strong>row 2+</strong> — 개별 상품 차트들 3-col grid, 마지막 슬롯은 "+ 상품 추가" 카드</li>
+        <li><strong>저장 키</strong> — <code>avk_monthly_review_brand_selections</code>: <code>{ "마이비": { mainLine: [...], individual: [...] }, "누비": {...}, "쏭레브": {...} }</code></li>
+        <li><strong>기본값</strong> — 주요 상품 라인 = PPT 언급 / 개별 = PPT 언급 5+3+4 = 12개</li>
+        <li><strong>차트 표시 모달 (기존)</strong> — 이번 18개 신규는 모달 항목에 자동 등록 (모든 차트 켜기/끄기)</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

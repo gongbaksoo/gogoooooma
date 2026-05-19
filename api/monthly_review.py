@@ -434,6 +434,75 @@ def get_summary(
         "data": _grouped_bar(chan_frames, chan_names, target_yymm),
     }
 
+    # ----- 브랜드 상세 (chart 10~15) -----
+    # 각 브랜드: 종합 트렌드 (단일 라인) + 주요 상품 라인 (다중 라인)
+    # 품목 구분 컬럼 기준 (R열 규약은 거래처 식별 전용)
+    if "품목 구분" not in df.columns:
+        raise HTTPException(status_code=400, detail="CSV에 '품목 구분' 컬럼이 없습니다.")
+
+    MONO_PALETTE = ["#000000", "#5d5d5d", "#7d7d7d", "#9d9d9d", "#b8b8b8"]
+
+    def _brand_total_chart(brand_name: str) -> dict:
+        f = df_part[df_part["품목그룹1"] == brand_name]
+        return {
+            "title": f"{brand_name} 종합 트렌드",
+            "series_names": [brand_name],
+            "colors": ["#000000"],
+            "data": [
+                {
+                    "month": f"{y}-{str(m).zfill(2)}",
+                    "values": [float(f[f["월구분"] == f"{str(y)[-2:]}{str(m).zfill(2)}"]["판매액"].sum())],
+                }
+                for y, m in last12
+            ],
+        }
+
+    def _brand_products_chart(brand_name: str, product_lines: list) -> dict:
+        b = df_part[df_part["품목그룹1"] == brand_name]
+        frames = [b[b["품목 구분"] == p] for p in product_lines]
+        return {
+            "title": f"{brand_name} 주요 상품 라인",
+            "series_names": product_lines,
+            "colors": MONO_PALETTE[: len(product_lines)],
+            "data": [
+                {
+                    "month": f"{y}-{str(m).zfill(2)}",
+                    "values": [
+                        float(f[f["월구분"] == f"{str(y)[-2:]}{str(m).zfill(2)}"]["판매액"].sum())
+                        for f in frames
+                    ],
+                }
+                for y, m in last12
+            ],
+        }
+
+    chart10 = _brand_total_chart("마이비")
+    chart12 = _brand_total_chart("누비")
+    chart14 = _brand_total_chart("쏭레브")
+
+    # ----- brand_products: 각 브랜드별 S열(품목 구분) 모든 옵션 + 12개월 데이터 -----
+    # 프론트엔드가 localStorage selection 기반으로 주요 상품 라인·개별 상품 차트 동적 렌더
+    last12_yymm = [f"{str(y)[-2:]}{str(m).zfill(2)}" for y, m in last12]
+    last12_labels = [f"{y}-{str(m).zfill(2)}" for y, m in last12]
+
+    brand_products = {}
+    for brand in ["마이비", "누비", "쏭레브"]:
+        bdf = df_part[df_part["품목그룹1"] == brand]
+        # 품목 구분 unique values + row count
+        counts = bdf["품목 구분"].value_counts()
+        items = []
+        for product, count in counts.items():
+            if pd.isna(product) or str(product).strip() == "" or str(product) == "대상 X":
+                continue
+            pdf = bdf[bdf["품목 구분"] == product]
+            values = [float(pdf[pdf["월구분"] == yymm]["판매액"].sum()) for yymm in last12_yymm]
+            items.append({
+                "name": str(product),
+                "row_count": int(count),
+                "values": values,
+            })
+        brand_products[brand] = items
+
     return {
         "month": month,
         "part": part,
@@ -446,4 +515,9 @@ def get_summary(
         "chart7": chart7,
         "chart8": chart8,
         "chart9": chart9,
+        "chart10": chart10,
+        "chart12": chart12,
+        "chart14": chart14,
+        "brand_products": brand_products,
+        "brand_products_months": last12_labels,
     }

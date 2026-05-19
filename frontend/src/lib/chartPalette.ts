@@ -18,18 +18,18 @@ export type SeriesStyle = {
 // 12~14: 동일 3 hue × 점선
 const B6_PALETTE: { color: string; pattern: 'solid' | 'dashed' }[] = [
   { color: '#000000', pattern: 'solid'  },  // 1 검정 진/실
-  { color: '#1a2942', pattern: 'solid'  },  // 2 네이비 진/실
+  { color: '#475d78', pattern: 'solid'  },  // 2 네이비 진/실
   { color: '#a08e7a', pattern: 'solid'  },  // 3 베이지 진/실
   { color: '#9d9d9d', pattern: 'solid'  },  // 4 회색/실
   { color: '#000000', pattern: 'dashed' },  // 5 검정 진/점
-  { color: '#1a2942', pattern: 'dashed' },  // 6 네이비 진/점
+  { color: '#475d78', pattern: 'dashed' },  // 6 네이비 진/점
   { color: '#a08e7a', pattern: 'dashed' },  // 7 베이지 진/점
   { color: '#9d9d9d', pattern: 'dashed' },  // 8 회색/점
   { color: '#3d3d3d', pattern: 'solid'  },  // 9 검정 연/실
-  { color: '#4a5e80', pattern: 'solid'  },  // 10 네이비 연/실
+  { color: '#7d92b0', pattern: 'solid'  },  // 10 네이비 연/실
   { color: '#c4b5a0', pattern: 'solid'  },  // 11 베이지 연/실
   { color: '#3d3d3d', pattern: 'dashed' },  // 12 검정 연/점
-  { color: '#4a5e80', pattern: 'dashed' },  // 13 네이비 연/점
+  { color: '#7d92b0', pattern: 'dashed' },  // 13 네이비 연/점
   { color: '#c4b5a0', pattern: 'dashed' },  // 14 베이지 연/점
 ];
 

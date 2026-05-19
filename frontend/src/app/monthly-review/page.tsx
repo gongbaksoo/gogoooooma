@@ -8,20 +8,46 @@ import { getFileList } from "@/lib/api";
 import Chart1Achievement from "@/components/monthly-review/Chart1Achievement";
 import Chart2YoYTrend from "@/components/monthly-review/Chart2YoYTrend";
 import Chart3MainVsCoupang from "@/components/monthly-review/Chart3MainVsCoupang";
+import Chart4BrandTrend from "@/components/monthly-review/Chart4BrandTrend";
+import Chart5BrandShare from "@/components/monthly-review/Chart5BrandShare";
+import Chart6BrandVsAvg from "@/components/monthly-review/Chart6BrandVsAvg";
+import Chart7ChannelTrend from "@/components/monthly-review/Chart7ChannelTrend";
+import Chart8ChannelShare from "@/components/monthly-review/Chart8ChannelShare";
+import Chart9ChannelVsAvg from "@/components/monthly-review/Chart9ChannelVsAvg";
 
 type Part = "all" | "ecommerce" | "offline";
+
+interface TrendChart {
+  title: string;
+  series_names: string[];
+  colors: string[];
+  data: { month: string; values: number[] }[];
+}
+interface ShareChart {
+  title: string;
+  series_names: string[];
+  colors: string[];
+  data: { name: string; value: number }[];
+}
+interface BarChart {
+  title: string;
+  series_names: string[];
+  colors: string[];
+  data: { category: string; monthly_avg: number; current_month: number }[];
+}
 
 interface SummaryResponse {
   month: string;
   part: Part;
   chart1: { target: number | null; actual: number; achievement_rate: number | null };
   chart2: { month: string; current_year: number; prev_year: number }[];
-  chart3: {
-    title: string;
-    series_names: string[];
-    colors: string[];
-    data: { month: string; values: number[] }[];
-  };
+  chart3: TrendChart;
+  chart4: TrendChart;
+  chart5: ShareChart;
+  chart6: BarChart;
+  chart7: TrendChart;
+  chart8: ShareChart;
+  chart9: BarChart;
 }
 
 interface TargetFile {
@@ -342,13 +368,42 @@ export default function MonthlyReviewPage() {
 
         {/* 차트 그리드 */}
         {summary && !loading && (
-          <div
-            ref={chartGridRef}
-            className="grid grid-cols-1 lg:grid-cols-3 gap-4 bg-white"
-          >
-            <Chart1Achievement data={summary.chart1} month={month} />
-            <Chart2YoYTrend data={summary.chart2} />
-            <Chart3MainVsCoupang chart3={summary.chart3} />
+          <div ref={chartGridRef} className="bg-white space-y-8">
+            {/* 종합 */}
+            <section>
+              <h2 className="text-[15px] font-bold text-black mb-3 pb-2 border-b border-[#c4c4c4]">
+                종합
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <Chart1Achievement data={summary.chart1} month={month} />
+                <Chart2YoYTrend data={summary.chart2} />
+                <Chart3MainVsCoupang chart3={summary.chart3} />
+              </div>
+            </section>
+
+            {/* 브랜드 종합 */}
+            <section>
+              <h2 className="text-[15px] font-bold text-black mb-3 pb-2 border-b border-[#c4c4c4]">
+                브랜드 종합
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <Chart4BrandTrend chart4={summary.chart4} />
+                <Chart5BrandShare chart5={summary.chart5} />
+                <Chart6BrandVsAvg chart6={summary.chart6} />
+              </div>
+            </section>
+
+            {/* 채널 종합 */}
+            <section>
+              <h2 className="text-[15px] font-bold text-black mb-3 pb-2 border-b border-[#c4c4c4]">
+                채널 종합
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <Chart7ChannelTrend chart7={summary.chart7} />
+                <Chart8ChannelShare chart8={summary.chart8} />
+                <Chart9ChannelVsAvg chart9={summary.chart9} />
+              </div>
+            </section>
           </div>
         )}
       </div>

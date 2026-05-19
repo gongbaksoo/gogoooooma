@@ -115,6 +115,30 @@ PPT 월간 리뷰 보고서를 화면에서 재현하고 PDF로 출력하는 정
 
 **라벨 배치 (3-series 겹침 회피)**: 첫 시리즈(메인 검정)는 라인 `top`/`bold`, 나머지는 `bottom`/`normal` (Chart3 컴포넌트 내장 로직).
 
+#### 2.3.3.3 Phase 2 종합 차트 (Chart 4~9, 2026-05-19 추가)
+
+`종합` 섹션 아래에 `브랜드 종합` (chart 4·5·6) / `채널 종합` (chart 7·8·9) 2 섹션 추가. 각 섹션 3-column grid + 상단 헤더 `border-b border-[#c4c4c4]`.
+
+| Chart | 종류 | 시리즈/카테고리 | X축 | 컬러 매핑 |
+|-------|------|-----------------|-----|-----------|
+| 4. 브랜드별 매출 트렌드 | LineChart (5-series, 12개월) | 마이비 / 누비 / 쏭레브 / 에코보 / 기타 | `YY.MM` | 모노 4단계 + 회색 (`#000` `#5d5d5d` `#7d7d7d` `#9d9d9d` `#b8b8b8`) |
+| 5. 브랜드별 매출 비중 | PieChart (12개월 합) | 동일 5 카테고리 | — | 동일 |
+| 6. 브랜드 월평균 vs 당월 | Grouped BarChart | 카테고리: 마이비/누비/쏭레브/마+누+쏭, 시리즈: 월평균·당월 | 카테고리 | 월평균 `#5d5d5d`, 당월 `#000` |
+| 7. 채널별 매출 트렌드 | LineChart (4-series, 12개월) | 사입 / 위탁 / 자사몰 / 기타 | `YY.MM` | `#000` `#5d5d5d` `#7d7d7d` `#b8b8b8` |
+| 8. 채널별 매출 비중 | PieChart (12개월 합) | 동일 4 카테고리 | — | 동일 |
+| 9. 채널 월평균 vs 당월 | Grouped BarChart | 4 채널 카테고리, 시리즈: 월평균·당월 | 카테고리 | 월평균 `#5d5d5d`, 당월 `#000` |
+
+#### 2.3.3.4 PieChart 외부 라벨 규약 (Chart 5/8)
+- 라벨: `{name} {pct}%` 형식, **fontSize 10px, fill `#5d5d5d`** (보조 텍스트 토큰)
+- `labelLine={false}` — 리더선 없이 라벨이 슬라이스 외부에 자동 배치
+- `<Legend>` 미사용 — 외부 라벨이 카테고리명+비율 모두 표시하므로 중복 제거
+- `outerRadius={100}` — Legend 제거로 확보된 공간 활용 (기본 80에서 25% 확대)
+
+#### 2.3.3.5 Tooltip 시리즈명 표시 규약 (9개 차트 통일)
+- formatter 시그니처: `(v, name) => [\`${v.toLocaleString()} 백만\`, name]` — Recharts가 dataKey를 `name`으로 전달
+- 예외 Chart 1 (BarChart with single dataKey `value`): `formatter={(v, _n, item) => [..., item.payload.name]}` — payload에서 카테고리명("사업계획"/"실적") 추출
+- 예외 Chart 2: 기존 closure 패턴 유지 (전년 라벨에 비교 월 추가 표시)
+
 #### 2.3.3.1 차트 전환 애니메이션
 - **§8.10 차트 등장 애니메이션 통일 규약** 적용 (Recharts 기본 활성화 + `animationDuration={1500}` `animationEasing="ease-out"`).
 - 데이터 시그니처 기반 `key` (월 리뷰는 `month` 또는 `data[0].month + data.length`)로 파트·월 전환 시 차트 remount → 애니메이션 재생.

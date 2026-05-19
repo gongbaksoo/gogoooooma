@@ -314,10 +314,136 @@ def get_summary(
         "data": chart3_data,
     }
 
+    # ----- 공통 헬퍼: 카테고리별 trailing 12개월 집계 -----
+    def _trailing_series(category_frames: list, name: str) -> dict:
+        """N개 카테고리 frame 리스트 → trailing 12개월 line chart 데이터"""
+        return {
+            "title": name,
+            "data": [
+                {
+                    "month": f"{y}-{str(m).zfill(2)}",
+                    "values": [
+                        float(f[f["월구분"] == f"{str(y)[-2:]}{str(m).zfill(2)}"]["판매액"].sum())
+                        for f in category_frames
+                    ],
+                }
+                for y, m in last12
+            ],
+        }
+
+    def _share_pie(category_frames: list, series_names_local: list) -> list:
+        """N개 카테고리 frame → 최근 12개월 합계로 PieChart 데이터 [{name, value}]"""
+        last12_yymm = {f"{str(y)[-2:]}{str(m).zfill(2)}" for y, m in last12}
+        out = []
+        for name, f in zip(series_names_local, category_frames):
+            v = float(f[f["월구분"].isin(last12_yymm)]["판매액"].sum())
+            out.append({"name": name, "value": v})
+        return out
+
+    def _grouped_bar(category_frames: list, series_names_local: list, current_yymm: str) -> list:
+        """N개 카테고리 × (월평균/당월) BarChart 데이터 [{category, monthly_avg, current_month}]"""
+        last12_yymm_list = [f"{str(y)[-2:]}{str(m).zfill(2)}" for y, m in last12]
+        out = []
+        for name, f in zip(series_names_local, category_frames):
+            total_12 = float(f[f["월구분"].isin(last12_yymm_list)]["판매액"].sum())
+            monthly_avg = total_12 / 12 if last12_yymm_list else 0
+            current = float(f[f["월구분"] == current_yymm]["판매액"].sum())
+            out.append({
+                "category": name,
+                "monthly_avg": monthly_avg,
+                "current_month": current,
+            })
+        return out
+
+    # ----- 브랜드 분류 (df_part 기반: 파트 필터 적용 후) -----
+    # 메인 4: 마이비/누비/쏭레브/에코보 + 기타(나머지 품목그룹1)
+    if "품목그룹1" not in df.columns:
+        raise HTTPException(status_code=400, detail="CSV에 '품목그룹1' 컬럼이 없습니다.")
+    BRAND_MAIN = ["마이비", "누비", "쏭레브", "에코보"]
+    brand_frames = [df_part[df_part["품목그룹1"] == b] for b in BRAND_MAIN]
+    brand_frames.append(df_part[~df_part["품목그룹1"].isin(BRAND_MAIN)])
+    brand_names = BRAND_MAIN + ["기타"]
+    brand_colors = ["#000000", "#5d5d5d", "#7d7d7d", "#9d9d9d", "#b8b8b8"]
+
+    # chart4: 브랜드별 매출 트렌드 (라인, 5-series, trailing 12개월)
+    chart4 = {
+        "title": "브랜드별 매출 트렌드",
+        "series_names": brand_names,
+        "colors": brand_colors,
+        "data": _trailing_series(brand_frames, "")["data"],
+    }
+
+    # chart5: 브랜드별 매출 비중 (파이, 최근 12개월 합계)
+    chart5 = {
+        "title": "브랜드별 매출 비중 (최근 12개월)",
+        "series_names": brand_names,
+        "colors": brand_colors,
+        "data": _share_pie(brand_frames, brand_names),
+    }
+
+    # chart6: 월 평균 대비 실적 (그룹드 바, 마+누+쏭 추가 카테고리)
+    # 카테고리: 마이비/누비/쏭레브/마+누+쏭
+    brand_sum_frame = pd.concat([df_part[df_part["품목그룹1"] == b] for b in ["마이비", "누비", "쏭레브"]])
+    bar_cats = ["마이비", "누비", "쏭레브", "마+누+쏭"]
+    bar_frames = [df_part[df_part["품목그룹1"] == b] for b in ["마이비", "누비", "쏭레브"]] + [brand_sum_frame]
+    chart6 = {
+        "title": "월 평균 대비 실적",
+        "series_names": ["월평균", "당월"],
+        "colors": ["#5d5d5d", "#000000"],
+        "data": _grouped_bar(bar_frames, bar_cats, target_yymm),
+    }
+
+    # ----- 채널 유형 분류 (df_part 기반) -----
+    # 사입 / 위탁 / 자사몰 / 기타
+    if "채널구분" not in df.columns:
+        raise HTTPException(status_code=400, detail="CSV에 '채널구분' 컬럼이 없습니다.")
+    CHAN_BUY_IN = ["오픈마켓(사입)"]
+    CHAN_CONSIGN = ["오픈마켓(위탁)", "종합몰", "버티컬커머스"]
+    CHAN_OWN = ["자사몰"]
+    chan_main = CHAN_BUY_IN + CHAN_CONSIGN + CHAN_OWN
+    chan_frames = [
+        df_part[df_part["채널구분"].isin(CHAN_BUY_IN)],
+        df_part[df_part["채널구분"].isin(CHAN_CONSIGN)],
+        df_part[df_part["채널구분"].isin(CHAN_OWN)],
+        df_part[~df_part["채널구분"].isin(chan_main)],
+    ]
+    chan_names = ["사입", "위탁", "자사몰", "기타"]
+    chan_colors = ["#000000", "#5d5d5d", "#7d7d7d", "#b8b8b8"]
+
+    # chart7: 채널별 매출 트렌드
+    chart7 = {
+        "title": "채널별 매출 트렌드",
+        "series_names": chan_names,
+        "colors": chan_colors,
+        "data": _trailing_series(chan_frames, "")["data"],
+    }
+
+    # chart8: 채널별 매출 비중
+    chart8 = {
+        "title": "채널별 매출 비중 (최근 12개월)",
+        "series_names": chan_names,
+        "colors": chan_colors,
+        "data": _share_pie(chan_frames, chan_names),
+    }
+
+    # chart9: 채널별 월 평균 대비 실적
+    chart9 = {
+        "title": "월 평균 대비 실적",
+        "series_names": ["월평균", "당월"],
+        "colors": ["#5d5d5d", "#000000"],
+        "data": _grouped_bar(chan_frames, chan_names, target_yymm),
+    }
+
     return {
         "month": month,
         "part": part,
         "chart1": chart1,
         "chart2": chart2,
         "chart3": chart3,
+        "chart4": chart4,
+        "chart5": chart5,
+        "chart6": chart6,
+        "chart7": chart7,
+        "chart8": chart8,
+        "chart9": chart9,
     }

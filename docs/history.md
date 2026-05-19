@@ -4,6 +4,96 @@
 
 ---
 
+## 2026-05-19 (12회차) — Phase 2: 브랜드·채널 종합 6개 차트 추가 + 로컬 워크플로우 확립
+
+### 1. 배경
+- 사용자: "다음 스텝이 뭐지?" → 옵션 중 Phase 2 (PPT 잔여 차트) 선택.
+- 우선 종합 슬라이드 — 브랜드 종합(3차트) + 채널 종합(3차트) 총 6개 신규.
+- 동시에 "Mac Mini 매번 명령 귀찮다" 피드백 → 로컬 dev 워크플로우 도입.
+
+### 2. 사용자 결정 사항 (5건)
+1. **로컬 워크플로우**: `.env.local`을 localhost로 전환, 세션마다 수동 기동 (launchd 자동시작 제외).
+2. **채널 매핑**: 채널구분 기반 4그룹 (사입/위탁/자사몰/기타) + R열 규약은 거래처 식별에만 적용.
+3. **레이아웃**: 섹션 구분 (종합 / 브랜드 / 채널), 각 3-column grid.
+4. **파트 필터**: 신규 6개도 동일 적용.
+5. **Chart 6/9 정의**: Grouped Bar — 월평균 vs 당월 (4 카테고리 × 2 시리즈).
+
+### 3. 구현
+
+#### 로컬 워크플로우 도입
+- `frontend/.env.local`을 `https://api.gongbaksoo.com` → `http://localhost:8000`으로 전환 (백업: `.env.local.bak`).
+- 작업 흐름: 매 세션 시작 시 uvicorn + `npm run dev` 수동 기동. Mac Mini는 "릴리즈할 때"만 건드림.
+- 효과: iteration 중 Mac Mini 배포 0회. 코드 검증을 로컬 데이터로 진행.
+
+#### 백엔드 (`api/monthly_review.py`)
+3개 공용 헬퍼 추가:
+- `_trailing_series(frames, name)` → trailing 12개월 라인 차트 데이터
+- `_share_pie(frames, names)` → 12개월 합계 PieChart [{name, value}]
+- `_grouped_bar(frames, names, current_yymm)` → [{category, monthly_avg, current_month}]
+
+6개 chart 신규:
+- chart4 브랜드 트렌드 (마이비/누비/쏭레브/에코보/기타)
+- chart5 브랜드 비중 (Pie, 같은 5 카테고리)
+- chart6 브랜드 월평균 대비 (마이비/누비/쏭레브/마+누+쏭 × 월평균·당월)
+- chart7 채널 트렌드 (사입/위탁/자사몰/기타)
+- chart8 채널 비중 (Pie, 같은 4 카테고리)
+- chart9 채널 월평균 대비
+
+#### 프론트엔드 컴포넌트 6개
+- `Chart4BrandTrend`, `Chart5BrandShare`, `Chart6BrandVsAvg` 신규 작성.
+- `Chart7ChannelTrend`, `Chart8ChannelShare`, `Chart9ChannelVsAvg` — `sed`로 prop 이름만 변경한 동형 컴포넌트 생성 (3 파일).
+
+#### 페이지 구조 (`page.tsx`)
+- 기존 단일 grid → 3개 `<section>` 구조 (종합/브랜드 종합/채널 종합), 각 헤더 + 3-column grid.
+- `chartGridRef`로 전체 wrap → PDF 다운로드도 9개 차트 모두 포함.
+
+### 4. UI 보완 (사용자 피드백 기반 즉시 수정 3건)
+
+#### 4-1. Tooltip 시리즈명 표시 (9개 차트 통일)
+- 증상: 마우스 호버 시 ": 397 백만"처럼 시리즈명 누락.
+- 원인: `formatter={(v) => [..., ""]}` 으로 두 번째 인자를 강제 빈 문자열로 반환.
+- 해결: 7개 차트 sed 일괄 치환 → `formatter={(v, name) => [..., name]}`. Chart 1은 `dataKey="value"`라 특별 처리(`item.payload.name` 사용). Chart 2는 이미 정상.
+
+#### 4-2. PieChart 외부 라벨 폰트 축소 (Chart 5/8)
+- 증상: "위탁" 라벨이 잘려 "탁"만 보임. 라벨 폰트 너무 큼.
+- 해결: `label` prop을 string 반환 → SVG `<text>` 반환으로 변경 — `fontSize=10`, `fill=#5d5d5d` 명시.
+
+#### 4-3. PieChart 하단 Legend 제거 + 크기 확대 (Chart 5/8)
+- 외부 라벨이 카테고리명+비율 다 표시 → Legend 중복.
+- `<Legend>` 제거 + import도 정리.
+- `outerRadius` 80 → 100 (25% 확대). Legend 제거로 확보된 공간 활용.
+
+### 5. 검증
+- 로컬 백엔드 (260106_4.csv, 2025-12, all 모드) — 9개 차트 모두 정상 응답:
+  - chart4: 마이비 386M / 누비 48M / 쏭레브 29M / 에코보 1.5M / 기타 14M
+  - chart5: 마이비 73.9% 비중 등
+  - chart6: 마이비 월평균 406M / 당월 386M 등
+  - chart7: 사입 271M / 위탁 62M / 자사몰 63M / 기타 84M
+  - chart8: 사입 46.9% 비중 등
+  - chart9: 사입 월평균 249M / 당월 271M 등
+- Next.js `npm run build` 통과.
+- 로컬 페이지 http://localhost:3000/monthly-review 정상 렌더.
+
+### 6. 배포 전략 (사용자 합의)
+- **이번 작업만 단독 배포** (다음 작업 묶지 않음) — 변경 단위 작아 회귀 위험·디버깅 비용 모두 감소.
+- §22 SOP 적용: Mac Mini 백엔드 먼저(또는 즉시) → git push로 Vercel 자동 빌드.
+- chart4~9는 신규 키만 추가 (non-breaking) — OLD 프론트는 무시. 그러나 NEW 프론트 + OLD 백엔드 = `summary.chart4` undefined → 크래시 위험. SOP 그대로 적용 (error.md §22 가벼운 사례 노트 추가).
+
+### 7. 산출물
+- 신규 코드 (6 컴포넌트): `frontend/src/components/monthly-review/Chart{4,5,6,7,8,9}*.tsx`
+- 수정 코드: `api/monthly_review.py` (헬퍼 3개 + chart4~9 추가), `frontend/src/app/monthly-review/page.tsx` (섹션 구조 + import), Chart1·3·4·5·6·7·8·9 (tooltip formatter 통일 — 7개 sed + Chart 1 manual).
+- 설정: `frontend/.env.local` 로컬 전환 (gitignored, 백업 보존).
+- 문서: project_plan §4.7 (Phase 2 6개 차트 + 채널 매핑 + 레이아웃), design_document §2.3.3.3~5 (Phase 2 차트 표, Pie 라벨 규약, Tooltip 시리즈명 규약), error.md §22 가벼운 사례 노트, history 본 12회차.
+
+### 8. Phase 3 후속 항목
+1. **마이비/누비/쏭레브 브랜드별 상품 라인** (PPT slides 4~10) — 6개 차트.
+2. **xlsx 직접 업로드 지원** (전사 시트 파서).
+3. **차트 추가/제거 UI** — 사용자가 표시할 차트 선택.
+4. **chart3 컴포넌트 리네임** — `Chart3MainVsCoupang` → `Chart3PartComparison`.
+5. **Mac Mini 자동 배포** — 누적 후속 항목.
+
+---
+
 ## 2026-05-19 (11회차) — Chart 3 offline 3-series (이마트/롯데마트/다이소) + 거래처 R열 영구 규약
 
 ### 1. 배경

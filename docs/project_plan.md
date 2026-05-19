@@ -132,7 +132,16 @@ sales-analysis-site/
   - chart3 신규 object 구조(`{title, series_names, colors, data}`) 응답 — `all`/`ecommerce` 양쪽 모드 검증 완료
   - Vercel 프론트 `https://gogoooooma.vercel.app/monthly-review` 200 OK + 차트 정상 렌더
   - **배포 운영 규칙**: API 응답 구조 변경 시 백엔드(Mac Mini)와 프론트(Vercel)를 **동시 배포** 필요 — 미스매치 시 client-side crash. 운영 절차는 `docs/error.md §22` 참조.
-- **Phase 2 차트 (예정)**: 브랜드별, 상품별, 채널 유형별 — PPT 잔여 12개 차트 추가 구현
+- **Phase 2 종합 차트 (2026-05-19 구현, chart 4~9)**:
+  - **Chart 4 — 브랜드별 매출 트렌드** (LineChart, 5-series, 12개월): 마이비/누비/쏭레브/에코보/기타 (모노 4단계 + 회색)
+  - **Chart 5 — 브랜드별 매출 비중** (PieChart, 12개월 합): 카테고리 외부 라벨 `name pct%` 10px 표시, 하단 Legend 제거
+  - **Chart 6 — 브랜드 월평균 vs 당월** (Grouped BarChart): 카테고리 마이비/누비/쏭레브/마+누+쏭, 시리즈 월평균(`#5d5d5d`) / 당월(`#000`)
+  - **Chart 7 — 채널별 매출 트렌드** (LineChart, 4-series, 12개월): 사입/위탁/자사몰/기타
+  - **Chart 8 — 채널별 매출 비중** (PieChart, 12개월 합)
+  - **Chart 9 — 채널 월평균 vs 당월** (Grouped BarChart): 카테고리 사입/위탁/자사몰/기타
+  - 채널 매핑: 사입=`채널구분=='오픈마켓(사입)'` / 위탁=`['오픈마켓(위탁)','종합몰','버티컬커머스']` / 자사몰=`'자사몰'` / 기타=나머지 (R열 규약은 **거래처 식별**에만 적용, 채널 유형은 시스템 `채널구분` 컬럼)
+- **레이아웃**: 3개 섹션 — `종합` (chart 1~3) / `브랜드 종합` (chart 4~6) / `채널 종합` (chart 7~9). 각 섹션 3-column grid + 섹션 헤더 (하단 border).
+- **Phase 3 차트 (예정)**: 마이비/누비/쏭레브 브랜드별 상품 라인 (slides 4-10) — PPT 잔여 6개 차트
 - **매핑 규약**:
   - 파트 필터: `all` → 필터X / `ecommerce` → `파트구분 == '이커머스'` / `offline` → `파트구분 == '오프라인'`
   - 주력채널 정의: CSV의 `주력 채널` 컬럼 값이 `'주력'` 인 row 합산

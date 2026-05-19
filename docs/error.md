@@ -503,6 +503,13 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 - 결과: 화이트스크린 없이 매끄러운 전환. SOP 효과 입증.
 - 다만 Mac Mini 자동 배포 도입 권장은 여전히 유효 — 매번 수동 패치는 휴먼 에러 위험.
 
+#### 📌 §22 SOP 가벼운 사례 — Non-breaking 변경 (2026-05-19, Phase 2 chart 4~9 추가)
+- chart 4~9를 신규 추가만 했고 chart 1~3 응답 구조 그대로 유지 → **non-breaking change**.
+- 위험 분석:
+  - OLD 프론트 + NEW 백엔드 = OLD 프론트가 chart4~9 무시 → 안전
+  - NEW 프론트 + OLD 백엔드 = `summary.chart4` undefined → 크래시 위험 (1~2분 Vercel 빌드 갭 동안)
+- 그래서 여전히 **Mac Mini 먼저 → 검증 → push** 순서 권장. Non-breaking이라고 SOP를 스킵하면 NEW 프론트 배포 시점에 OLD 백엔드면 크래시. SOP는 breaking·non-breaking 무관하게 적용.
+
 ---
 
 ## 20. 차트 라벨 통일 — "모든 차트 적용" 지시에 viewMode/timeUnit 조건 차단 케이스 누락 (자가검증 실패)

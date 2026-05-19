@@ -4,6 +4,80 @@
 
 ---
 
+## 2026-05-19 (9회차) — Chart 3 파트별 동적 전환 + 운영 목표 파일 동기화
+
+### 1. 배경
+- 사용자 요청: "전체에서는 주력채널 vs 쿠팡(사입)이 아니라 이커머스 vs 오프라인으로 그래프 변경해줄래"
+- 직전 운영 페이지 점검 중 `full_targets_extracted.csv`가 운영에 없는 것 발견 (사용자: "목표 데이터가 사라진 것 같다")
+
+### 2. 결정 사항
+- **Chart 3 파트별 자동 전환**:
+  - `part=all` (전체) → 이커머스 vs 오프라인 (파트구분 기반)
+  - `part=ecommerce|offline` → 주력채널 vs 쿠팡(사입) (현행 유지)
+- **제목/시리즈명/색도 모드에 따라 자동 전환** (백엔드 응답이 메타데이터 포함)
+- 색 위계 차이:
+  - 전체 모드: 두 파트 카테고리 비교 → 모노톤 `#000` + `#5d5d5d`
+  - 채널 모드: 쿠팡을 단일 강조 대상으로 → `#ff0066` 액센트 유지
+
+### 3. 구현
+
+#### 백엔드 (`api/monthly_review.py`)
+chart3 응답 구조를 array → object로 재구성:
+```json
+{
+  "chart3": {
+    "title": "이커머스 vs 오프라인",
+    "series_names": ["이커머스", "오프라인"],
+    "colors": ["#000000", "#5d5d5d"],
+    "data": [{"month": "2025-03", "value1": N, "value2": M}, ...]
+  }
+}
+```
+파트 분기 로직:
+```python
+if part == "all":
+    df_a = df[df["파트구분"] == "이커머스"]
+    df_b = df[df["파트구분"] == "오프라인"]
+    title = "이커머스 vs 오프라인"
+    ...
+else:
+    df_a = df_part[df_part["주력 채널"] == "주력"]
+    df_b = df_part[df_part["주력 채널"] == "주력(쿠팡)"]
+    title = "주력채널 vs 쿠팡(사입)"
+    ...
+```
+
+#### 프론트엔드 (`Chart3MainVsCoupang.tsx` + `monthly-review/page.tsx`)
+- Chart3 컴포넌트: hardcoded `주력채널`/`쿠팡(사입)` 제거 → `chart3.series_names`/`chart3.colors`로 동적 렌더.
+- page.tsx: SummaryResponse의 `chart3` 타입을 array → object로 변경, prop명 `data` → `chart3`.
+
+### 4. 운영 데이터 동기화 (error.md §21 참조)
+- `full_targets_extracted.csv`(72행 = 24개월×3파트, 25-01~26-12 목표)를 운영 백엔드에 curl 직접 업로드.
+  ```bash
+  curl -F "file=@api/uploads/targets/full_targets_extracted.csv" \
+       https://api.gongbaksoo.com/api/monthly-review/targets/
+  ```
+- 운영 검증: 2026-02 전체 목표 721M / 실적 405M / 56.1% 달성률.
+
+### 5. 검증
+- 로컬 backend (260106_4.csv, 2025-12):
+  - all 모드: 이커머스 416M vs 오프라인 63.5M ✓
+  - ecommerce 모드: 주력 122M vs 쿠팡(사입) 270.5M ✓
+- Next.js `npm run build` 통과.
+- 운영 배포 후 `https://api.gongbaksoo.com/api/monthly-review/summary/?month=2026-02&part=all` chart3.title = "이커머스 vs 오프라인" 확인 예정.
+
+### 6. 산출물
+- 수정: `api/monthly_review.py`, `frontend/src/components/monthly-review/Chart3MainVsCoupang.tsx`, `frontend/src/app/monthly-review/page.tsx`.
+- 데이터: `full_targets_extracted.csv` 운영 동기화.
+- 문서: `project_plan §4.7`, `design_document §2.3.3 / §2.3.3.2`, `error §21`, `history` 본 9회차.
+
+### 7. 후속 권장 항목
+1. **목표 파일 운영 자동 sync** — Mac Mini가 git pull 시 `api/uploads/targets/*`도 받아오도록 추적 + sync 스크립트. (error.md §21)
+2. **xlsx 직접 업로드 지원** — 매월 새 엑셀이 나올 때 별도 변환 없이 '전사' 시트를 백엔드가 파싱.
+3. **Mac Mini 자동 배포** — webhook 또는 cron으로 `git pull && launchctl kickstart` 주기 실행 (Phase 2 후속 항목 누적).
+
+---
+
 ## 2026-05-19 (8회차) — 차트 데이터 값 레이블 정리 (마지막 시점만 표시)
 
 ### 1. 배경

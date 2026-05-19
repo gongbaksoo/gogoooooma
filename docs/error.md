@@ -537,6 +537,42 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 
 ---
 
+## 21. 운영 백엔드 데이터 vs 로컬 데이터 불일치 — "사라진" 게 아니라 "원래 없던" 것
+
+작성일: 2026-05-19
+
+### 🚨 증상
+- 사용자가 `gogoooooma.vercel.app/monthly-review` 진입 → 목표 파일 드롭다운에 `test_targets.csv`만 표시.
+- 직전 로컬 세션에서 업로드해 사용했던 `full_targets_extracted.csv`가 안 보임.
+- 사용자가 "목표 데이터가 사라진 것 같다" 보고.
+
+### 🧭 원인
+- 로컬 backend(`api/uploads/targets/`)와 운영 backend(Mac Mini `api/uploads/targets/`)는 **물리적으로 다른 디렉토리**.
+- 지난 세션에서 추출한 `full_targets_extracted.csv`는 로컬에만 업로드. 운영엔 한 번도 안 올렸음.
+- 즉, "사라진" 게 아니라 **운영에는 원래 없던** 파일.
+- §16 (`.env.local`이 운영을 가리킴)이 결합되어 로컬 dev에서도 운영을 보고 있던 상태라 혼란 가중.
+
+### ✅ 해결
+1. 양쪽 상태를 동시에 보여줘 차이를 명확화:
+   ```bash
+   curl -s https://api.gongbaksoo.com/api/monthly-review/targets/   # 운영
+   curl -s http://127.0.0.1:8000/api/monthly-review/targets/        # 로컬 (켜져 있을 때)
+   ls api/uploads/targets/                                          # 로컬 디스크
+   ```
+2. 사용자 승인받고 로컬 파일을 운영에 curl 업로드:
+   ```bash
+   curl -F "file=@api/uploads/targets/full_targets_extracted.csv" \
+        https://api.gongbaksoo.com/api/monthly-review/targets/
+   ```
+3. 동일 파일명 + 동일 수치 검증 (2026-02 전체 목표 721M / 실적 405M / 56% 일치).
+
+### 💡 향후 권장
+- **로컬 ↔ 운영 데이터 명확 분리 인지**: 로컬에서 만든 산출물은 운영에 자동 동기화되지 않음. 작업 보고 시 "로컬에만" / "운영에도" 명시.
+- **목표 파일·기준 데이터 sync 스크립트** — `api/uploads/targets/`처럼 운영에도 필요한 정형 데이터는 git 추적 + Mac Mini가 git pull 시 자동 동기화되도록 하거나, 별도 sync 스크립트 운영.
+- **사용자에게 보일 때 "원천(source)" 명시** — UI에 "데이터 출처: 운영 백엔드 (api.gongbaksoo.com)" 같은 환경 표시 검토.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.

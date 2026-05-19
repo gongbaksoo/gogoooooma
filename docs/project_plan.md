@@ -121,7 +121,10 @@ sales-analysis-site/
 - **Phase 1 차트 (운영 배포 완료, 2026-05-19)**:
   - **Chart 1 — 목표비 실적** (BarChart): 사업계획 vs 실적 + 달성률(%)
   - **Chart 2 — 전년비 트렌드** (LineChart): **대상월 기준 직전 12개월** vs **같은 기간 1년 전** (예: 대상월 26-02 → X축 25.03~26.02, 전년 라인은 24.03~25.02 동일 월 값)
-  - **Chart 3 — 주력채널 vs 쿠팡(사입)** (LineChart): 최근 12개월, 2시리즈
+  - **Chart 3 — 파트별 동적 비교** (LineChart, 최근 12개월): 파트 필터에 따라 자동 전환
+    - `part=all` (전체) → **이커머스 vs 오프라인** (파트구분 기반, 색 `#000`/`#5d5d5d`)
+    - `part=ecommerce|offline` → **주력채널 vs 쿠팡(사입)** (주력채널 컬럼 기반, 색 `#000`/`#ff0066`)
+    - 백엔드 응답: `{title, series_names, colors, data: [{month, value1, value2}]}` 객체 구조 — 프론트엔드가 메타데이터로 동적 렌더링
 - **운영 동작 상태** (2026-05-19 검증):
   - Mac Mini 백엔드 `launchctl kickstart -k gui/$(id -u)/com.avk.backend` 으로 코드 반영
   - `https://api.gongbaksoo.com/api/monthly-review/{months, targets, summary}` 모두 200 OK

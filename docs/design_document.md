@@ -692,3 +692,46 @@ const CustomLabel = (props: any) => {
 - 라벨이 없던 3개 차트(브랜드 비교 4 Line, Chart2YoYTrend 2 Line, Chart3MainVsCoupang 2 Line)에 LabelList 추가.
 - Chart2YoYTrend와 Chart3MainVsCoupang은 라인 2개가 가까이 위치할 수 있어, 1번째 라인은 `position="top"`, 2번째 라인은 `position="bottom"`으로 겹침 방지.
 
+### 8.12 일간 모드 X축 라벨 — 월별 1일만 표시 (2026-05-19 적용)
+
+#### 배경
+
+이전 일간 모드 X축은 모든 날짜를 `MM.DD` 형식으로 표시 → 17개월(약 500일) 기간 조회 시 라벨이 모두 중첩되어 가로축이 검게 보이는 가독성 문제.
+
+#### 규약
+
+일간 모드(`timeUnit === 'day'` 또는 `isDaily`)에서는 **각 월의 1일에만** X축 라벨을 표시. 나머지 날짜는 빈 문자열 반환하여 tick은 유지하되 글자만 숨김.
+
+#### 표기 포맷
+
+```
+"25/1", "25/2", ... "25/12", "26/1", ... "26/5"
+```
+
+- 형식: `YY/M` (월은 leading-zero 없음)
+- 17개월 조회 시 총 17개 라벨만 표시.
+
+#### 표준 패턴
+
+```javascript
+if (timeUnit === 'day') {
+    if (!value) return value;
+    const [yyyy, mm, dd] = value.split('-');
+    if (dd !== '01') return '';
+    return `${yyyy.slice(2)}/${parseInt(mm)}`;
+}
+```
+
+#### 적용 범위 (5개 파일)
+
+| 파일 | 위치 |
+|------|------|
+| `ChannelSalesChartNew.tsx` | `formatXAxisTick` 함수 (일간 분기) |
+| `DetailedSalesChartNew.tsx` | `formatXAxisTick` 함수 (일간 분기) |
+| `ProductSearchChart.tsx` | `formatXAxisTick` 함수 (일간 분기) |
+| `DynamicAnalysisSection.tsx` | 인라인 `tickFormatter` (isDaily 분기) |
+| `app/custom-dashboard/details/page.tsx` | `formatXAxisTick` (10자 분기) + 페이지 로컬 인라인 `tickFormatter` |
+
+월간 모드(`timeUnit === 'month'`/`!isDaily`)의 X축 라벨 로직은 기존 그대로 유지 (1월에만 연도 표시 `"25'1"` 형식).
+
+

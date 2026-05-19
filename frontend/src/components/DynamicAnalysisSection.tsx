@@ -259,7 +259,16 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                         <XAxis
                             dataKey={isDaily ? "Date" : "Month"}
-                            tickFormatter={(val, index) => isDaily ? val.split('-').slice(1).join('/') : formatXAxisTick(val, index)}
+                            tickFormatter={(val, index) => {
+                                if (isDaily) {
+                                    const parts = val.split('-');
+                                    if (parts.length !== 3) return val;
+                                    const [yyyy, mm, dd] = parts;
+                                    if (dd !== '01') return '';
+                                    return `${yyyy.slice(2)}/${parseInt(mm)}`;
+                                }
+                                return formatXAxisTick(val, index);
+                            }}
                             stroke="#5d5d5d"
                             style={{ fontSize: '9px', fontWeight: 500 }}
                             axisLine={false}

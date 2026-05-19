@@ -275,16 +275,12 @@ const DetailedSalesChartNew: React.FC<DetailedSalesChartProps> = ({ filename }) 
 
     const formatXAxisTick = (value: string, index: number) => {
         if (timeUnit === 'day') {
-            // value is likely 'YYYY-MM-DD' or 'MM.DD' (if already formatted, but dataKey uses 'rawMonth')
-            // Let's assume rawMonth is 'YYYY-MM-DD'
             if (!value) return value;
-
-            // Format: "MM.DD"
             const dateParts = value.split('-');
             if (dateParts.length === 3) {
-                const month = dateParts[1];
-                const day = dateParts[2];
-                return `${month}.${day}`;
+                const [yyyy, mm, dd] = dateParts;
+                if (dd !== '01') return '';
+                return `${yyyy.slice(2)}/${parseInt(mm)}`;
             }
             return value;
         }

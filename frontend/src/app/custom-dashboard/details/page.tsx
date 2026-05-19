@@ -85,9 +85,13 @@ const formatXAxisTick = (value: string, index: number) => {
         }
         return `${month}`;
     }
-    // Daily format YYYY-MM-DD
+    // Daily format YYYY-MM-DD: 각 월의 1일에만 'YY/M' 표시
     if (value.length === 10) {
-        return `${value.substring(5, 7)}.${value.substring(8, 10)}`;
+        const dd = value.substring(8, 10);
+        if (dd !== '01') return '';
+        const yy = value.substring(2, 4);
+        const m = parseInt(value.substring(5, 7));
+        return `${yy}/${m}`;
     }
     return value;
 };
@@ -138,7 +142,16 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                         <XAxis
                             dataKey={isDaily ? "Date" : "Month"}
-                            tickFormatter={(val, index) => isDaily ? val.split('-').slice(1).join('/') : formatXAxisTick(val, index)}
+                            tickFormatter={(val, index) => {
+                                if (isDaily) {
+                                    const parts = val.split('-');
+                                    if (parts.length !== 3) return val;
+                                    const [yyyy, mm, dd] = parts;
+                                    if (dd !== '01') return '';
+                                    return `${yyyy.slice(2)}/${parseInt(mm)}`;
+                                }
+                                return formatXAxisTick(val, index);
+                            }}
                             stroke="#5d5d5d"
                             style={{ fontSize: '9px', fontWeight: 500 }}
                             axisLine={false}

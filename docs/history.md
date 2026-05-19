@@ -4,6 +4,47 @@
 
 ---
 
+## 2026-05-19 (14회차) — 일간 모드 X축 라벨 가독성 개선 (월별 1일만 표시)
+
+### 1. 배경
+- 사용자가 `채널별 매출 상세 분석` 차트에서 일간 모드 조회 중 X축 라벨이 모든 날짜(약 500일)를 표시하여 글자가 중첩되어 검게 보이는 가독성 문제 발견.
+- 스크린샷으로 지적: "글자가 다 겹쳐보이거든? 일간으로 봤을때는 각 월의 1일만 표현해줄래?"
+
+### 2. 결정 사항
+- **일간 모드(`timeUnit === 'day'` 또는 `isDaily`)**: 각 월의 1일에만 X축 라벨 표시, 나머지 날짜는 빈 문자열.
+- **표기 포맷**: `YY/M` (예: `25/1`, `25/2`, ... `26/5`) — 17개월 조회 시 총 17개 라벨.
+- **적용 범위**: 일간 모드를 지원하는 차트 전체.
+- **월간 모드는 기존 유지**: 1월에만 연도 표시 `"25'1"` 규칙 그대로.
+
+### 3. 적용 내역 (5개 파일)
+
+| 파일 | 변경 |
+|------|------|
+| `ChannelSalesChartNew.tsx` | `formatXAxisTick` 일간 분기 |
+| `DetailedSalesChartNew.tsx` | `formatXAxisTick` 일간 분기 |
+| `ProductSearchChart.tsx` | `formatXAxisTick` 일간 분기 |
+| `DynamicAnalysisSection.tsx` | 인라인 `tickFormatter` isDaily 분기 |
+| `app/custom-dashboard/details/page.tsx` | 전역 `formatXAxisTick` 10자 분기 + 페이지 로컬 인라인 `tickFormatter` |
+
+### 4. 표준 패턴
+```javascript
+if (timeUnit === 'day') {
+    const [yyyy, mm, dd] = value.split('-');
+    if (dd !== '01') return '';
+    return `${yyyy.slice(2)}/${parseInt(mm)}`;
+}
+```
+
+### 5. 검증
+- TypeScript: 기존 pre-existing 에러 외 새 에러 없음.
+- 시각 확인: Vercel 배포 후 사용자 검증 예정.
+
+### 6. 산출물
+- `docs/design_document.md` §8.12 신규 섹션 추가.
+- `docs/history.md` 본 섹션 추가.
+
+---
+
 ## 2026-05-19 (13회차) — Phase 3: 브랜드 상세 동적 UI + HTML 목업 SOP 도입
 
 ### 1. 배경

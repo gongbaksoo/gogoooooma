@@ -325,9 +325,9 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
         if (timeUnit === 'day') {
             const dateParts = value.split('-');
             if (dateParts.length === 3) {
-                const month = dateParts[1];
-                const day = dateParts[2];
-                return `${month}.${day}`;
+                const [yyyy, mm, dd] = dateParts;
+                if (dd !== '01') return '';
+                return `${yyyy.slice(2)}/${parseInt(mm)}`;
             }
             return value;
         }

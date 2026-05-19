@@ -657,6 +657,38 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 
 ---
 
+## 24. localStorage selection 마이그레이션 누락 — 옛 카테고리명이 새 옵션 풀에 없으면 모달 비어보임
+
+작성일: 2026-05-19 (14회차)
+
+### 🚨 증상
+- 이커머스 모드의 채널 selection을 4 그룹 카테고리(`사입/위탁/자사몰/기타`) → P열 unique values로 변경.
+- 기존 사용자 localStorage에 `["사입","위탁","자사몰","기타"]`가 저장된 상태였음.
+- 신규 옵션 풀(P열 10개)에는 `사입`/`위탁`/`기타` 항목이 없음 → filter 결과 빈 selection → 차트에 "표시할 채널을 선택해주세요" 안내만.
+- 신규 default가 적용되지 않고 빈 상태로 보임.
+
+### 🧭 원인
+- selection 풀(옵션 카테고리 이름)이 바뀌었는데 localStorage migration 코드가 없음.
+- `loadChannelSelections`는 string array만 그대로 보존 — 유효성 검증·default fallback 없음.
+- 결과: 사용자는 "왜 비어있지?" 혼란.
+
+### ✅ 해결 (사용자 대처 안내)
+- 모달 열고 새 default 5개 체크 → 적용 (수동).
+- 또는 브라우저 콘솔: `localStorage.removeItem("avk_monthly_review_channel_selections")` 후 새로고침 → 기본값 자동 적용.
+
+### 💡 향후 권장
+1. **selection storage에 마이그레이션 로직 추가** — load 시 옵션에 없는 값 자동 제거 + 0개 남으면 default fallback.
+   ```ts
+   function migrate(selected: string[], availableNames: Set<string>, fallback: string[]): string[] {
+     const valid = selected.filter(s => availableNames.has(s));
+     return valid.length > 0 ? valid : fallback;
+   }
+   ```
+2. **스키마 버전 키**: `avk_monthly_review_channel_selections_v2` 같은 버전 suffix → breaking 변경 시 자동 초기화.
+3. **사용자에게 변경 시 안내 토스트**: "옵션이 변경되어 기본값으로 초기화됨" 1회 표시.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.

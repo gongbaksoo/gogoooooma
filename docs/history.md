@@ -4,6 +4,71 @@
 
 ---
 
+## 2026-05-19 (15회차) — 채널 종합 동적화 (ChannelSection) + 이커머스 P열 통일
+
+### 1. 배경
+- 사용자 요청: "채널 종합 섹션의 트렌드/비중/월평균 3 차트 모두 — **파트별로 다른 카테고리 + 사용자 선택 가능 + localStorage 저장**"
+- 추가 요청: "이커머스 탭 모달이 4개 옵션만 보이는데 CSV의 이커머스 P열 값 다 가져와줘"
+
+### 2. 사용자 합의 사항 (3건)
+1. **파트별 기본 카테고리**:
+   - 전체: 오픈마켓(사입) / 오픈마켓(위탁) / 자사몰 / 할인점
+   - 이커머스: 4 그룹(사입/위탁/자사몰/기타) → **P열 unique values 통일** (5개 default)
+   - 오프라인: 할인점 / 다이소 / 오프라인 대리점
+2. **선택 안 한 P열 값들**: 차트에 표시 안 함 (단순).
+3. **목업 생략**: UI 패턴이 BrandSection의 ProductSelectionModal과 동일 → 텍스트 합의만으로 진행.
+
+### 3. 구현
+
+#### 백엔드 (`api/monthly_review.py`)
+- chart7/8/9 정적 응답 **제거**.
+- `channel_options` 추가: 파트별 옵션 + 12개월 데이터 + monthly_avg + current_month metric.
+  - `all`: 16개 P열 unique
+  - `ecommerce`: 10개 P열 unique (이커머스 파트 row만)
+  - `offline`: 5개 P열 unique (오프라인 파트 row만)
+- `channel_defaults`, `channel_months` 추가.
+
+#### 프론트엔드 신규
+- `channelSelectionStorage.ts` — localStorage CRUD + Part 타입 + 기본값
+- `ChannelSection.tsx` — 트렌드/파이/막대 3 차트 + 모달 트리거 통합 (BrandSection 패턴 차용, 차트 종류만 다름)
+- `ProductSelectionModal.tsx` 재사용 (옵션 풀만 다른 데이터)
+
+#### 프론트엔드 수정
+- `page.tsx`: Chart7/8/9 영역을 `<ChannelSection part={part}>`로 교체. part 토글 시 옵션·selection 자동 전환.
+- `ChartVisibilityModal.tsx`: chart7/8/9 토글 제거 (ChannelSection 자체 관리).
+- 사용 안 하는 Chart7/8/9 컴포넌트 파일 삭제.
+
+### 4. 이커머스 모드 통일 (사용자 후속 요청)
+- 초기 구현: 이커머스만 4 그룹 카테고리 유지 (`사입/위탁/자사몰/기타`)
+- 사용자 피드백: "옵션 4개밖에 안 나오는데 P열 다 가져와"
+- 변경: 이커머스도 all/offline과 같은 패턴 (P열 10개 unique values).
+- 새 default: `오픈마켓(사입) / 오픈마켓(위탁) / 종합몰 / 버티컬커머스 / 자사몰` (5개) — PPT "위탁 = 오픈마켓위탁+종합몰+버티컬"을 P열에 직접 매핑.
+
+### 5. 마이그레이션 누락 (error.md §24)
+- 기존 사용자 localStorage에 `["사입","위탁","자사몰","기타"]`가 있으면 새 옵션 풀에 없는 값들 → filter 결과 빈 selection → "표시할 채널을 선택해주세요" 안내만.
+- 해결 안내: 모달에서 새 default 5개 체크 OR `localStorage.removeItem` 후 새로고침.
+- 향후 권장: storage 마이그레이션 로직 (옵션에 없는 값 자동 제거 + 0개 남으면 default fallback).
+
+### 6. 검증
+- 백엔드 로컬: `channel_options.ecommerce` 10개 확인 (자사몰 20500, 오픈마켓위탁 13603, 종합몰 6562, 버티컬커머스 6017, 오픈마켓사입 5289, 사내판매, 폐쇄몰, 해외, 스페셜, 온라인 벤더).
+- Next.js `npm run build` 통과.
+- 로컬 페이지 HTTP 200.
+
+### 7. 산출물
+- 신규: `ChannelSection.tsx` / `channelSelectionStorage.ts`
+- 수정: `api/monthly_review.py` (chart7/8/9 제거 + channel_options 추가) / `page.tsx` / `ChartVisibilityModal.tsx` / `channelSelectionStorage.ts` (이커머스 default 5개)
+- 삭제: `Chart7ChannelTrend.tsx` / `Chart8ChannelShare.tsx` / `Chart9ChannelVsAvg.tsx`
+- 문서: project_plan §4.7 채널 종합 동적화 / design_document §2.3.3.8 ChannelSection 디자인·API·마이그레이션 / error.md §24 storage 마이그레이션 누락 회고 / history 본 15회차.
+
+### 8. Phase 후속 항목 (변동)
+1. **이번 회차 운영 배포** — Mac Mini git pull + uvicorn 재시작 + git push.
+2. **storage 마이그레이션 로직 추가** — selectionStorage들 (channel/brand/visibility) load 시 옵션 유효성 검증 + default fallback.
+3. **xlsx 직접 업로드** (전사 시트 파서) — 보류 중.
+4. **Mac Mini 자동 배포** — 누적 권장 (§19/§22).
+5. **chart3 컴포넌트 리네임**.
+
+---
+
 ## 2026-05-19 (14회차) — 일간 모드 X축 라벨 가독성 개선 (월별 1일만 표시)
 
 ### 1. 배경

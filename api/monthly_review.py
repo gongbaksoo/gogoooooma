@@ -393,45 +393,56 @@ def get_summary(
         "data": _grouped_bar(bar_frames, bar_cats, target_yymm),
     }
 
-    # ----- 채널 유형 분류 (df_part 기반) -----
-    # 사입 / 위탁 / 자사몰 / 기타
+    # ----- 채널 옵션 (part별 동적) -----
+    # all      → P열(채널구분) unique values 직접
+    # ecommerce → 4 그룹 카테고리 (사입/위탁/자사몰/기타) — 기존 유지
+    # offline   → P열(채널구분) unique values 직접 (오프라인 파트 row만)
     if "채널구분" not in df.columns:
         raise HTTPException(status_code=400, detail="CSV에 '채널구분' 컬럼이 없습니다.")
-    CHAN_BUY_IN = ["오픈마켓(사입)"]
-    CHAN_CONSIGN = ["오픈마켓(위탁)", "종합몰", "버티컬커머스"]
-    CHAN_OWN = ["자사몰"]
-    chan_main = CHAN_BUY_IN + CHAN_CONSIGN + CHAN_OWN
-    chan_frames = [
-        df_part[df_part["채널구분"].isin(CHAN_BUY_IN)],
-        df_part[df_part["채널구분"].isin(CHAN_CONSIGN)],
-        df_part[df_part["채널구분"].isin(CHAN_OWN)],
-        df_part[~df_part["채널구분"].isin(chan_main)],
-    ]
-    chan_names = ["사입", "위탁", "자사몰", "기타"]
-    chan_colors = ["#000000", "#5d5d5d", "#7d7d7d", "#b8b8b8"]
 
-    # chart7: 채널별 매출 트렌드
-    chart7 = {
-        "title": "채널별 매출 트렌드",
-        "series_names": chan_names,
-        "colors": chan_colors,
-        "data": _trailing_series(chan_frames, "")["data"],
+    last12_yymm_set = [f"{str(y)[-2:]}{str(m).zfill(2)}" for y, m in last12]
+
+    def _option_from_frame(name: str, f: pd.DataFrame) -> dict:
+        """단일 옵션 = name + row_count + 12개월 values + monthly_avg + current_month"""
+        values = [float(f[f["월구분"] == yymm]["판매액"].sum()) for yymm in last12_yymm_set]
+        total_12 = sum(values)
+        return {
+            "name": name,
+            "row_count": int(len(f)),
+            "values": values,
+            "monthly_avg": total_12 / 12 if values else 0.0,
+            "current_month": float(f[f["월구분"] == target_yymm]["판매액"].sum()),
+        }
+
+    # all: P열 unique values 전부 (전체 df 기준)
+    all_options = []
+    for chan in sorted(df["채널구분"].dropna().unique().tolist()):
+        f = df[df["채널구분"] == chan]
+        all_options.append(_option_from_frame(str(chan), f))
+
+    # ecommerce: P열 unique values (이커머스 파트 row만) — all/offline과 동일 패턴
+    ec_df = df[df["파트구분"] == "이커머스"]
+    ec_options = []
+    for chan in sorted(ec_df["채널구분"].dropna().unique().tolist()):
+        f = ec_df[ec_df["채널구분"] == chan]
+        ec_options.append(_option_from_frame(str(chan), f))
+
+    # offline: P열 unique values (오프라인 파트 row만)
+    off_df = df[df["파트구분"] == "오프라인"]
+    off_options = []
+    for chan in sorted(off_df["채널구분"].dropna().unique().tolist()):
+        f = off_df[off_df["채널구분"] == chan]
+        off_options.append(_option_from_frame(str(chan), f))
+
+    channel_options = {
+        "all": all_options,
+        "ecommerce": ec_options,
+        "offline": off_options,
     }
-
-    # chart8: 채널별 매출 비중
-    chart8 = {
-        "title": "채널별 매출 비중 (최근 12개월)",
-        "series_names": chan_names,
-        "colors": chan_colors,
-        "data": _share_pie(chan_frames, chan_names),
-    }
-
-    # chart9: 채널별 월 평균 대비 실적
-    chart9 = {
-        "title": "월 평균 대비 실적",
-        "series_names": ["월평균", "당월"],
-        "colors": ["#5d5d5d", "#000000"],
-        "data": _grouped_bar(chan_frames, chan_names, target_yymm),
+    channel_defaults = {
+        "all": ["오픈마켓(사입)", "오픈마켓(위탁)", "자사몰", "할인점"],
+        "ecommerce": ["오픈마켓(사입)", "오픈마켓(위탁)", "종합몰", "버티컬커머스", "자사몰"],
+        "offline": ["할인점", "다이소", "오프라인 대리점"],
     }
 
     # ----- 브랜드 상세 (chart 10~15) -----
@@ -512,12 +523,12 @@ def get_summary(
         "chart4": chart4,
         "chart5": chart5,
         "chart6": chart6,
-        "chart7": chart7,
-        "chart8": chart8,
-        "chart9": chart9,
         "chart10": chart10,
         "chart12": chart12,
         "chart14": chart14,
         "brand_products": brand_products,
         "brand_products_months": last12_labels,
+        "channel_options": channel_options,
+        "channel_defaults": channel_defaults,
+        "channel_months": last12_labels,
     }

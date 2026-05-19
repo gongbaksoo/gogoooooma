@@ -136,11 +136,20 @@ sales-analysis-site/
   - **Chart 4 — 브랜드별 매출 트렌드** (LineChart, 5-series, 12개월): 마이비/누비/쏭레브/에코보/기타 (모노 4단계 + 회색)
   - **Chart 5 — 브랜드별 매출 비중** (PieChart, 12개월 합): 카테고리 외부 라벨 `name pct%` 10px 표시, 하단 Legend 제거
   - **Chart 6 — 브랜드 월평균 vs 당월** (Grouped BarChart): 카테고리 마이비/누비/쏭레브/마+누+쏭, 시리즈 월평균(`#5d5d5d`) / 당월(`#000`)
-  - **Chart 7 — 채널별 매출 트렌드** (LineChart, 4-series, 12개월): 사입/위탁/자사몰/기타
-  - **Chart 8 — 채널별 매출 비중** (PieChart, 12개월 합)
-  - **Chart 9 — 채널 월평균 vs 당월** (Grouped BarChart): 카테고리 사입/위탁/자사몰/기타
-  - 채널 매핑: 사입=`채널구분=='오픈마켓(사입)'` / 위탁=`['오픈마켓(위탁)','종합몰','버티컬커머스']` / 자사몰=`'자사몰'` / 기타=나머지 (R열 규약은 **거래처 식별**에만 적용, 채널 유형은 시스템 `채널구분` 컬럼)
-- **레이아웃**: 3개 섹션 — `종합` (chart 1~3) / `브랜드 종합` (chart 4~6) / `채널 종합` (chart 7~9). 각 섹션 3-column grid + 섹션 헤더 (하단 border).
+  - ~~Chart 7/8/9 (정적)~~ → **ChannelSection** 동적 컴포넌트로 대체 (2026-05-19 14회차)
+- **채널 종합 (ChannelSection, 2026-05-19 동적화)**:
+  - 단일 컴포넌트가 트렌드/파이/막대 3 차트 동시 렌더 + 우측 상단 `표시 채널 수정 ▾` 모달
+  - **파트별 동적 옵션 + 사용자 선택 가능** (P열 `채널구분` unique values, 파트구분으로 필터링):
+    - `all`: 16개 옵션 (전체 df의 P열 unique) — 기본 4개 (오픈마켓(사입)/오픈마켓(위탁)/자사몰/할인점)
+    - `ecommerce`: 10개 옵션 (이커머스 파트 P열) — 기본 5개 (오픈마켓(사입)/오픈마켓(위탁)/종합몰/버티컬커머스/자사몰, PPT 위탁 그룹의 P열 매핑)
+    - `offline`: 5개 옵션 (오프라인 파트 P열) — 기본 3개 (할인점/다이소/오프라인 대리점)
+  - **백엔드 응답 신규 필드**:
+    - `channel_options`: `{ all: [...], ecommerce: [...], offline: [...] }` — 각 옵션 = `{name, row_count, values[12], monthly_avg, current_month}`
+    - `channel_defaults`: 파트별 기본 선택 (백엔드·프론트 동기 명시)
+    - `channel_months`: 12개월 라벨 배열
+  - **localStorage 저장 키**: `avk_monthly_review_channel_selections` — `{ all: string[], ecommerce: string[], offline: string[] }`
+  - 사용 안 하는 Chart7/8/9 컴포넌트 + chart7/8/9 응답 키 제거
+- **레이아웃**: 4개 섹션 — `종합` (chart 1~3) / `브랜드 종합` (chart 4~6) / `채널 종합` (ChannelSection) / `브랜드 상세` (BrandSection × 3). 각 섹션 자체 헤더 + grid.
 - **Phase 3 브랜드 상세 (2026-05-19 구현, 동적 컴포넌트)**:
   - 단일 컴포넌트 `BrandSection` × 3 (마이비 / 누비 / 쏭레브). 각 브랜드 섹션이 자체적으로 3종류 차트 그룹 렌더:
     - **종합 트렌드** (단일 line, 12개월) — 백엔드 `chart10/12/14`

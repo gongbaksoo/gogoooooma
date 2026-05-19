@@ -4,15 +4,13 @@ import { useEffect, useState } from "react";
 
 export type ChartId =
   | "chart1" | "chart2" | "chart3"
-  | "chart4" | "chart5" | "chart6"
-  | "chart7" | "chart8" | "chart9";
+  | "chart4" | "chart5" | "chart6";
 
 export type VisibilityMap = Record<ChartId, boolean>;
 
 const ALL_CHART_IDS: ChartId[] = [
   "chart1", "chart2", "chart3",
   "chart4", "chart5", "chart6",
-  "chart7", "chart8", "chart9",
 ];
 
 const SECTIONS: { title: string; charts: { id: ChartId; label: string }[] }[] = [
@@ -32,16 +30,8 @@ const SECTIONS: { title: string; charts: { id: ChartId; label: string }[] }[] = 
       { id: "chart6", label: "6. 브랜드 월평균 vs 당월" },
     ],
   },
-  {
-    title: "채널 종합",
-    charts: [
-      { id: "chart7", label: "7. 채널별 매출 트렌드" },
-      { id: "chart8", label: "8. 채널별 매출 비중" },
-      { id: "chart9", label: "9. 채널 월평균 vs 당월" },
-    ],
-  },
 ];
-// 주: "브랜드 상세" 섹션은 각 브랜드 BrandSection 내부에서 자체적으로 관리 (상품 추가/제거 모달)
+// 주: "채널 종합"·"브랜드 상세" 섹션은 각 컴포넌트 내부에서 자체적으로 관리 (표시 채널/상품 수정 모달)
 
 const STORAGE_KEY = "avk_monthly_review_visible_charts";
 

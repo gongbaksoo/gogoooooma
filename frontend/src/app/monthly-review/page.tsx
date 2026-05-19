@@ -11,9 +11,13 @@ import Chart3MainVsCoupang from "@/components/monthly-review/Chart3MainVsCoupang
 import Chart4BrandTrend from "@/components/monthly-review/Chart4BrandTrend";
 import Chart5BrandShare from "@/components/monthly-review/Chart5BrandShare";
 import Chart6BrandVsAvg from "@/components/monthly-review/Chart6BrandVsAvg";
-import Chart7ChannelTrend from "@/components/monthly-review/Chart7ChannelTrend";
-import Chart8ChannelShare from "@/components/monthly-review/Chart8ChannelShare";
-import Chart9ChannelVsAvg from "@/components/monthly-review/Chart9ChannelVsAvg";
+import ChannelSection from "@/components/monthly-review/ChannelSection";
+import {
+  ChannelSelections,
+  DEFAULT_CHANNEL_SELECTIONS,
+  loadChannelSelections,
+  saveChannelSelections,
+} from "@/components/monthly-review/channelSelectionStorage";
 import ChartVisibilityModal, {
   VisibilityMap,
   defaultVisibility,
@@ -58,14 +62,20 @@ interface SummaryResponse {
   chart4: TrendChart;
   chart5: ShareChart;
   chart6: BarChart;
-  chart7: TrendChart;
-  chart8: ShareChart;
-  chart9: BarChart;
   chart10: TrendChart;
   chart12: TrendChart;
   chart14: TrendChart;
   brand_products: Record<Brand, { name: string; row_count: number; values: number[] }[]>;
   brand_products_months: string[];
+  channel_options: Record<"all" | "ecommerce" | "offline", {
+    name: string;
+    row_count: number;
+    values: number[];
+    monthly_avg: number;
+    current_month: number;
+  }[]>;
+  channel_defaults: Record<"all" | "ecommerce" | "offline", string[]>;
+  channel_months: string[];
 }
 
 interface TargetFile {
@@ -98,17 +108,27 @@ export default function MonthlyReviewPage() {
   const [visibility, setVisibility] = useState<VisibilityMap>(defaultVisibility());
   const [visibilityModalOpen, setVisibilityModalOpen] = useState(false);
   const [brandSelections, setBrandSelections] = useState<BrandSelections>(DEFAULT_BRAND_SELECTIONS);
+  const [channelSelections, setChannelSelections] = useState<ChannelSelections>(DEFAULT_CHANNEL_SELECTIONS);
 
-  // 마운트 시 localStorage에서 visibility & brand selections 복원 (SSR 안전)
+  // 마운트 시 localStorage에서 모든 selections 복원 (SSR 안전)
   useEffect(() => {
     setVisibility(loadVisibility());
     setBrandSelections(loadBrandSelections());
+    setChannelSelections(loadChannelSelections());
   }, []);
 
   const updateBrandSelection = (brand: Brand, next: BrandSelections[Brand]) => {
     setBrandSelections((prev) => {
       const updated = { ...prev, [brand]: next };
       saveBrandSelections(updated);
+      return updated;
+    });
+  };
+
+  const updateChannelSelection = (p: Part, next: string[]) => {
+    setChannelSelections((prev) => {
+      const updated = { ...prev, [p]: next };
+      saveChannelSelections(updated);
       return updated;
     });
   };
@@ -429,14 +449,6 @@ export default function MonthlyReviewPage() {
                 { id: "chart6", el: <Chart6BrandVsAvg chart6={summary.chart6} /> },
               ],
             },
-            {
-              title: "채널 종합",
-              charts: [
-                { id: "chart7", el: <Chart7ChannelTrend chart7={summary.chart7} /> },
-                { id: "chart8", el: <Chart8ChannelShare chart8={summary.chart8} /> },
-                { id: "chart9", el: <Chart9ChannelVsAvg chart9={summary.chart9} /> },
-              ],
-            },
           ];
           // 브랜드 상세 섹션은 BrandSection 컴포넌트 3개 (마이비/누비/쏭레브)
           const brandTotalMap: Record<Brand, TrendChart> = {
@@ -462,6 +474,17 @@ export default function MonthlyReviewPage() {
                   </section>
                 );
               })}
+
+              {/* 채널 종합 — 파트별 동적 카테고리 */}
+              <section>
+                <ChannelSection
+                  part={part}
+                  options={summary.channel_options[part] ?? []}
+                  months={summary.channel_months}
+                  selected={channelSelections[part]}
+                  onSelectedChange={(next) => updateChannelSelection(part, next)}
+                />
+              </section>
 
               {/* 브랜드 상세 — 각 브랜드별 BrandSection */}
               <div className="space-y-8 pt-4">

@@ -69,7 +69,7 @@ export default function BrandSection({
   // 주요 상품 라인 차트 데이터 (선택된 상품들 모아서 multi-line)
   const mainLineData = useMemo(() => {
     const selected = selection.mainLine.map((name) => productByName.get(name)).filter(Boolean) as BrandProduct[];
-    if (selected.length === 0) return { data: [], names: [], colors: [] };
+    if (selected.length === 0) return { data: [], names: [], styles: [] };
     const data = months.map((m, idx) => {
       const row: Record<string, string | number> = { month: shortLabel(m) };
       selected.forEach((p) => {

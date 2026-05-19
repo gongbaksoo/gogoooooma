@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>차트 팔레트 B-4 — 4 hue × 실/점선</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: 'Pretendard Variable', Pretendard, system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif;
+  background: #ffffff;
+  color: #000000;
+  margin: 0 auto;
+  padding: 60px 40px;
+  max-width: 960px;
+}
+h1 { font-size: 30px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.5px; }
+.subtitle { font-size: 15px; color: #5d5d5d; margin: 0 0 40px; line-height: 1.5; }
+.nav { display: flex; gap: 8px; margin-bottom: 32px; flex-wrap: wrap; }
+.nav a {
+  font-size: 13px; font-weight: 700; padding: 8px 14px;
+  border: 1px solid #c4c4c4; border-radius: 4px; text-decoration: none;
+  color: #000; background: #fff;
+}
+.nav a.active { background: #000; color: #fff; border-color: #000; }
+.nav a:hover { border-color: #000; }
+.nav-section { font-size: 11px; color: #5d5d5d; margin-right: 8px; align-self: center; }
+.chart-wrapper { border: 1px solid #c4c4c4; padding: 32px; background: white; margin-bottom: 32px; }
+.chart-title { font-size: 13px; font-weight: 700; margin: 0 0 20px; }
+svg { width: 100%; height: 420px; display: block; }
+.legend { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 20px; font-size: 12px; margin-top: 24px; }
+.legend-item { display: flex; align-items: center; gap: 10px; }
+.legend-swatch { flex-shrink: 0; }
+.palette-info { margin-top: 32px; padding: 24px; border: 1px solid #c4c4c4; font-size: 13px; line-height: 1.7; background: #fff; }
+.palette-info h2 { font-size: 14px; font-weight: 700; margin: 0 0 12px; }
+.palette-info p { margin: 0 0 8px; }
+.palette-info code { background: #f5f5f5; padding: 2px 6px; font-size: 12px; }
+.swatch-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-top: 16px; }
+.swatch-cell { aspect-ratio: 1; border: 1px solid #c4c4c4; position: relative; }
+.swatch-cell::after { content: attr(data-hex); position: absolute; bottom: -18px; left: 0; right: 0; text-align: center; font-size: 10px; color: #5d5d5d; }
+</style>
+</head>
+<body>
+
+<h1>B-4 — 4 hue × 실/점선</h1>
+<p class="subtitle">4가지 색조(검정·분홍·베이지·회색)를 실선으로 1~4번, 동일 4색조를 점선으로 5~8번. 색조 차로 1차 식별, 패턴 차로 2차 식별.</p>
+
+<div class="nav">
+  <span class="nav-section">B안 변형:</span>
+  <a href="chart-palette-b1.html">B-1 (그룹 내 분리)</a>
+  <a href="chart-palette-b2.html">B-2 (hue=패턴)</a>
+  <a href="chart-palette-b3.html">B-3 (4차원)</a>
+  <a href="chart-palette-b4.html" class="active">B-4 (8 슬롯)</a>
+  <a href="chart-palette-b5.html">B-5 (14 슬롯)</a>
+  <span class="nav-section" style="margin-left:16px;">원안:</span>
+  <a href="chart-palette-b.html">B 원안</a>
+</div>
+
+<div class="chart-wrapper">
+  <h3 class="chart-title">12개월 매출 트렌드 — 8 시리즈</h3>
+  <svg id="chart" viewBox="0 0 800 420" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="legend" id="legend"></div>
+</div>
+
+<div class="palette-info">
+  <h2>이 팔레트의 매핑 규약</h2>
+  <p>4 hue × 2 패턴 = 8 슬롯. 색조가 4개로 늘면서 인접 시리즈 식별성이 가장 좋음.</p>
+  <ul style="margin: 4px 0 12px 18px; padding: 0;">
+    <li>검정 <code>#000000</code> → 1번(실) / 5번(점)</li>
+    <li>분홍 <code>#ff0066</code> → 2번(실) / 6번(점)</li>
+    <li>베이지 <code>#a08e7a</code> → 3번(실) / 7번(점)</li>
+    <li>회색 <code>#9d9d9d</code> → 4번(실) / 8번(점)</li>
+  </ul>
+  <p><strong>장점:</strong> 색조 4개로 인접 시리즈 구분이 가장 명확. "같은 색의 실선 = 진본 / 점선 = 보조" 멘탈 모델 가능. 검정+회색이 모노톤 축, 분홍+베이지가 따뜻한 액센트 축.</p>
+  <p><strong>단점:</strong> 29CM 컨셉(흑백+분홍 1색)에서 베이지 추가가 가장 큰 일탈. 베이지와 회색 옅음(<code>#9d9d9d</code>)이 일부 모니터에서 혼동될 수 있음.</p>
+  <div class="swatch-grid" id="swatchGrid"></div>
+</div>
+
+<script>
+const palette = [
+  { color: '#000000', pattern: 'solid',  name: '시리즈 1 — 검정 실선' },
+  { color: '#ff0066', pattern: 'solid',  name: '시리즈 2 — 분홍 실선' },
+  { color: '#a08e7a', pattern: 'solid',  name: '시리즈 3 — 베이지 실선' },
+  { color: '#9d9d9d', pattern: 'solid',  name: '시리즈 4 — 회색 실선' },
+  { color: '#000000', pattern: 'dashed', name: '시리즈 5 — 검정 점선' },
+  { color: '#ff0066', pattern: 'dashed', name: '시리즈 6 — 분홍 점선' },
+  { color: '#a08e7a', pattern: 'dashed', name: '시리즈 7 — 베이지 점선' },
+  { color: '#9d9d9d', pattern: 'dashed', name: '시리즈 8 — 회색 점선' },
+];
+const data = [
+  [90, 88, 85, 82, 80, 78, 75, 73, 70, 68, 65, 62],
+  [30, 35, 38, 42, 48, 52, 55, 60, 65, 68, 72, 75],
+  [70, 72, 71, 73, 70, 72, 73, 74, 72, 71, 73, 72],
+  [20, 22, 25, 30, 35, 42, 48, 52, 58, 62, 65, 68],
+  [45, 48, 42, 50, 46, 52, 48, 54, 50, 56, 52, 58],
+  [65, 62, 60, 58, 55, 52, 50, 47, 45, 42, 40, 38],
+  [80, 75, 82, 78, 85, 80, 87, 83, 90, 86, 92, 88],
+  [25, 26, 28, 27, 30, 29, 32, 31, 34, 33, 36, 35],
+];
+const months = ['25/6','25/7','25/8','25/9','25/10','25/11','25/12','26/1','26/2','26/3','26/4','26/5'];
+
+function render() {
+  const W = 800, H = 420, PAD = { l: 50, r: 20, t: 20, b: 40 };
+  const plotW = W - PAD.l - PAD.r;
+  const plotH = H - PAD.t - PAD.b;
+  const max = 100;
+  let svg = '';
+
+  for (let i = 0; i <= 4; i++) {
+    const y = PAD.t + (i / 4) * plotH;
+    const val = Math.round(max - (i / 4) * max);
+    svg += `<line x1="${PAD.l}" y1="${y}" x2="${W - PAD.r}" y2="${y}" stroke="#f0f0f0" stroke-width="1"/>`;
+    svg += `<text x="${PAD.l - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#5d5d5d">${val}</text>`;
+  }
+  months.forEach((m, i) => {
+    const x = PAD.l + (i / 11) * plotW;
+    svg += `<text x="${x}" y="${H - PAD.b + 20}" text-anchor="middle" font-size="11" fill="#5d5d5d">${m}</text>`;
+  });
+  svg += `<line x1="${PAD.l}" y1="${H - PAD.b}" x2="${W - PAD.r}" y2="${H - PAD.b}" stroke="#5d5d5d" stroke-width="1"/>`;
+
+  data.forEach((series, i) => {
+    const path = series.map((v, j) => {
+      const x = PAD.l + (j / 11) * plotW;
+      const y = PAD.t + (1 - v / max) * plotH;
+      return (j === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    const p = palette[i];
+    const dash = p.pattern === 'dashed' ? 'stroke-dasharray="4 4"' : '';
+    const sw = p.pattern === 'dashed' ? 1.5 : 2.5;
+    svg += `<path d="${path}" stroke="${p.color}" stroke-width="${sw}" fill="none" ${dash}/>`;
+  });
+
+  document.getElementById('chart').innerHTML = svg;
+
+  let legend = '';
+  palette.forEach((p) => {
+    const sw = p.pattern === 'dashed' ? 1.5 : 2.5;
+    const dash = p.pattern === 'dashed' ? 'stroke-dasharray="4 4"' : '';
+    const swatch = `<svg width="32" height="8" class="legend-swatch"><line x1="0" y1="4" x2="32" y2="4" stroke="${p.color}" stroke-width="${sw}" ${dash}/></svg>`;
+    legend += `<div class="legend-item">${swatch}<span>${p.name}</span></div>`;
+  });
+  document.getElementById('legend').innerHTML = legend;
+
+  let swatchHtml = '';
+  ['#000000','#ff0066','#a08e7a','#9d9d9d'].forEach(hex => {
+    swatchHtml += `<div class="swatch-cell" style="background:${hex}" data-hex="${hex}"></div>`;
+  });
+  ['#000000','#ff0066','#a08e7a','#9d9d9d'].forEach(hex => {
+    swatchHtml += `<div class="swatch-cell" style="background:#fff; background-image: repeating-linear-gradient(135deg, ${hex} 0 1px, transparent 1px 4px);" data-hex="${hex} 점선"></div>`;
+  });
+  document.getElementById('swatchGrid').innerHTML = swatchHtml;
+}
+render();
+</script>
+
+</body>
+</html>

@@ -4,6 +4,45 @@
 
 ---
 
+## 2026-05-20 (20회차) — 다중 시리즈 차트 팔레트 B-6 도입 (4 hue × 실/점)
+
+### 1. 배경
+- 17회차 후 사용자 재지적: "다시보니 그래프의 색이 너무 구분 안 가긴 한데. 29cm 컨셉 안 깨는 기준으로 차트색 아이디어 있을까?"
+- §8.5 v4의 모노 4단계 명도(매출/일평균)에서 인접 단계(`#7d7d7d`~`#b8b8b8`) 식별성이 약했음.
+
+### 2. mockup 비교 SOP (9개 안)
+- `docs/mockups/chart-palette-{a,b,c,b1~b6}.html` 신규 생성. SVG 8 시리즈(B-5/B-6은 14 시리즈) 라인 차트 자체 렌더 + 상단 네비로 즉시 토글 비교.
+- A안(모노 6단계 × 실/점), B안(검정+핑크 4단계), C안(검정+베이지 4단계), B-1~B-3(B안 실/점 결합 변형), B-4(4 hue 8슬롯), B-5(14 슬롯, 분홍 포함), B-6(14 슬롯, 분홍→네이비 치환) 차례로 사용자 합의.
+
+### 3. 사용자 합의 사항
+- 8 시리즈 초과 시 검정/분홍/베이지 연한 톤 6개 추가(회색 패스) → 14 슬롯.
+- 이익률 분홍(§8.5 v4) 의미색은 보존 → 다중 시리즈 슬롯 2번을 분홍→**다크 네이비 `#2c3e50`**로 교체.
+- 네이비 연한 톤은 `#5a7090` (검정 진→연 명도 점프와 유사).
+
+### 4. 구현
+- 신규 `frontend/src/lib/chartPalette.ts` — `getMultiSeriesStyle(i)` (B-6) + `getDataTypeSeriesStyle(i, 'profitRate'|'growth')` (의미색 보존) 통합 유틸.
+- 적용 컴포넌트 6개:
+  - `BrandSection.tsx`, `ChannelSection.tsx`, `ChannelIssueSection.tsx` — `PALETTE` 상수 폐기, `getMultiSeriesStyle` 도입 + `<Line strokeDasharray>` 지원 추가.
+  - `ProductGroupChartNew.tsx` — sales/daily만 B-6, profitRate/growth는 §8.5 v4 매핑 유지.
+  - `DynamicAnalysisSection.tsx` — sales/daily/avg는 B-6, profit_only는 §8.5 v4 매핑 유지.
+  - `app/custom-dashboard/details/page.tsx` — 주력채널 vs 브랜드 4 시리즈 차트의 stroke 색상을 B-6 슬롯 1~4(검정/네이비/베이지/회색)로 인라인 교체.
+
+### 5. 검증
+- tsc: 신규 오류 없음 (기존 14건은 Recharts Tooltip Formatter 타입 issue, 무관).
+- 빌드: skip ts errors 설정으로 정상.
+
+### 6. 산출물
+- `frontend/src/lib/chartPalette.ts` (신규)
+- 차트 컴포넌트 6개 수정
+- `docs/design_document.md` **§8.14 추가** (B-6 다중 시리즈 팔레트 정식 정의)
+- `docs/mockups/chart-palette-*.html` 9개 (mockup 비교 자료)
+
+### 7. Phase 후속 항목
+- §8.5 v4와 §8.14의 공존 관계 — 의미색(이익률/증감률)은 v4, 다중 시리즈는 §8.14. 향후 차트 추가 시 어느 쪽인지 분기 판단 필요.
+- 색 정의 lint 검토 — 차트 컴포넌트에서 직접 hex 인라인 사용을 막고 `chartPalette` import만 허용하는 ESLint 룰 (향후).
+
+---
+
 ## 2026-05-20 (19회차) — 주요 채널 이슈 섹션 신설 + 섹션 재배치 + 차트 표시 모달 평면화
 
 ### 1. 배경

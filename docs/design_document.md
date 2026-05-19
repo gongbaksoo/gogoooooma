@@ -964,3 +964,72 @@ grep -rn "font-mono" frontend/src --include="*.tsx" --include="*.ts"
 - error.md §25 (디자인 시스템 드리프트 회고)
 
 
+### 8.14 다중 시리즈 차트 팔레트 — B-6 (검정/네이비/베이지/회색) 14 슬롯 (2026-05-20 도입)
+
+#### 배경
+
+§8.5 v4(2026-05-18 도입)의 "데이터 종류별 4단계 명도 × 실선/점선 = 8-pattern"은 매출/일평균 다중 시리즈 차트에서 인접 명도(`#7d7d7d`~`#b8b8b8`) 차이가 모니터 환경에 따라 시각적으로 작아 보이는 가독성 문제 발생. 사용자 지적: "그래프의 색이 너무 구분안가긴 하는데" (2026-05-19).
+
+해결책으로 `docs/mockups/chart-palette-{a,b,c,b1,b2,b3,b4,b5,b6}.html` 9가지 안을 mockup으로 비교 → **B-6 (검정/네이비/베이지/회색 4 hue × 실/점)** 채택.
+
+#### 규약
+
+다중 시리즈(시리즈 ≥ 4개) 차트에서 시리즈 순서 i번째에 다음 슬롯을 매핑.
+
+| 슬롯 | 색 | 패턴 | hex |
+|------|-----|------|-----|
+| 1 | 검정 진 | 실선 | `#000000` |
+| 2 | 네이비 진 | 실선 | `#2c3e50` |
+| 3 | 베이지 진 | 실선 | `#a08e7a` |
+| 4 | 회색 | 실선 | `#9d9d9d` |
+| 5 | 검정 진 | 점선 | `#000000` |
+| 6 | 네이비 진 | 점선 | `#2c3e50` |
+| 7 | 베이지 진 | 점선 | `#a08e7a` |
+| 8 | 회색 | 점선 | `#9d9d9d` |
+| 9 | 검정 연 | 실선 | `#3d3d3d` |
+| 10 | 네이비 연 | 실선 | `#5a7090` |
+| 11 | 베이지 연 | 실선 | `#c4b5a0` |
+| 12 | 검정 연 | 점선 | `#3d3d3d` |
+| 13 | 네이비 연 | 점선 | `#5a7090` |
+| 14 | 베이지 연 | 점선 | `#c4b5a0` |
+
+회색은 더 연한 단계 추가 시 인접 옅음(`#c4c4c4`)과 식별 약화되어 9~14에서 제외. 14 슬롯 초과 시 마지막 슬롯 반복(권장은 차트 분할 또는 호버 강조).
+
+#### 의미색 보존
+
+§8.5 v4의 데이터 종류 매핑은 다음 케이스에 한해 유지:
+
+- **이익률** (`profit_only`, `profitRate` viewMode): `#ff0066`/`#ff3385`/`#ff66a3`/`#ff99c1` 분홍 4단계 (단일 데이터 종류, 4-step × dashed 8-pattern)
+- **증감률** (`growth` viewMode): `#065f46`/`#10b981`/`#34d399`/`#6ee7b7` 녹색 4단계 (단일 데이터 종류, 29CM 모노 예외 1개 — 의미 분기 위해 유지)
+
+B-6은 **다중 시리즈 매출/일평균 차트**에만 적용. 이익률/증감률 색조와 분홍 슬롯이 충돌하지 않도록 B-6 2번 슬롯을 네이비로 설정.
+
+#### 구현
+
+`frontend/src/lib/chartPalette.ts` 단일 유틸로 통합:
+
+```typescript
+export function getMultiSeriesStyle(i: number): SeriesStyle;
+export function getDataTypeSeriesStyle(i: number, key: 'profitRate' | 'growth'): SeriesStyle;
+```
+
+각 차트 컴포넌트는 import 후 시리즈 매핑 시 `getMultiSeriesStyle(i)` 호출. 반환값에 `stroke`, `strokeDasharray`, `strokeWidth`, `dotR`, `activeR` 포함.
+
+#### 적용 범위 (5개 컴포넌트)
+
+| 파일 | 적용 viewMode/모드 |
+|------|-----------------|
+| `components/monthly-review/BrandSection.tsx` | 다중 시리즈 (브랜드별 주요 상품 라인) |
+| `components/monthly-review/ChannelSection.tsx` | 다중 시리즈 (채널 종합) |
+| `components/monthly-review/ChannelIssueSection.tsx` | 다중 시리즈 (채널 이슈) |
+| `components/ProductGroupChartNew.tsx` | sales / daily (profitRate/growth는 §8.5 v4 유지) |
+| `components/DynamicAnalysisSection.tsx` | sales/daily/avg (profit_only는 §8.5 v4 유지) |
+| `app/custom-dashboard/details/page.tsx` | 주력채널 브랜드 비교 차트 (4 hue 직접 인라인) |
+
+#### 관련 항목
+
+- §8.5 차트 팔레트 v4 (데이터 종류 기반, 이익률/증감률 의미색 정의)
+- 목업 비교 자료: `docs/mockups/chart-palette-*.html` (9개 안)
+
+
+

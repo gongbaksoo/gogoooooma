@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>차트 팔레트 B-5 — 4 hue × 실/점선 + 연한 톤 확장 (14 슬롯)</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: 'Pretendard Variable', Pretendard, system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif;
+  background: #ffffff;
+  color: #000000;
+  margin: 0 auto;
+  padding: 60px 40px;
+  max-width: 960px;
+}
+h1 { font-size: 30px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.5px; }
+.subtitle { font-size: 15px; color: #5d5d5d; margin: 0 0 40px; line-height: 1.5; }
+.nav { display: flex; gap: 8px; margin-bottom: 32px; flex-wrap: wrap; }
+.nav a {
+  font-size: 13px; font-weight: 700; padding: 8px 14px;
+  border: 1px solid #c4c4c4; border-radius: 4px; text-decoration: none;
+  color: #000; background: #fff;
+}
+.nav a.active { background: #000; color: #fff; border-color: #000; }
+.nav a:hover { border-color: #000; }
+.nav-section { font-size: 11px; color: #5d5d5d; margin-right: 8px; align-self: center; }
+.chart-wrapper { border: 1px solid #c4c4c4; padding: 32px; background: white; margin-bottom: 32px; }
+.chart-title { font-size: 13px; font-weight: 700; margin: 0 0 20px; }
+svg { width: 100%; height: 480px; display: block; }
+.legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 20px; font-size: 12px; margin-top: 24px; }
+.legend-item { display: flex; align-items: center; gap: 10px; }
+.legend-swatch { flex-shrink: 0; }
+.palette-info { margin-top: 32px; padding: 24px; border: 1px solid #c4c4c4; font-size: 13px; line-height: 1.7; background: #fff; }
+.palette-info h2 { font-size: 14px; font-weight: 700; margin: 0 0 12px; }
+.palette-info p { margin: 0 0 8px; }
+.palette-info code { background: #f5f5f5; padding: 2px 6px; font-size: 12px; }
+.palette-info table { border-collapse: collapse; width: 100%; margin-top: 12px; font-size: 12px; }
+.palette-info th, .palette-info td { border: 1px solid #e5e5e5; padding: 6px 10px; text-align: left; }
+.palette-info th { background: #f8f8f8; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<h1>B-5 — 4 hue × 실/점 + 연한 톤 확장 (14 슬롯)</h1>
+<p class="subtitle">B-4 기본 8 슬롯 + 시리즈 9~14에 검정·분홍·베이지의 연한 톤 추가 (회색은 패스). 14 시리즈까지 확장 가능한 풀 라인업.</p>
+
+<div class="nav">
+  <span class="nav-section">B안 변형:</span>
+  <a href="chart-palette-b1.html">B-1 (그룹 내 분리)</a>
+  <a href="chart-palette-b2.html">B-2 (hue=패턴)</a>
+  <a href="chart-palette-b3.html">B-3 (4차원)</a>
+  <a href="chart-palette-b4.html">B-4 (8 슬롯)</a>
+  <a href="chart-palette-b5.html" class="active">B-5 (14 슬롯)</a>
+  <span class="nav-section" style="margin-left:16px;">원안:</span>
+  <a href="chart-palette-b.html">B 원안</a>
+</div>
+
+<div class="chart-wrapper">
+  <h3 class="chart-title">12개월 매출 트렌드 — 14 시리즈</h3>
+  <svg id="chart" viewBox="0 0 800 480" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="legend" id="legend"></div>
+</div>
+
+<div class="palette-info">
+  <h2>이 팔레트의 매핑 규약</h2>
+  <p>B-4 기본(1~8번) + 시리즈 9~14는 검정·분홍·베이지 각각의 연한 톤 1단계 추가. 회색은 더 연한 단계 추가 시 식별성 약해지므로 패스.</p>
+
+  <table>
+    <thead><tr><th>슬롯</th><th>색</th><th>패턴</th><th>hex</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>검정 진</td><td>실선</td><td><code>#000000</code></td></tr>
+      <tr><td>2</td><td>분홍 진</td><td>실선</td><td><code>#ff0066</code></td></tr>
+      <tr><td>3</td><td>베이지 진</td><td>실선</td><td><code>#a08e7a</code></td></tr>
+      <tr><td>4</td><td>회색</td><td>실선</td><td><code>#9d9d9d</code></td></tr>
+      <tr><td>5</td><td>검정 진</td><td>점선</td><td><code>#000000</code></td></tr>
+      <tr><td>6</td><td>분홍 진</td><td>점선</td><td><code>#ff0066</code></td></tr>
+      <tr><td>7</td><td>베이지 진</td><td>점선</td><td><code>#a08e7a</code></td></tr>
+      <tr><td>8</td><td>회색</td><td>점선</td><td><code>#9d9d9d</code></td></tr>
+      <tr><td>9</td><td>검정 연</td><td>실선</td><td><code>#3d3d3d</code></td></tr>
+      <tr><td>10</td><td>분홍 연</td><td>실선</td><td><code>#ff66a3</code></td></tr>
+      <tr><td>11</td><td>베이지 연</td><td>실선</td><td><code>#c4b5a0</code></td></tr>
+      <tr><td>12</td><td>검정 연</td><td>점선</td><td><code>#3d3d3d</code></td></tr>
+      <tr><td>13</td><td>분홍 연</td><td>점선</td><td><code>#ff66a3</code></td></tr>
+      <tr><td>14</td><td>베이지 연</td><td>점선</td><td><code>#c4b5a0</code></td></tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top: 16px;"><strong>장점:</strong> 14 시리즈까지 모두 명확한 식별성. hue + 명도 + 패턴 3축 활용. 회색 패스로 인접 단계 혼동 회피.</p>
+  <p><strong>단점:</strong> 14 시리즈는 어떤 팔레트로도 가독성 한계 — 시리즈 수 자체를 줄이거나 차트 분할이 더 나을 수 있음. 같은 차트에 14 라인은 인터랙티브(호버 강조)와 함께만 권장.</p>
+</div>
+
+<script>
+const palette = [
+  { color: '#000000', pattern: 'solid',  name: '1 — 검정 진/실' },
+  { color: '#ff0066', pattern: 'solid',  name: '2 — 분홍 진/실' },
+  { color: '#a08e7a', pattern: 'solid',  name: '3 — 베이지 진/실' },
+  { color: '#9d9d9d', pattern: 'solid',  name: '4 — 회색/실' },
+  { color: '#000000', pattern: 'dashed', name: '5 — 검정 진/점' },
+  { color: '#ff0066', pattern: 'dashed', name: '6 — 분홍 진/점' },
+  { color: '#a08e7a', pattern: 'dashed', name: '7 — 베이지 진/점' },
+  { color: '#9d9d9d', pattern: 'dashed', name: '8 — 회색/점' },
+  { color: '#3d3d3d', pattern: 'solid',  name: '9 — 검정 연/실' },
+  { color: '#ff66a3', pattern: 'solid',  name: '10 — 분홍 연/실' },
+  { color: '#c4b5a0', pattern: 'solid',  name: '11 — 베이지 연/실' },
+  { color: '#3d3d3d', pattern: 'dashed', name: '12 — 검정 연/점' },
+  { color: '#ff66a3', pattern: 'dashed', name: '13 — 분홍 연/점' },
+  { color: '#c4b5a0', pattern: 'dashed', name: '14 — 베이지 연/점' },
+];
+
+const data = [
+  [90, 88, 85, 82, 80, 78, 75, 73, 70, 68, 65, 62],
+  [30, 35, 38, 42, 48, 52, 55, 60, 65, 68, 72, 75],
+  [70, 72, 71, 73, 70, 72, 73, 74, 72, 71, 73, 72],
+  [20, 22, 25, 30, 35, 42, 48, 52, 58, 62, 65, 68],
+  [45, 48, 42, 50, 46, 52, 48, 54, 50, 56, 52, 58],
+  [65, 62, 60, 58, 55, 52, 50, 47, 45, 42, 40, 38],
+  [80, 75, 82, 78, 85, 80, 87, 83, 90, 86, 92, 88],
+  [25, 26, 28, 27, 30, 29, 32, 31, 34, 33, 36, 35],
+  [55, 58, 56, 60, 62, 65, 63, 67, 69, 72, 70, 74],
+  [40, 38, 42, 40, 44, 42, 46, 44, 48, 46, 50, 48],
+  [85, 83, 80, 78, 75, 73, 70, 68, 65, 62, 60, 58],
+  [15, 18, 22, 25, 28, 32, 35, 38, 42, 45, 48, 52],
+  [60, 64, 62, 66, 64, 68, 66, 70, 68, 72, 70, 74],
+  [50, 52, 54, 53, 55, 54, 56, 55, 58, 57, 60, 59],
+];
+
+const months = ['25/6','25/7','25/8','25/9','25/10','25/11','25/12','26/1','26/2','26/3','26/4','26/5'];
+
+function render() {
+  const W = 800, H = 480, PAD = { l: 50, r: 20, t: 20, b: 40 };
+  const plotW = W - PAD.l - PAD.r;
+  const plotH = H - PAD.t - PAD.b;
+  const max = 100;
+  let svg = '';
+
+  for (let i = 0; i <= 4; i++) {
+    const y = PAD.t + (i / 4) * plotH;
+    const val = Math.round(max - (i / 4) * max);
+    svg += `<line x1="${PAD.l}" y1="${y}" x2="${W - PAD.r}" y2="${y}" stroke="#f0f0f0" stroke-width="1"/>`;
+    svg += `<text x="${PAD.l - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#5d5d5d">${val}</text>`;
+  }
+  months.forEach((m, i) => {
+    const x = PAD.l + (i / 11) * plotW;
+    svg += `<text x="${x}" y="${H - PAD.b + 20}" text-anchor="middle" font-size="11" fill="#5d5d5d">${m}</text>`;
+  });
+  svg += `<line x1="${PAD.l}" y1="${H - PAD.b}" x2="${W - PAD.r}" y2="${H - PAD.b}" stroke="#5d5d5d" stroke-width="1"/>`;
+
+  data.forEach((series, i) => {
+    const path = series.map((v, j) => {
+      const x = PAD.l + (j / 11) * plotW;
+      const y = PAD.t + (1 - v / max) * plotH;
+      return (j === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    const p = palette[i];
+    const dash = p.pattern === 'dashed' ? 'stroke-dasharray="4 4"' : '';
+    const sw = p.pattern === 'dashed' ? 1.5 : 2.5;
+    svg += `<path d="${path}" stroke="${p.color}" stroke-width="${sw}" fill="none" ${dash}/>`;
+  });
+
+  document.getElementById('chart').innerHTML = svg;
+
+  let legend = '';
+  palette.forEach((p) => {
+    const sw = p.pattern === 'dashed' ? 1.5 : 2.5;
+    const dash = p.pattern === 'dashed' ? 'stroke-dasharray="4 4"' : '';
+    const swatch = `<svg width="32" height="8" class="legend-swatch"><line x1="0" y1="4" x2="32" y2="4" stroke="${p.color}" stroke-width="${sw}" ${dash}/></svg>`;
+    legend += `<div class="legend-item">${swatch}<span>${p.name}</span></div>`;
+  });
+  document.getElementById('legend').innerHTML = legend;
+}
+render();
+</script>
+
+</body>
+</html>

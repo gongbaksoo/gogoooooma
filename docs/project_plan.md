@@ -122,9 +122,10 @@ sales-analysis-site/
   - **Chart 1 — 목표비 실적** (BarChart): 사업계획 vs 실적 + 달성률(%)
   - **Chart 2 — 전년비 트렌드** (LineChart): **대상월 기준 직전 12개월** vs **같은 기간 1년 전** (예: 대상월 26-02 → X축 25.03~26.02, 전년 라인은 24.03~25.02 동일 월 값)
   - **Chart 3 — 파트별 동적 비교** (LineChart, 최근 12개월): 파트 필터에 따라 자동 전환
-    - `part=all` (전체) → **이커머스 vs 오프라인** (파트구분 기반, 색 `#000`/`#5d5d5d`)
-    - `part=ecommerce|offline` → **주력채널 vs 쿠팡(사입)** (주력채널 컬럼 기반, 색 `#000`/`#ff0066`)
-    - 백엔드 응답: `{title, series_names, colors, data: [{month, value1, value2}]}` 객체 구조 — 프론트엔드가 메타데이터로 동적 렌더링
+    - `part=all` (전체) → **이커머스 vs 오프라인** (파트구분 기반, 2-series, 색 `#000`/`#5d5d5d`)
+    - `part=ecommerce` → **주력채널 vs 쿠팡(사입)** (주력채널 컬럼 기반, 2-series, 색 `#000`/`#ff0066`)
+    - `part=offline` → **이마트 vs 롯데마트 vs 다이소** (거래처명 R열 기준, 3-series, 색 `#000`/`#5d5d5d`/`#7d7d7d`)
+    - 백엔드 응답: `{title, series_names, colors, data: [{month, values: number[]}]}` — N-series 가변 길이로 일반화 (프론트가 series_names.length만큼 Line 동적 렌더)
 - **운영 동작 상태** (2026-05-19 최종 검증):
   - Mac Mini 백엔드 `launchctl kickstart -k gui/$(id -u)/com.avk.backend` 으로 코드 반영
   - `https://api.gongbaksoo.com/api/monthly-review/{months, targets, summary}` 모두 200 OK
@@ -135,7 +136,8 @@ sales-analysis-site/
 - **매핑 규약**:
   - 파트 필터: `all` → 필터X / `ecommerce` → `파트구분 == '이커머스'` / `offline` → `파트구분 == '오프라인'`
   - 주력채널 정의: CSV의 `주력 채널` 컬럼 값이 `'주력'` 인 row 합산
-  - 쿠팡(사입) 정의: `채널구분`이 쿠팡 사입 관련 — 정확한 값은 구현 시 CSV 검증
+  - 쿠팡(사입) 정의: `주력 채널 == '주력(쿠팡)'` (CSV 검증: 100% `오픈마켓(사입) + 쿠팡_사입(AVK)`)
+  - **거래처 식별 — R열 기준 (영구 규약)**: 거래처 단위 매출 집계는 항상 **R열(`거래처명`, 0-indexed 17)** 사용. C열(`거래처`)이 아님. 이마트/롯데마트/다이소 매핑: `거래처명 == '이마트'` / `'롯데마트'` / `'다이소'` (R열에 이미 본부+점포가 통합된 정규화 값으로 들어옴)
 - **PDF 출력**: 클라이언트 사이드 (`html2canvas` + `jspdf`), A4 가로
 
 ---

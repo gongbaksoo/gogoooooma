@@ -4,6 +4,84 @@
 
 ---
 
+## 2026-05-19 (11회차) — Chart 3 offline 3-series (이마트/롯데마트/다이소) + 거래처 R열 영구 규약
+
+### 1. 배경
+- 사용자 요청: "오프라인을 클릭하면 이마트, 롯데마트, 다이소 매출이 뜨게 해줄래?"
+- 직전 9회차 대비: 이번엔 offline 모드만 별도 3-series로 분기, ecommerce는 그대로.
+
+### 2. 사용자 합의 사항 (2건)
+1. **차트 위치**: 오프라인 모드 Chart 3를 교체 (별도 Chart 4 신규는 보류).
+2. **거래처 식별 영구 규약**: "거래처는 엑셀/CSV에서 항상 R열 기준" — 앞으로도 계속 이 기준 적용.
+
+### 3. 데이터 검증 (CSV 260106_4.csv 점검)
+- C열 `거래처`: 거래처가 분산됨 (`롯데마트사업본부`, `롯데마트강변`, `롯데마트제타플렉스` 등 본부+점포 여러 row)
+- **R열 `거래처명`**: 정규화된 단일 값 (`이마트`, `롯데마트`, `다이소` 정확 일치) ← 사용자 규약대로 R열 사용
+- 오프라인 파트 기준:
+  - 이마트 7,017 row
+  - 롯데마트 2,716 row
+  - 다이소 59 row
+
+### 4. 영구 규약 — Memory 저장
+- `/Users/gongbaksoo/.claude/projects/.../memory/vendor_column.md` 생성:
+  - "거래처 식별은 항상 R열(거래처명, 0-indexed 17) 사용"
+  - feedback type — 향후 세션에서도 자동 적용
+- `MEMORY.md` 인덱스에도 등재.
+
+### 5. 구현
+
+#### 백엔드 (`api/monthly_review.py`)
+chart3 분기 2 → 3개로 확장:
+```python
+if part == "all":
+    # 이커머스 vs 오프라인 (2-series)
+elif part == "offline":
+    series_frames = [
+        df_part[df_part["거래처명"] == "이마트"],
+        df_part[df_part["거래처명"] == "롯데마트"],
+        df_part[df_part["거래처명"] == "다이소"],
+    ]
+    title = "이마트 vs 롯데마트 vs 다이소"
+    series_names = ["이마트", "롯데마트", "다이소"]
+    colors = ["#000000", "#5d5d5d", "#7d7d7d"]
+else:  # ecommerce
+    # 주력채널 vs 쿠팡(사입) (2-series)
+```
+
+응답 데이터 구조 **breaking change**: `{value1, value2}` 고정 → `{values: number[]}` 가변 길이.
+
+#### 프론트엔드
+- `Chart3MainVsCoupang.tsx`: hardcoded 2-Line → `series_names.length`만큼 동적 Line 렌더.
+- 라벨 배치 규칙: 첫 시리즈(메인 검정)는 `top`/`bold`, 나머지는 `bottom`/`normal` (3-series 겹침 회피).
+- `page.tsx`: `chart3.data` 타입을 `{value1,value2}` → `{values:number[]}` 갱신.
+
+### 6. 배포 (§22 SOP 적용)
+직전 10회차의 화이트스크린 함정 회피를 위해 명시적 순서:
+1. **Mac Mini 백엔드 먼저 수동 패치** — Mac Mini Claude Code 세션에서 `api/monthly_review.py`의 chart3 블록 교체 + `launchctl kickstart` 재시작.
+2. **운영 검증** — curl로 3개 모드 응답 확인:
+   - all: `이커머스 vs 오프라인` (2-series) ✓
+   - ecommerce: `주력채널 vs 쿠팡(사입)` (2-series) ✓
+   - offline: `이마트 vs 롯데마트 vs 다이소` (3-series, NEW) ✓
+3. **git push** — Vercel 자동 빌드 (~1분). 빌드 중 OLD 프론트가 NEW 백엔드 호출 시 `value1`이 undefined → NaN 라벨, 크래시는 없음.
+4. **Vercel 빌드 완료** — 외부 검증 OK.
+
+### 7. 결과 — 화이트스크린 없는 매끄러운 전환 (§22 SOP 효과 입증)
+
+운영 검증 (2026-02, 오프라인 파트):
+- 이마트: 4.8M / 롯데마트: 2.2M / 다이소: 0M
+
+### 8. 산출물
+- 코드: `api/monthly_review.py`, `frontend/src/components/monthly-review/Chart3MainVsCoupang.tsx`, `frontend/src/app/monthly-review/page.tsx`.
+- 영구 규약: memory `vendor_column.md` (R열 기준).
+- 문서: `project_plan §4.7`(거래처 R열 규약 추가), `design_document §2.3.3.2`(3-series 매핑 + 라벨 배치 규칙), `error.md §19 후속 사례`(SOP 성공 노트), `history` 본 11회차.
+
+### 9. 후속 권장 항목 (변동)
+1. **Mac Mini 자동 배포 도입** — 매번 수동 패치는 휴먼 에러 위험. webhook 또는 cron 도입 우선순위 유지.
+2. **거래처 R열 규약 코드 주석화** — `api/monthly_review.py`에 "거래처는 항상 거래처명(R열) 사용" 짧은 docstring 추가.
+3. **chart3 컴포넌트 리네임 검토** — 파일명 `Chart3MainVsCoupang.tsx`이 더 이상 내용을 반영 못 함. `Chart3Comparison.tsx` 또는 `Chart3PartComparison.tsx`로 리네임.
+
+---
+
 ## 2026-05-19 (10회차) — Vercel client-side crash 응급 복구 + 배포 SOP 명문화
 
 ### 1. 배경

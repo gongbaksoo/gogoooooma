@@ -497,6 +497,12 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 - **README/CLAUDE.md에 배포 절차 명문화**: "프론트 변경만이면 push 끝, 백엔드 변경이면 Mac Mini 추가 배포 필요"를 한 문장으로.
 - **세션 간 작업 충돌 의심 시 우선 fetch + 직접 endpoint curl**: 다른 세션 영향과 단순 배포 누락은 git log + curl 한 번이면 구분 가능.
 
+#### 📌 §22 SOP 후속 사례 — 성공 적용 (2026-05-19)
+- chart3 응답 구조를 2-series 고정(`value1`/`value2`) → N-series 가변(`values: number[]`)으로 재차 breaking change.
+- 본 SOP 그대로 따름: ① Mac Mini 백엔드 수동 패치(`api/monthly_review.py` Edit) → ② 운영 curl로 3-series 응답 검증 → ③ git push로 Vercel 자동 빌드.
+- 결과: 화이트스크린 없이 매끄러운 전환. SOP 효과 입증.
+- 다만 Mac Mini 자동 배포 도입 권장은 여전히 유효 — 매번 수동 패치는 휴먼 에러 위험.
+
 ---
 
 ## 20. 차트 라벨 통일 — "모든 차트 적용" 지시에 viewMode/timeUnit 조건 차단 케이스 누락 (자가검증 실패)

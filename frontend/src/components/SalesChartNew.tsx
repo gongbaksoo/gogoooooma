@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
+import { getMultiSeriesStyle, getDataTypeSeriesStyle } from '@/lib/chartPalette';
 
 interface SalesChartProps {
     filename: string | null;
@@ -415,22 +416,13 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                         />
                         <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="line" />
 
-                        {/* Sales & Daily Mode */}
-                        {/* 데이터 종류별 8-pattern 매핑
-                            sales/daily = 검정 계열, growth = 녹색 계열, profitRate = 분홍 계열
-                            시리즈 순서: 1=총매출(메인 진함 실선), 2=이커머스(진함 점선), 3=오프라인(중간 실선)
-                        */}
+                        {/* 시리즈 매핑 — sales/daily는 B-6 다중 hue (§8.14), profitRate/growth는 §8.5 v4 의미색 */}
                         {(() => {
-                            const palette = viewMode === 'growth' ? ['#065f46', '#10b981', '#34d399', '#6ee7b7']
-                                : viewMode === 'profitRate' ? ['#ff0066', '#ff3385', '#ff66a3', '#ff99c1']
-                                : ['#000000', '#5d5d5d', '#7d7d7d', '#b8b8b8'];
-                            const seriesStyle = (i: number) => ({
-                                stroke: palette[Math.floor(i / 2)] || palette[palette.length - 1],
-                                strokeDasharray: (i % 2 === 1) ? '4 4' : undefined,
-                                strokeWidth: i === 0 ? 2.5 : 1.5,
-                                dotR: i === 0 ? 4 : 3,
-                                activeR: i === 0 ? 6 : 5,
-                            });
+                            const seriesStyle = (i: number) => {
+                                if (viewMode === 'growth') return getDataTypeSeriesStyle(i, 'growth');
+                                if (viewMode === 'profitRate') return getDataTypeSeriesStyle(i, 'profitRate');
+                                return getMultiSeriesStyle(i);
+                            };
                             // 시리즈 정의 — 순서: 총매출(1) / 이커머스(2) / 오프라인(3)
                             const seriesDefs = viewMode === 'profitRate'
                                 ? [

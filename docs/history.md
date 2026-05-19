@@ -16,8 +16,8 @@
 
 ### 3. 사용자 합의 사항
 - 8 시리즈 초과 시 검정/분홍/베이지 연한 톤 6개 추가(회색 패스) → 14 슬롯.
-- 이익률 분홍(§8.5 v4) 의미색은 보존 → 다중 시리즈 슬롯 2번을 분홍→**다크 네이비 `#2c3e50`**로 교체.
-- 네이비 연한 톤은 `#5a7090` (검정 진→연 명도 점프와 유사).
+- 이익률 분홍(§8.5 v4) 의미색은 보존 → 다중 시리즈 슬롯 2번을 분홍→**다크 네이비 `#1a2942`**로 교체.
+- 네이비 연한 톤은 `#4a5e80` (검정 진→연 명도 점프와 유사).
 
 ### 4. 구현
 - 신규 `frontend/src/lib/chartPalette.ts` — `getMultiSeriesStyle(i)` (B-6) + `getDataTypeSeriesStyle(i, 'profitRate'|'growth')` (의미색 보존) 통합 유틸.
@@ -26,6 +26,10 @@
   - `ProductGroupChartNew.tsx` — sales/daily만 B-6, profitRate/growth는 §8.5 v4 매핑 유지.
   - `DynamicAnalysisSection.tsx` — sales/daily/avg는 B-6, profit_only는 §8.5 v4 매핑 유지.
   - `app/custom-dashboard/details/page.tsx` — 주력채널 vs 브랜드 4 시리즈 차트의 stroke 색상을 B-6 슬롯 1~4(검정/네이비/베이지/회색)로 인라인 교체.
+  - `SalesChartNew.tsx` (후속 패치) — 인라인 4단계 명도 팔레트 폐기, `getMultiSeriesStyle`/`getDataTypeSeriesStyle` 도입.
+
+### 4-A. 후속 보정 (같은 날)
+- 사용자 시각 확인 후 네이비 톤 추가 darken: `#2c3e50` → **`#1a2942`** (연한 톤 `#5a7090` → `#4a5e80` 동반 조정). chartPalette.ts / mockup b6 / design_document §8.14 / history 본 섹션 모두 동기화.
 
 ### 5. 검증
 - tsc: 신규 오류 없음 (기존 14건은 Recharts Tooltip Formatter 타입 issue, 무관).

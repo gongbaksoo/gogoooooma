@@ -336,8 +336,8 @@ function DetailsContent() {
                                 <Line type="monotone" dataKey={`${isMain ? "주력채널" : typeLabel} 전체`} stroke="#000000" strokeWidth={2.5} dot={{ fill: "#000000", r: 4 }} activeDot={{ r: 6 }} animationDuration={1500} animationEasing="ease-out">
                                     <LabelList dataKey={`${isMain ? "주력채널" : typeLabel} 전체`} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} lastIndex={comparisonData.length - 1} />} />
                                 </Line>
-                                <Line type="monotone" dataKey="마이비" stroke="#2c3e50" strokeWidth={2} dot={{ fill: "#2c3e50", r: 3 }} activeDot={{ r: 5 }} animationDuration={1500} animationEasing="ease-out">
-                                    <LabelList dataKey="마이비" position="top" content={<CustomLabel fill="#2c3e50" formatter={formatMillions} lastIndex={comparisonData.length - 1} />} />
+                                <Line type="monotone" dataKey="마이비" stroke="#1a2942" strokeWidth={2} dot={{ fill: "#1a2942", r: 3 }} activeDot={{ r: 5 }} animationDuration={1500} animationEasing="ease-out">
+                                    <LabelList dataKey="마이비" position="top" content={<CustomLabel fill="#1a2942" formatter={formatMillions} lastIndex={comparisonData.length - 1} />} />
                                 </Line>
                                 <Line type="monotone" dataKey="누비" stroke="#a08e7a" strokeWidth={2} dot={{ fill: "#a08e7a", r: 3 }} activeDot={{ r: 5 }} animationDuration={1500} animationEasing="ease-out">
                                     <LabelList dataKey="누비" position="top" content={<CustomLabel fill="#a08e7a" formatter={formatMillions} lastIndex={comparisonData.length - 1} />} />

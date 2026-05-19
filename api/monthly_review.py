@@ -265,22 +265,39 @@ def get_summary(
             "prev_year": _month_total(y - 1, m, df_part),
         })
 
-    # ----- chart3: 주력 vs 쿠팡(사입) — 최근 12개월 -----
-    if "주력 채널" not in df.columns:
-        raise HTTPException(status_code=400, detail="CSV에 '주력 채널' 컬럼이 없습니다.")
+    # ----- chart3: 파트별 동적 비교 — 최근 12개월 -----
+    # part=all → 이커머스 vs 오프라인 (파트구분 기반)
+    # part=ecommerce/offline → 주력채널 vs 쿠팡(사입) (주력채널 컬럼 기반)
+    if part == "all":
+        df_a = df[df["파트구분"] == "이커머스"]
+        df_b = df[df["파트구분"] == "오프라인"]
+        title = "이커머스 vs 오프라인"
+        series_names = ["이커머스", "오프라인"]
+        colors = ["#000000", "#5d5d5d"]
+    else:
+        if "주력 채널" not in df.columns:
+            raise HTTPException(status_code=400, detail="CSV에 '주력 채널' 컬럼이 없습니다.")
+        df_a = df_part[df_part["주력 채널"] == "주력"]
+        df_b = df_part[df_part["주력 채널"] == "주력(쿠팡)"]
+        title = "주력채널 vs 쿠팡(사입)"
+        series_names = ["주력채널", "쿠팡(사입)"]
+        colors = ["#000000", "#ff0066"]
 
-    df_main = df_part[df_part["주력 채널"] == "주력"]
-    df_coupang = df_part[df_part["주력 채널"] == "주력(쿠팡)"]
-
-    chart3 = []
+    chart3_data = []
     for y, m in last12:
         yymm = f"{str(y)[-2:]}{str(m).zfill(2)}"
-        label = f"{y}-{str(m).zfill(2)}"
-        chart3.append({
-            "month": label,
-            "main_channels": float(df_main[df_main["월구분"] == yymm]["판매액"].sum()),
-            "coupang_purchase": float(df_coupang[df_coupang["월구분"] == yymm]["판매액"].sum()),
+        chart3_data.append({
+            "month": f"{y}-{str(m).zfill(2)}",
+            "value1": float(df_a[df_a["월구분"] == yymm]["판매액"].sum()),
+            "value2": float(df_b[df_b["월구분"] == yymm]["판매액"].sum()),
         })
+
+    chart3 = {
+        "title": title,
+        "series_names": series_names,
+        "colors": colors,
+        "data": chart3_data,
+    }
 
     return {
         "month": month,

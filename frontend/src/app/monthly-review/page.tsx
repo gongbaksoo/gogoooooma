@@ -16,7 +16,12 @@ interface SummaryResponse {
   part: Part;
   chart1: { target: number | null; actual: number; achievement_rate: number | null };
   chart2: { month: string; current_year: number; prev_year: number }[];
-  chart3: { month: string; main_channels: number; coupang_purchase: number }[];
+  chart3: {
+    title: string;
+    series_names: string[];
+    colors: string[];
+    data: { month: string; value1: number; value2: number }[];
+  };
 }
 
 interface TargetFile {
@@ -343,7 +348,7 @@ export default function MonthlyReviewPage() {
           >
             <Chart1Achievement data={summary.chart1} month={month} />
             <Chart2YoYTrend data={summary.chart2} />
-            <Chart3MainVsCoupang data={summary.chart3} />
+            <Chart3MainVsCoupang chart3={summary.chart3} />
           </div>
         )}
       </div>

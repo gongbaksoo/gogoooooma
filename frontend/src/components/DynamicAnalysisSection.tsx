@@ -347,7 +347,7 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                         animationDuration={1500}
                                         animationEasing="ease-out"
                                     >
-                                        {!isDaily && <LabelList dataKey={mode === 'total' || mode === 'sales_only' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} lastIndex={chartData.length - 1} />} />}
+                                        <LabelList dataKey={mode === 'total' || mode === 'sales_only' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} lastIndex={chartData.length - 1} />} />
                                     </Line>
                                 )}
 
@@ -364,7 +364,7 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                         animationDuration={1500}
                                         animationEasing="ease-out"
                                     >
-                                        {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ff0066" formatter={formatPercent} lastIndex={chartData.length - 1} />} />}
+                                        <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ff0066" formatter={formatPercent} lastIndex={chartData.length - 1} />} />
                                     </Line>
                                 )}
                             </>

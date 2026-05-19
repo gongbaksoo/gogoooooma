@@ -453,7 +453,6 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                                 .filter(s => channelFilter === 'all' || channelFilter === s.channel)
                                 .map(s => {
                                     const style = seriesStyle(s.idx);
-                                    const showLabel = viewMode !== 'sales' && viewMode !== 'daily';
                                     const lastIdx = chartData.length - 1;
                                     return (
                                         <Line
@@ -469,30 +468,28 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                                             animationDuration={1500}
                                             animationEasing="ease-out"
                                         >
-                                            {showLabel && (
-                                                <LabelList
-                                                    dataKey={s.key}
-                                                    position="top"
-                                                    content={(p: any) => {
-                                                        const { x, y, value, index } = p;
-                                                        if (index !== lastIdx) return null;
-                                                        if (value === undefined || value === null) return null;
-                                                        return (
-                                                            <text
-                                                                x={x}
-                                                                y={y}
-                                                                dy={-8}
-                                                                fill={style.stroke}
-                                                                fontSize={10}
-                                                                textAnchor="middle"
-                                                                fontWeight={s.idx === 0 ? 'bold' : 'normal'}
-                                                            >
-                                                                {yAxisFormatter(value)}
-                                                            </text>
-                                                        );
-                                                    }}
-                                                />
-                                            )}
+                                            <LabelList
+                                                dataKey={s.key}
+                                                position="top"
+                                                content={(p: any) => {
+                                                    const { x, y, value, index } = p;
+                                                    if (index !== lastIdx) return null;
+                                                    if (value === undefined || value === null) return null;
+                                                    return (
+                                                        <text
+                                                            x={x}
+                                                            y={y}
+                                                            dy={-8}
+                                                            fill={style.stroke}
+                                                            fontSize={10}
+                                                            textAnchor="middle"
+                                                            fontWeight={s.idx === 0 ? 'bold' : 'normal'}
+                                                        >
+                                                            {yAxisFormatter(value)}
+                                                        </text>
+                                                    );
+                                                }}
+                                            />
                                         </Line>
                                     );
                                 });

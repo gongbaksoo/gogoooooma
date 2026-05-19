@@ -772,18 +772,16 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                 animationDuration={1500}
                                 animationEasing="ease-out"
                             >
-                                {timeUnit === 'month' && (
-                                    <LabelList
-                                        dataKey={viewMode === 'growth' ? "growth" : "value"}
-                                        content={
-                                            <CustomLabel
-                                                fill={mainColor}
-                                                formatter={labelFormatter}
-                                                lastIndex={displayData.length - 1}
-                                            />
-                                        }
-                                    />
-                                )}
+                                <LabelList
+                                    dataKey={viewMode === 'growth' ? "growth" : "value"}
+                                    content={
+                                        <CustomLabel
+                                            fill={mainColor}
+                                            formatter={labelFormatter}
+                                            lastIndex={displayData.length - 1}
+                                        />
+                                    }
+                                />
                             </Line>
                                 );
                             })()}
@@ -800,18 +798,16 @@ const ProductSearchChart: React.FC<ProductSearchChartProps> = ({ filename }) => 
                                     animationDuration={1500}
                                     animationEasing="ease-out"
                                 >
-                                    {timeUnit === 'month' && (
-                                        <LabelList
-                                            dataKey="profitRate"
-                                            content={
-                                                <CustomLabel
-                                                    fill="#ff0066"
-                                                    formatter={formatPercent}
-                                                    lastIndex={displayData.length - 1}
-                                                />
-                                            }
-                                        />
-                                    )}
+                                    <LabelList
+                                        dataKey="profitRate"
+                                        content={
+                                            <CustomLabel
+                                                fill="#ff0066"
+                                                formatter={formatPercent}
+                                                lastIndex={displayData.length - 1}
+                                            />
+                                        }
+                                    />
                                 </Line>
                             )}
                         </ComposedChart>

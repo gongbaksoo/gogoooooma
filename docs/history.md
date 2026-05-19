@@ -47,7 +47,24 @@
 ### 7. 산출물
 - `docs/design_document.md` §8.11 신규 섹션 추가.
 - `docs/history.md` 본 섹션 추가.
-- 커밋: (다음 단계에서 작성).
+- 커밋 `077ec14` → origin/main 푸쉬 완료.
+
+### 8. 자가검증 후 보강 (같은 날 2차 작업)
+사용자가 `/monthly-review` 등에서 화면을 확인한 결과, 일부 차트는 마지막 라벨이 여전히 안 보임을 발견.
+
+**원인 분석 (3패턴)**
+- 패턴 1: LabelList 자체가 없음 — 브랜드 비교 4 Line, Chart2YoYTrend 2 Line, Chart3MainVsCoupang 2 Line
+- 패턴 2: `showLabel` 조건 — SalesChartNew에서 매출액/일평균 모드는 라벨 차단
+- 패턴 3: day/daily 모드 조건 — ChannelSales·DetailedSales·ProductSearch (`timeUnit === 'month'`), DynamicAnalysisSection·details 첫 차트 (`!isDaily`)
+
+**보강 내용**
+- 모든 조건 제거 (mode·timeUnit·isDaily) — 어떤 모드에서도 마지막 라벨 노출.
+- 패턴 1 차트 3종에 LabelList 신규 추가 (lastIndex 콜백). 2 Line 차트는 top/bottom 위치 분리로 겹침 방지.
+- 영향 파일 (8개): SalesChartNew, ChannelSalesChartNew, DetailedSalesChartNew, ProductSearchChart, DynamicAnalysisSection, details/page.tsx (첫 차트 + 브랜드 비교), monthly-review/Chart2YoYTrend, monthly-review/Chart3MainVsCoupang.
+
+**교훈**
+- "모든 차트에 적용"을 받았을 때 자동으로 mode·timeUnit 조건이 막고 있는 케이스를 자가검증하지 못함. 사용자가 직접 화면을 보고 알려주신 뒤에야 인지.
+- 권장: 라벨 같은 가시성 변경은 적용 직후 모든 viewMode/timeUnit 조합을 자가검증하는 체크리스트 필요.
 
 ---
 

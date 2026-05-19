@@ -579,3 +579,19 @@ const CustomLabel = (props: any) => {
 
 `Chart1Achievement`은 시계열이 아니라 사업계획 vs 실적 비교(막대 2개). 규약을 그대로 적용하여 마지막(=실적)에만 값을 표시. 의도와 부합 (사업계획은 막대 높이와 달성률 %로 확인 가능).
 
+#### 8.11-A 보강 (2026-05-19 추가) — 모든 차트·모든 모드에서 노출
+
+초기 적용 후 자가검증 결과, 일부 차트가 여전히 마지막 라벨을 가리고 있던 것이 확인됨. 원인:
+
+1. **mode 조건으로 차단** — `SalesChartNew`는 `showLabel = viewMode !== 'sales' && viewMode !== 'daily'`로 매출액/일평균 모드에서 라벨 자체를 막고 있었음.
+2. **day/daily 모드 조건으로 차단** — `ChannelSalesChartNew`·`DetailedSalesChartNew`·`ProductSearchChart`는 `{timeUnit === 'month' && ...}`, `DynamicAnalysisSection`과 `details/page.tsx` 첫 차트는 `{!isDaily && ...}`로 일 모드에서 라벨 제거.
+3. **LabelList 자체가 없는 차트** — `details/page.tsx`의 브랜드 비교 4 Line, `monthly-review/Chart2YoYTrend`, `Chart3MainVsCoupang`.
+
+전제: 이전 조건들은 "데이터 포인트가 N개 다 찍히면 dense" 우려로 차단했던 것. 마지막 1개만 표시하는 현재 규약에서는 더 이상 유효하지 않음.
+
+**보강 사항:**
+
+- 모든 mode/timeUnit/isDaily 조건 제거 — 어떤 보기에서도 마지막 데이터 포인트의 라벨이 표시되도록 통일.
+- 라벨이 없던 3개 차트(브랜드 비교 4 Line, Chart2YoYTrend 2 Line, Chart3MainVsCoupang 2 Line)에 LabelList 추가.
+- Chart2YoYTrend와 Chart3MainVsCoupang은 라인 2개가 가까이 위치할 수 있어, 1번째 라인은 `position="top"`, 2번째 라인은 `position="bottom"`으로 겹침 방지.
+

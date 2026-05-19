@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  LabelList,
 } from "recharts";
 
 interface Chart2Point {
@@ -77,7 +78,22 @@ export default function Chart2YoYTrend({ data }: { data: Chart2Point[] }) {
             dot={{ r: 3, fill: "#000000" }}
             animationDuration={1500}
             animationEasing="ease-out"
-          />
+          >
+            <LabelList
+              dataKey="당해"
+              position="top"
+              content={(p: any) => {
+                const { x, y, value, index } = p;
+                if (index !== chartData.length - 1) return null;
+                if (value === undefined || value === null) return null;
+                return (
+                  <text x={x} y={y} dy={-8} fill="#000000" fontSize={10} textAnchor="middle" fontWeight="bold">
+                    {value.toLocaleString()}
+                  </text>
+                );
+              }}
+            />
+          </Line>
           <Line
             type="monotone"
             dataKey="전년"
@@ -87,7 +103,22 @@ export default function Chart2YoYTrend({ data }: { data: Chart2Point[] }) {
             dot={{ r: 3, fill: "#5d5d5d" }}
             animationDuration={1500}
             animationEasing="ease-out"
-          />
+          >
+            <LabelList
+              dataKey="전년"
+              position="bottom"
+              content={(p: any) => {
+                const { x, y, value, index } = p;
+                if (index !== chartData.length - 1) return null;
+                if (value === undefined || value === null) return null;
+                return (
+                  <text x={x} y={y} dy={14} fill="#5d5d5d" fontSize={10} textAnchor="middle">
+                    {value.toLocaleString()}
+                  </text>
+                );
+              }}
+            />
+          </Line>
         </LineChart>
       </ResponsiveContainer>
       </div>

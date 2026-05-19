@@ -167,7 +167,7 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             animationDuration={1500}
                             animationEasing="ease-out"
                         >
-                            {!isDaily && <LabelList dataKey={mode === 'total' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} lastIndex={chartData.length - 1} />} />}
+                            <LabelList dataKey={mode === 'total' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} lastIndex={chartData.length - 1} />} />
                         </Line>
 
                         <Line
@@ -182,7 +182,7 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             animationDuration={1500}
                             animationEasing="ease-out"
                         >
-                            {!isDaily && <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ff0066" formatter={formatPercent} lastIndex={chartData.length - 1} />} />}
+                            <LabelList dataKey="이익률" position="bottom" content={<CustomLabel fill="#ff0066" formatter={formatPercent} lastIndex={chartData.length - 1} />} />
                         </Line>
                     </ComposedChart>
                 </ResponsiveContainer>
@@ -319,10 +319,18 @@ function DetailsContent() {
                                 <Tooltip formatter={(val: any) => [formatMillions(val), '매출액']} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #c4c4c4', borderRadius: '2px', padding: '10px' }} />
                                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
                                 {/* 8-pattern: 1=전체 진함실선, 2=마이비 진함점선, 3=누비 중간실선, 4=쏭레브 중간점선 — 모두 매출 데이터 (검정 계열) */}
-                                <Line type="monotone" dataKey={`${isMain ? "주력채널" : typeLabel} 전체`} stroke="#000000" strokeWidth={2.5} dot={{ fill: "#000000", r: 4 }} activeDot={{ r: 6 }} animationDuration={1500} animationEasing="ease-out" />
-                                <Line type="monotone" dataKey="마이비" stroke="#000000" strokeWidth={1.5} strokeDasharray="4 4" dot={{ fill: "#000000", r: 3 }} activeDot={{ r: 5 }} animationDuration={1500} animationEasing="ease-out" />
-                                <Line type="monotone" dataKey="누비" stroke="#5d5d5d" strokeWidth={1.5} dot={{ fill: "#5d5d5d", r: 3 }} activeDot={{ r: 5 }} animationDuration={1500} animationEasing="ease-out" />
-                                <Line type="monotone" dataKey="쏭레브" stroke="#5d5d5d" strokeWidth={1.5} strokeDasharray="4 4" dot={{ fill: "#5d5d5d", r: 3 }} activeDot={{ r: 5 }} animationDuration={1500} animationEasing="ease-out" />
+                                <Line type="monotone" dataKey={`${isMain ? "주력채널" : typeLabel} 전체`} stroke="#000000" strokeWidth={2.5} dot={{ fill: "#000000", r: 4 }} activeDot={{ r: 6 }} animationDuration={1500} animationEasing="ease-out">
+                                    <LabelList dataKey={`${isMain ? "주력채널" : typeLabel} 전체`} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} lastIndex={comparisonData.length - 1} />} />
+                                </Line>
+                                <Line type="monotone" dataKey="마이비" stroke="#000000" strokeWidth={1.5} strokeDasharray="4 4" dot={{ fill: "#000000", r: 3 }} activeDot={{ r: 5 }} animationDuration={1500} animationEasing="ease-out">
+                                    <LabelList dataKey="마이비" position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} lastIndex={comparisonData.length - 1} />} />
+                                </Line>
+                                <Line type="monotone" dataKey="누비" stroke="#5d5d5d" strokeWidth={1.5} dot={{ fill: "#5d5d5d", r: 3 }} activeDot={{ r: 5 }} animationDuration={1500} animationEasing="ease-out">
+                                    <LabelList dataKey="누비" position="top" content={<CustomLabel fill="#5d5d5d" formatter={formatMillions} lastIndex={comparisonData.length - 1} />} />
+                                </Line>
+                                <Line type="monotone" dataKey="쏭레브" stroke="#5d5d5d" strokeWidth={1.5} strokeDasharray="4 4" dot={{ fill: "#5d5d5d", r: 3 }} activeDot={{ r: 5 }} animationDuration={1500} animationEasing="ease-out">
+                                    <LabelList dataKey="쏭레브" position="top" content={<CustomLabel fill="#5d5d5d" formatter={formatMillions} lastIndex={comparisonData.length - 1} />} />
+                                </Line>
                             </LineChart>
                         </ResponsiveContainer>
                         </div>

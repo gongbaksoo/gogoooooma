@@ -800,6 +800,85 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 
 ---
 
+## 29. `.gitignore`의 광범위한 `lib/` 룰이 `frontend/src/lib/` 신규 파일 차단
+
+작성일: 2026-05-20 (20회차)
+
+### 🚨 증상
+- B-6 차트 팔레트 적용 작업에서 `frontend/src/lib/chartPalette.ts` 신규 생성.
+- 19회차 다른 세션도 같은 위치 헬퍼 파일 import를 4개 컴포넌트에 커밋했으나, 파일 자체는 git에 추적 안 됨.
+- `git status`에서 untracked로도 보이지 않음 → 한참 후에야 파일이 ignore되었음을 발견.
+- `git ls-files`로 확인 결과 `frontend/src/lib/api.ts`, `frontend/src/lib/utils.ts`는 추적 중이지만 신규 파일만 무시됨.
+
+### 🧭 원인
+- `.gitignore` 62행 `lib/` 룰 — Python setuptools dist 디렉토리(`build/lib/`, `lib64/`)를 무시하려는 의도였으나, gitignore는 **루트 경로 한정이 없으면 어디서나 매칭**.
+- `frontend/src/lib/` 디렉토리 전체가 의도치 않게 ignore 대상.
+- 기존 `api.ts`/`utils.ts`는 이 룰 추가 이전에 커밋되었거나 `-f`로 강제 추가되어 추적 중. 새 파일은 자동 무시.
+- `git check-ignore -v frontend/src/lib/chartPalette.ts` 출력: `.gitignore:62:lib/	frontend/src/lib/chartPalette.ts`
+
+### ✅ 해결
+- `.gitignore`에 `!frontend/src/lib/` 명시 예외 추가 (62행 `lib/` 바로 아래).
+- 이후 `git status`가 `?? frontend/src/lib/chartPalette.ts`로 정상 untracked 표시.
+- 정상 `git add` → 커밋 가능.
+
+### 💡 향후 권장
+1. **gitignore 룰 작성 시 절대 경로 prefix 권장** — `lib/` → `/lib/` 또는 `build/lib/`로 좁히는 게 안전. 광범위 매칭 시 명시 예외(`!path/`) 같이 동반.
+2. **신규 파일이 `git status`에 안 보일 때 `git check-ignore -v` 즉시 사용** — silent ignore가 가장 진단 어려운 케이스. 19회차에서도 발견 못 함.
+3. **CI에 "import 대상 파일 존재" lint** — 빌드는 working tree 기준이라 로컬에서는 통과하나, 클론하면 실패. tsc는 잡지만 import path 위반은 패턴별로 잡히기 어려움.
+
+---
+
+## 30. 상대적 색 지시("더 진하게")의 방향 오해 — 1회 darken 후 lighten으로 반전
+
+작성일: 2026-05-20 (20회차 후속)
+
+### 🚨 증상
+- 사용자: "남색이 좀더 진했음 좋겠어" → 진하게 darken (`#2c3e50` → `#1a2942`).
+- 사용자 재확인: "반대로 해야할거같아 #2c3e50 여기서 더 연해져야할거같아. 진해지니까 더 검정선이랑 구분안된다" → 방향 반전 lighten (`#1a2942` → `#475d78`).
+- 2회 반복 → 4개 파일 동기화도 2번 수행.
+
+### 🧭 원인
+- 모니터에서 본 시각 결과와 사용자 의도가 어긋남. "진하게 = 검정에 가까워짐"이 시각적으로는 인접 슬롯(검정 `#000`)과 충돌 → 식별성 저하.
+- 인접 슬롯과의 상호작용을 사전에 시뮬레이션하지 않고 단일 색만 조정.
+- 본인이 추측한 darken 방향이 검정과 격차를 좁히는 결과를 낳을 거란 점을 사전에 인지하지 못 함.
+
+### ✅ 해결
+- 진한 톤: `#1a2942` → **`#475d78`** (RGB 71/93/120, 검정과 명확히 분리)
+- 연한 톤 동반 조정: `#4a5e80` → `#7d92b0`
+- 4파일(chartPalette.ts / mockup b6 / design_document §8.14 / history) 동기화.
+
+### 💡 향후 권장
+1. **인접 슬롯 시뮬레이션 SOP** — 색 조정 시 단일 hex만 보지 말고, 같은 차트 안 나란히 있을 인접 슬롯(특히 검정/회색 같은 무채축)과 같이 swatch 비교.
+2. **상대 지시는 시각 결과로 환원하여 재질문** — "더 진하게" 같은 모호 지시는 "결과적으로 검정과의 격차를 좁히는 방향인지/늘리는 방향인지" 같이 시각 의도 확인.
+3. **mockup 사이클에서 인접 슬롯 함께 변경 미리보기** — palette 조정안을 코드 적용 전 mockup 단계에서 인접 슬롯과 같이 보여주기.
+
+---
+
+## 31. SalesChartNew B-6 적용 누락 — 초기 컴포넌트 스캔 시 인라인 ternary 패턴 미감지
+
+작성일: 2026-05-20 (20회차 후속)
+
+### 🚨 증상
+- B-6 다중 시리즈 팔레트 적용 후 사용자 캡처 제보: `/custom-dashboard/details`의 "월별 이커머스 vs 오프라인 매출 추이" 차트가 옛 §8.5 v4 패턴(검정 실/점 + 회색 실)으로 그려져 있음.
+- 적용 대상 5개 컴포넌트(`BrandSection`/`ChannelSection`/`ChannelIssueSection`/`ProductGroupChartNew`/`DynamicAnalysisSection`)를 모두 수정했으나 SalesChartNew가 빠짐.
+
+### 🧭 원인
+- 초기 스캔 시 `PALETTES`(객체) 패턴만 grep — `grep -rn "const colors\s*=\|COLORS\s*=\|MONO_PALETTE\|SERIES_COLORS\|chartColors"`.
+- SalesChartNew의 인라인 ternary 패턴(`viewMode === 'growth' ? [...] : viewMode === 'profitRate' ? [...] : [...]`)은 식별자 없는 익명 배열이라 위 grep에 안 잡힘.
+- 사용자 캡처 제보 후 `grep -rln "palette\[Math.floor"`로 재스캔 → SalesChartNew 발견.
+
+### ✅ 해결
+- SalesChartNew에 `getMultiSeriesStyle` / `getDataTypeSeriesStyle` 도입.
+- 인라인 4단계 명도 팔레트 폐기.
+- 후속 grep `palette\[Math.floor` → 잔여 없음.
+
+### 💡 향후 권장
+1. **컴포넌트 스캔 시 grep 패턴 다양화** — 식별자 패턴(`PALETTES`/`COLORS`) + 패턴 표현식(`palette\[Math.floor`/`stroke=.+#`) + hex 시퀀스(`#000000.*#5d5d5d`)를 함께.
+2. **차트 컴포넌트 인벤토리 문서화** — 어느 컴포넌트가 multi-series mono palette를 쓰는지 design_document.md §7 또는 §8에 표로 명시. 후속 작업의 누락 위험 감소.
+3. **사용자 캡처 제보 가치 재인식** — 자동 스캔보다 실 화면 캡처가 더 빠르게 누락 발견. 작업 후 "Vercel 배포 후 확인 부탁" 명시.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -815,3 +894,6 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 12. **재페치 시 그리드 unmount 금지** — refetch 트리거 컨트롤이 있는 페이지의 차트/리스트 그리드는 `!loading` 조건과 결합 금지 (§26 권장 1번 참조).
 13. **N-column 매트릭스 UI 패턴** — 10개 이상 컬럼은 `overflow-auto` + sticky 컬럼 (좌/우) 디폴트 적용 (§27 권장 1번 참조).
 14. **목업 ↔ 구현 위계 1:1 매칭** — HTML 목업의 들여쓰기·순서·그룹핑이 구현 위계임을 명시 (§28 권장 1번 참조).
+15. **gitignore 광범위 룰 점검** — `lib/` 같은 식별자 단독 룰은 절대 경로 prefix(`/lib/`) 또는 명시 예외(`!path/`) 동반 (§29 권장 1번 참조).
+16. **인접 슬롯 시뮬레이션 SOP** — 색 조정 시 단일 hex가 아니라 인접 슬롯과 swatch 비교 (§30 권장 1번 참조).
+17. **차트 컴포넌트 인벤토리** — multi-series mono palette 사용 컴포넌트 리스트를 design_document.md에 표로 유지 (§31 권장 2번 참조).

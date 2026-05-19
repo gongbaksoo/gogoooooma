@@ -28,11 +28,22 @@
   - `app/custom-dashboard/details/page.tsx` — 주력채널 vs 브랜드 4 시리즈 차트의 stroke 색상을 B-6 슬롯 1~4(검정/네이비/베이지/회색)로 인라인 교체.
   - `SalesChartNew.tsx` (후속 패치) — 인라인 4단계 명도 팔레트 폐기, `getMultiSeriesStyle`/`getDataTypeSeriesStyle` 도입.
 
-### 4-A. 후속 보정 (같은 날, 2회 반복)
+### 4-A. 후속 보정 (같은 날, 2회 반복) — error.md §30
 - 1차 시도: `#2c3e50` → `#1a2942` (darken). 사용자 재확인 후 "검정과 더 구분 안 된다" 피드백. 진행 방향을 darken → **lighten**으로 반전.
 - 최종: `#2c3e50` → **`#475d78`** (RGB 71/93/120, 검정과 명확히 분리). 연한 톤 `#5a7090` → `#7d92b0` 동반 조정.
 - 회고: "더 진하게/연하게" 같은 상대적 지시는 사용자 의도와 시각 결과가 어긋날 수 있음. 인접 슬롯(검정)과의 충돌이 식별성을 결정.
 - chartPalette.ts / mockup b6 / design_document §8.14 / history 본 섹션 모두 동기화.
+
+### 4-B. `.gitignore` 트랩 발견 — error.md §29
+- 신규 `frontend/src/lib/chartPalette.ts`가 `git status`에 보이지 않음 → `.gitignore` 62행 `lib/` 룰이 `frontend/src/lib/` 디렉토리 전체를 silent ignore.
+- 19회차 다른 세션도 같은 파일 import를 4개 컴포넌트에 커밋했으나 헬퍼 자체는 가져가지 못 한 상태였음 (커밋 시점에는 다른 세션의 working tree에만 존재).
+- `.gitignore`에 `!frontend/src/lib/` 명시 예외 1줄 추가 → 정상 추적.
+- 진단 도구: `git check-ignore -v <path>` 로 silent ignore 즉시 확인.
+
+### 4-C. SalesChartNew B-6 누락 → 사용자 캡처 제보 후 추가 적용 — error.md §31
+- 초기 5개 컴포넌트 일괄 적용 후 사용자 캡처: `/custom-dashboard/details`의 "월별 이커머스 vs 오프라인 매출 추이" 차트가 옛 팔레트.
+- 원인: SalesChartNew의 인라인 ternary 패턴이 식별자(`PALETTES`/`COLORS`) 기반 grep에 안 잡힘.
+- 후속 패치: `getMultiSeriesStyle`/`getDataTypeSeriesStyle` 도입. `palette\[Math.floor` 패턴으로 재스캔 → 잔여 없음 확인.
 
 ### 5. 검증
 - tsc: 신규 오류 없음 (기존 14건은 Recharts Tooltip Formatter 타입 issue, 무관).

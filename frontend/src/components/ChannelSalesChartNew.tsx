@@ -720,9 +720,9 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                         dataKey={viewMode === 'growth' ? "growth" : "value"}
                                         name={viewMode === 'growth' ? "증감율" : (viewMode === 'daily' || viewMode === 'dailyProfitRate' ? "일평균 매출" : "매출액")}
                                         stroke={mainColor}
-                                        strokeWidth={timeUnit === 'day' ? 1.5 : 2.5}
-                                        dot={timeUnit === 'day' ? false : { fill: mainColor, r: 4 }}
-                                        activeDot={{ r: 6 }}
+                                        strokeWidth={2}
+                                        dot={timeUnit === 'day' ? false : { fill: mainColor, r: 1.5 }}
+                                        activeDot={{ r: 3.5 }}
                                         animationDuration={1500}
                                         animationEasing="ease-out"
                                     >
@@ -746,9 +746,9 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                     dataKey="profitRate"
                                     name="이익률"
                                     stroke="#ff0066"
-                                    strokeWidth={timeUnit === 'day' ? 1.5 : 1.5}
-                                    dot={timeUnit === 'day' ? false : { fill: "#ff0066", r: 3 }}
-                                    activeDot={{ r: 5 }}
+                                    strokeWidth={2}
+                                    dot={timeUnit === 'day' ? false : { fill: "#ff0066", r: 1.5 }}
+                                    activeDot={{ r: 3.5 }}
                                     animationDuration={1500}
                                     animationEasing="ease-out"
                                 >

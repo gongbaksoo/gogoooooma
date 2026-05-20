@@ -126,7 +126,7 @@ export default function BrandSection({
                   contentStyle={{ border: "1px solid #c4c4c4", borderRadius: 2, fontSize: 12 }}
                   formatter={(v: number, name: string) => [`${v.toLocaleString()} 백만`, name]}
                 />
-                <Line type="monotone" dataKey={brand} stroke="#000000" strokeWidth={2} dot={{ r: 2 }} animationDuration={1500} animationEasing="ease-out" />
+                <Line type="monotone" dataKey={brand} stroke="#000000" strokeWidth={2} dot={{ r: 1.5 }} animationDuration={1500} animationEasing="ease-out" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -170,7 +170,7 @@ export default function BrandSection({
                         stroke={s.stroke}
                         strokeWidth={s.strokeWidth}
                         strokeDasharray={s.strokeDasharray}
-                        dot={{ r: 2, fill: s.stroke }}
+                        dot={{ r: 1.5, fill: s.stroke }}
                         animationDuration={1500}
                         animationEasing="ease-out"
                       />
@@ -216,7 +216,7 @@ export default function BrandSection({
                       contentStyle={{ border: "1px solid #c4c4c4", borderRadius: 2, fontSize: 11 }}
                       formatter={(v: number, name: string) => [`${v.toLocaleString()} 백만`, name]}
                     />
-                    <Line type="monotone" dataKey={p.name} stroke="#000000" strokeWidth={2} dot={{ r: 2 }} animationDuration={1500} animationEasing="ease-out" />
+                    <Line type="monotone" dataKey={p.name} stroke="#000000" strokeWidth={2} dot={{ r: 1.5 }} animationDuration={1500} animationEasing="ease-out" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

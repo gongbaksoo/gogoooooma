@@ -83,7 +83,7 @@ export default function Chart3MainVsCoupang({ chart3 }: Chart3Props) {
                   dataKey={name}
                   stroke={color}
                   strokeWidth={2}
-                  dot={{ r: 3, fill: color }}
+                  dot={{ r: 1.5, fill: color }}
                   animationDuration={1500}
                   animationEasing="ease-out"
                 >

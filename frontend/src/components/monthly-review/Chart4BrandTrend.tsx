@@ -65,8 +65,8 @@ export default function Chart4BrandTrend({ chart4 }: Chart4Props) {
                 type="monotone"
                 dataKey={name}
                 stroke={colors[i] ?? "#000000"}
-                strokeWidth={i === 0 ? 2 : 1.5}
-                dot={{ r: 2, fill: colors[i] ?? "#000000" }}
+                strokeWidth={2}
+                dot={{ r: 1.5, fill: colors[i] ?? "#000000" }}
                 animationDuration={1500}
                 animationEasing="ease-out"
               />

@@ -151,7 +151,7 @@ function MiniLineChart({
                     stroke={s.stroke}
                     strokeWidth={s.strokeWidth}
                     strokeDasharray={s.strokeDasharray}
-                    dot={{ r: 2, fill: s.stroke }}
+                    dot={{ r: 1.5, fill: s.stroke }}
                     animationDuration={1200}
                     animationEasing="ease-out"
                   />

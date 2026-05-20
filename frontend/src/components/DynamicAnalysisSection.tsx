@@ -344,9 +344,9 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                         name={mode === 'total' || mode === 'sales_only' ? "월매출액" : (mode === 'daily' ? "일매출액" : "일평균 매출")}
                                         data={isDaily ? undefined : ((mode === 'avg' || mode === 'avg_only') ? chartData.map(d => ({ ...d, "판매액": (d as any).일평균매출 })) : undefined)}
                                         stroke="#000000"
-                                        strokeWidth={isDaily ? 1.5 : 2.5}
-                                        dot={isDaily ? false : { fill: "#000000", r: 4 }}
-                                        activeDot={{ r: 6 }}
+                                        strokeWidth={2}
+                                        dot={isDaily ? false : { fill: "#000000", r: 1.5 }}
+                                        activeDot={{ r: 3.5 }}
                                         animationDuration={1500}
                                         animationEasing="ease-out"
                                     >
@@ -361,9 +361,9 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                         dataKey="이익률"
                                         name="이익률"
                                         stroke="#ff0066"
-                                        strokeWidth={1.5}
-                                        dot={isDaily ? false : { fill: "#ff0066", r: 3 }}
-                                        activeDot={{ r: 5 }}
+                                        strokeWidth={2}
+                                        dot={isDaily ? false : { fill: "#ff0066", r: 1.5 }}
+                                        activeDot={{ r: 3.5 }}
                                         animationDuration={1500}
                                         animationEasing="ease-out"
                                     >

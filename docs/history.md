@@ -4,6 +4,35 @@
 
 ---
 
+## 2026-05-20 (21회차) — 전 차트 점·선 크기 통일 + 로컬 검증 환경 정리
+
+### 1. 배경
+- 사용자 지적: "그래프의 표식(동그란 점)이 너무 크고, 선마다 원 크기도 서로 다르다. 맞춰달라." 이어서 "선두께도 메인선 강조하지 말고 다 통일. 단 1.5는 너무 얇으니 기존과의 중간으로."
+
+### 2. 통일 규약
+- `dot` r **1.5**, `activeDot` r **3.5**, `strokeWidth` **2** — 전 차트 공통, 메인선 강조 폐지.
+- daily/일별 보기의 점 숨김(`dot={false}`) 동작은 유지. SVG 검색 아이콘 `strokeWidth="2.5"`는 미변경.
+
+### 3. 구현 (13개 컴포넌트)
+- 팔레트 단일 출처: `chartPalette.ts`의 `getMultiSeriesStyle`/`getDataTypeSeriesStyle` 반환값을 `sw 2 / dotR 1.5 / activeR 3.5`로 변경 (메인 `isPrimary` 분기 제거).
+- 하드코딩 차트 11종은 라인 스코프 perl 치환으로 일괄 적용: monthly-review(BrandSection·ChannelSection·ChannelIssueSection·Chart2/3/4), ProductGroupChartNew, SalesChartNew, DynamicAnalysisSection, ChannelSalesChartNew, DetailedSalesChartNew, ProductSearchChart, custom-dashboard/details/page.
+- 상세 범위는 design_document.md §8.14 "전 차트 적용 범위" 표 참조.
+
+### 3-A. 누락·오판 보정 — error.md §33
+- 1차 치환이 `if (/dot=/)` 케이스 민감 필터라 단독 `activeDot={{ r: 6/5 }}` 줄을 누락. 검증 grep도 케이스 민감이라 못 잡음.
+- `activeDot=` 전용 보강 패스 + `grep -i` 재검증으로 해결.
+
+### 4. 로컬 검증 환경 정리 — error.md §32
+- "안 변함" 보고 → 진단 결과 로컬 dev 미실행, 사용자는 Vercel 배포본을 보고 있었음.
+- `frontend`에서 `npm run dev` 기동(localhost:3000), `api`에서 `uvicorn index:app --port 8000` 기동.
+- 기존 업로드 파일은 `api/uploads/` + `metadata.db`에 이미 등록되어 재업로드 불필요 — 백엔드만 켜니 `/api/files/`가 2개(260519.csv, 260210_2.csv) 정상 반환.
+- "Calculation Debug Info" 패널은 `NODE_ENV==='development'`에서만 보이는 dev 전용(SalesChartNew) — 배포본 미표시, 그대로 유지하기로 함.
+
+### 5. 산출물
+- `chartPalette.ts` + 차트 12개 파일 수정, design_document §8.5 주석 / §8.14 통일 규약·범위 표, error.md §32·§33 + 권장 18·19, 본 항목.
+
+---
+
 ## 2026-05-20 (20회차) — 다중 시리즈 차트 팔레트 B-6 도입 (4 hue × 실/점)
 
 ### 1. 배경

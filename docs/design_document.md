@@ -641,6 +641,8 @@ interface SummaryData {
 - 1번째 시리즈만 메인 위계 (sw 2.5, dot r 4). 2번째 이후는 보조 위계로 통일.
 - dot strokeWidth(테두리)는 사용하지 않음 (fill only).
 
+> **변경 이력 (2026-05-20 후속, 21회차)**: 위 표의 `strokeWidth`/`dot r`/`activeDot r` 값은 §8.14의 **점·선 크기 통일 규약으로 대체됨** — 전 차트 공통 `strokeWidth 2`, `dot r 1.5`, `activeDot r 3.5`. 메인 위계 강조(sw 2.5, dot r 4)는 폐지. 색·명도·실/점 패턴 매핑만 본 표 유지.
+
 #### 시리즈 순서 매핑 규칙
 
 **원칙**: 합계/메인 데이터가 1번째 (가장 두드러진 진함 실선), 이후는 데이터 분해 순.
@@ -1025,6 +1027,38 @@ export function getDataTypeSeriesStyle(i: number, key: 'profitRate' | 'growth'):
 | `components/ProductGroupChartNew.tsx` | sales / daily (profitRate/growth는 §8.5 v4 유지) |
 | `components/DynamicAnalysisSection.tsx` | sales/daily/avg (profit_only는 §8.5 v4 유지) |
 | `app/custom-dashboard/details/page.tsx` | 주력채널 브랜드 비교 차트 (4 hue 직접 인라인) |
+
+#### 점·선 크기 통일 규약 (2026-05-20 후속, 21회차)
+
+전 차트 공통으로 점(dot)·선(strokeWidth) 크기를 통일. 사용자 지적: "표식(동그란 점)이 너무 크고, 선마다 원 크기가 서로 다르다" → 작게·일정하게, 선두께는 메인선 강조 없이 통일.
+
+| 속성 | 통일 값 | 비고 |
+|------|---------|------|
+| `dot` r | **1.5** | 메인/보조 구분 없이 동일. daily/일별 보기는 점 숨김(`dot={false}`) 동작 유지 |
+| `activeDot` r (hover) | **3.5** | |
+| `strokeWidth` | **2** | 메인선 강조 폐지. 기존 2~2.5와 1차 시도값 1.5의 중간 |
+
+- 팔레트 기반 차트는 `chartPalette.ts`의 `getMultiSeriesStyle`/`getDataTypeSeriesStyle` 반환값 한 곳에서 통일(`strokeWidth 2`, `dotR 1.5`, `activeR 3.5`).
+- 팔레트를 쓰지 않는 하드코딩 차트(아래 "전 차트 적용 범위")도 동일 값으로 일괄 치환.
+- SVG 검색 아이콘의 `strokeWidth="2.5"`(`<path>`)는 차트 선이 아니므로 미변경.
+
+#### 전 차트 적용 범위 (점·선 크기 통일, 13개 컴포넌트)
+
+| 파일 | 비고 |
+|------|------|
+| `components/monthly-review/BrandSection.tsx` | 종합·주요라인·개별 |
+| `components/monthly-review/ChannelSection.tsx` | |
+| `components/monthly-review/ChannelIssueSection.tsx` | |
+| `components/monthly-review/Chart2YoYTrend.tsx` | |
+| `components/monthly-review/Chart3MainVsCoupang.tsx` | |
+| `components/monthly-review/Chart4BrandTrend.tsx` | |
+| `components/ProductGroupChartNew.tsx` | 팔레트 기반 |
+| `components/SalesChartNew.tsx` | 팔레트 기반 |
+| `components/DynamicAnalysisSection.tsx` | 팔레트 + 하드코딩 라인 |
+| `components/ChannelSalesChartNew.tsx` | 하드코딩 + daily 분기 |
+| `components/DetailedSalesChartNew.tsx` | 하드코딩 + daily 분기 |
+| `components/ProductSearchChart.tsx` | 하드코딩 + daily 분기 |
+| `app/custom-dashboard/details/page.tsx` | 주력채널 브랜드 비교 (인라인) |
 
 #### 관련 항목
 

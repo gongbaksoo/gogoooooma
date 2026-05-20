@@ -75,7 +75,7 @@ export default function Chart2YoYTrend({ data }: { data: Chart2Point[] }) {
             dataKey="당해"
             stroke="#000000"
             strokeWidth={2}
-            dot={{ r: 3, fill: "#000000" }}
+            dot={{ r: 1.5, fill: "#000000" }}
             animationDuration={1500}
             animationEasing="ease-out"
           >
@@ -98,9 +98,9 @@ export default function Chart2YoYTrend({ data }: { data: Chart2Point[] }) {
             type="monotone"
             dataKey="전년"
             stroke="#5d5d5d"
-            strokeWidth={1.5}
+            strokeWidth={2}
             strokeDasharray="4 4"
-            dot={{ r: 3, fill: "#5d5d5d" }}
+            dot={{ r: 1.5, fill: "#5d5d5d" }}
             animationDuration={1500}
             animationEasing="ease-out"
           >

@@ -36,13 +36,12 @@ const B6_PALETTE: { color: string; pattern: 'solid' | 'dashed' }[] = [
 // 시리즈 i번째의 스타일 반환. i가 14를 넘으면 마지막 슬롯 반복.
 export function getMultiSeriesStyle(i: number): SeriesStyle {
   const slot = B6_PALETTE[i] ?? B6_PALETTE[B6_PALETTE.length - 1];
-  const isPrimary = i === 0;
   return {
     stroke: slot.color,
     strokeDasharray: slot.pattern === 'dashed' ? '4 4' : undefined,
-    strokeWidth: isPrimary ? 2.5 : (slot.pattern === 'dashed' ? 1.5 : 2),
-    dotR: isPrimary ? 4 : 3,
-    activeR: isPrimary ? 6 : 5,
+    strokeWidth: 2,
+    dotR: 1.5,
+    activeR: 3.5,
   };
 }
 
@@ -61,8 +60,8 @@ export function getDataTypeSeriesStyle(i: number, key: DataTypePaletteKey): Seri
   return {
     stroke: color,
     strokeDasharray: dashed ? '4 4' : undefined,
-    strokeWidth: i === 0 ? 2.5 : 1.5,
-    dotR: i === 0 ? 4 : 3,
-    activeR: i === 0 ? 6 : 5,
+    strokeWidth: 2,
+    dotR: 1.5,
+    activeR: 3.5,
   };
 }

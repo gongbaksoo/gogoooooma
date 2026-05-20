@@ -516,71 +516,61 @@ def get_summary(
 
     # ----- channel_issue: 주요 채널 이슈 섹션용 (P열 × R열·D열 12개월 pivot) -----
     # 프론트가 사용자 정의 그룹(P열 매핑)으로 vendor·brand 데이터를 동적 집계
+    def _series_by(cdf: pd.DataFrame, key_col: str) -> list:
+        """key_col unique × 12개월 매출 — groupby 1회로 집계 (per-item 불리언 스캔 회피)."""
+        if key_col not in cdf.columns:
+            return []
+        sub = cdf[[key_col, "월구분", "판매액"]].dropna(subset=[key_col])
+        if sub.empty:
+            return []
+        counts = sub[key_col].value_counts()  # row 수 내림차순 (NaN 제외)
+        pivot = (
+            sub.groupby([key_col, "월구분"])["판매액"].sum()
+            .unstack("월구분")
+            .reindex(columns=last12_yymm)
+            .fillna(0.0)
+        )
+        out = []
+        for name in counts.index:
+            if str(name).strip() == "":  # 빈 이름은 유니크 값 단위로만 필터 (저비용)
+                continue
+            vals = pivot.loc[name]
+            out.append({
+                "name": str(name),
+                "row_count": int(counts[name]),
+                "values": [float(vals[y]) for y in last12_yymm],
+            })
+        return out
+
     def _build_channel_issue(scope_df: pd.DataFrame) -> dict:
         channels_out = []
+        if "채널구분" not in scope_df.columns:
+            return {"channels": channels_out}
         for chan in sorted(scope_df["채널구분"].dropna().unique().tolist()):
             cdf = scope_df[scope_df["채널구분"] == chan]
 
-            # 채널(P열) 전체 12개월 합계 — P열 라인용
-            chan_values = [float(cdf[cdf["월구분"] == yymm]["판매액"].sum()) for yymm in last12_yymm]
-
-            # R열 거래처 unique × 12개월
-            vendors = []
-            v_counts = cdf["거래처명"].value_counts() if "거래처명" in cdf.columns else {}
-            for vendor, count in v_counts.items():
-                if pd.isna(vendor) or str(vendor).strip() == "":
-                    continue
-                vdf = cdf[cdf["거래처명"] == vendor]
-                values = [float(vdf[vdf["월구분"] == yymm]["판매액"].sum()) for yymm in last12_yymm]
-                vendors.append({
-                    "name": str(vendor),
-                    "row_count": int(count),
-                    "values": values,
-                })
-
-            # D열 브랜드 unique × 12개월
-            brands = []
-            b_counts = cdf["품목그룹1"].value_counts() if "품목그룹1" in cdf.columns else {}
-            for brand, count in b_counts.items():
-                if pd.isna(brand) or str(brand).strip() == "":
-                    continue
-                bdf = cdf[cdf["품목그룹1"] == brand]
-                values = [float(bdf[bdf["월구분"] == yymm]["판매액"].sum()) for yymm in last12_yymm]
-                brands.append({
-                    "name": str(brand),
-                    "row_count": int(count),
-                    "values": values,
-                })
-
-            # S열 품목 구분 unique × 12개월 (D열 브랜드의 하위 세부)
-            products = []
-            p_counts = cdf["품목 구분"].value_counts() if "품목 구분" in cdf.columns else {}
-            for product, count in p_counts.items():
-                if pd.isna(product) or str(product).strip() == "":
-                    continue
-                pdf = cdf[cdf["품목 구분"] == product]
-                values = [float(pdf[pdf["월구분"] == yymm]["판매액"].sum()) for yymm in last12_yymm]
-                products.append({
-                    "name": str(product),
-                    "row_count": int(count),
-                    "values": values,
-                })
+            # 채널(P열) 전체 12개월 합계 — groupby 1회
+            month_sum = cdf.groupby("월구분")["판매액"].sum()
+            chan_values = [float(month_sum.get(yymm, 0.0)) for yymm in last12_yymm]
 
             channels_out.append({
                 "name": str(chan),
                 "row_count": int(len(cdf)),
                 "values": chan_values,
-                "vendors": vendors,
-                "brands": brands,
-                "products": products,
+                "vendors": _series_by(cdf, "거래처명"),   # R열
+                "brands": _series_by(cdf, "품목그룹1"),    # D열
+                "products": _series_by(cdf, "품목 구분"),  # S열
             })
         return {"channels": channels_out}
 
+    # 프론트는 요청 파트(summary.channel_issue[part])만 사용 → 요청 파트만 빌드 (성능).
+    # part 변경 시 summary를 재페치하므로 나머지 파트는 빈 배열로 충분.
     channel_issue = {
-        "all": _build_channel_issue(df),
-        "ecommerce": _build_channel_issue(df[df["파트구분"] == "이커머스"]),
-        "offline": _build_channel_issue(df[df["파트구분"] == "오프라인"]),
+        "all": {"channels": []},
+        "ecommerce": {"channels": []},
+        "offline": {"channels": []},
     }
+    channel_issue[part] = _build_channel_issue(df_part)
 
     return {
         "month": month,

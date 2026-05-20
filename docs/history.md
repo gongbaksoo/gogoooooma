@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-05-20 (24회차 후속) — channel_issue 성능 회귀 수정 (summary ~7s → 1.3~3s)
+
+### 1. 배경
+- 사용자 지적: 24회차 직후 "매출/목표 파일 선택 후 그래프 로딩이 엄청 느려졌다". 측정 결과 `/summary/`가 part당 ~7초(이전 1초대).
+
+### 2. 원인 (error.md §37)
+- `_build_channel_issue`가 채널×(거래처·브랜드·품목 107개)×12개월을 `cdf[cdf["월구분"]==월].sum()`로 반복 스캔 → S열 추가로 폭증.
+- 한 요청에서 all/ecommerce/offline 3파트 전부 빌드(프론트는 현재 part만 사용).
+
+### 3. 수정 (`api/monthly_review.py`)
+- `_series_by` 헬퍼: 채널당 `groupby([key,"월구분"]).sum().unstack().reindex(last12).fillna(0)` 1회로 12개월 집계. 채널 합계도 `groupby("월구분").sum()` 1회.
+- 빈 이름 필터: 행 단위 strip → `dropna(subset=[key])` + value_counts unique 단위.
+- channel_issue를 **요청 part만 빌드**, 나머지는 `{"channels": []}`.
+
+### 4. 검증 (로컬, 260519.csv)
+- `curl -w "%{time_total}"`: all 7.3→2.4~3.0s / ecommerce 7.1→1.7s / offline 6.7→1.3s.
+- 데이터 정합성 동일: vendors 19 / brands 11 / products 107 / values 12, 요청 part만 채워짐(ecommerce 요청 → all:0, ecommerce:10, offline:0).
+
+### 5. 산출물
+- `monthly_review.py` 수정, design_document §2.3.3.15 성능 규약 추가, project_plan §4.7, error.md §37 + 권장 23, 본 항목.
+- 후속: **Mac Mini 재배포 필요** (백엔드 변경).
+
+---
+
 ## 2026-05-20 (24회차) — 주요 채널 이슈: 표시 항목에 상·하위 레벨 동시 노출
 
 ### 1. 배경

@@ -988,6 +988,31 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 
 ---
 
+## 37. 백엔드 성능 회귀 — 항목×월 반복 불리언 필터 + 전 파트 빌드로 summary ~7s
+
+작성일: 2026-05-20 (24회차 후속)
+
+### 🚨 증상
+- 24회차(S열 품목 추가) 직후 "매출/목표 파일 선택 후 그래프 로딩이 엄청 느려졌다". 측정 결과 `/summary/` 응답이 **part당 ~7초**(이전 1초대).
+
+### 🧭 원인
+1. **항목·월마다 데이터프레임 통째 필터링**: `_build_channel_issue`가 채널×(거래처·브랜드·품목)×12개월 각각을 `cdf[cdf["월구분"]==월]["판매액"].sum()`로 반복 스캔. S열 품목(107개) 추가로 스캔량 폭증 (O(채널×항목×12)).
+2. **전 파트 빌드**: 한 요청에서 `all`/`ecommerce`/`offline` channel_issue를 모두 계산(프론트는 현재 part만 사용하는데도).
+3. 부가: 빈 이름 필터를 행 단위 `astype(str).str.strip()`로 수행(대용량 컬럼에서 비용).
+
+### ✅ 해결
+1. **채널당 `groupby` 1회**: `sub.groupby([key,"월구분"])["판매액"].sum().unstack("월구분").reindex(columns=last12).fillna(0)` → 항목×월 반복 스캔 제거. 채널 합계도 `groupby("월구분").sum()` 1회.
+2. **요청 part만 빌드**: `channel_issue[part] = _build_channel_issue(df_part)`, 나머지는 `{"channels": []}`.
+3. 빈 이름 필터를 `dropna(subset=[key])` + value_counts unique 단위로.
+- 결과: all 7.3→2.4~3.0s / ecommerce 7.1→1.7s / offline 6.7→1.3s. 데이터 정합성 동일.
+
+### 💡 향후 권장
+1. **항목별 시계열 집계는 groupby/pivot 1회로** — "고유값 × 기간" 반복 boolean-mask sum은 카디널리티 증가 시 폭발. 신규 차원 추가 시 집계 패턴부터 점검.
+2. **응답에 안 쓰는 파트/데이터 빌드 금지** — 클라이언트가 일부만 쓰면 백엔드도 그만큼만. 특히 무거운 pivot은 요청 스코프로 한정.
+3. **데이터 차원 추가 PR은 응답시간 측정 동반** — `curl -w "%{time_total}"`로 before/after 기록.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -1011,3 +1036,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 20. **라이브러리 기본 옵션 끄기 + 풀 리로드 검증** — `undefined`는 defaultProps로 되돌아가니 끄려면 `null`/명시값; recharts 등 내부 store 라이브러리 설정 변경은 HMR 말고 풀 리로드로 확인 (§34 권장 1·2번 참조).
 21. **미해결 질문·복수 요청 큐잉** — 확인 질문이 미해결인 채 작업을 전환하면 pending 항목을 추적하고 마무리 때 환기 (§35 권장 1·2번 참조).
 22. **env 중복 키 제거 + 검증 전 타깃 URL 확정** — `NEXT_PUBLIC_API_URL` 같은 키는 한 줄로, 백엔드 변경 검증은 실제 네트워크 요청으로 어느 백엔드인지 먼저 확인 (§36 권장 1·2번 참조).
+23. **시계열 집계는 groupby 1회 + 응답시간 측정** — 고유값×기간 반복 boolean-mask sum 금지, 안 쓰는 파트 빌드 금지, 차원 추가 PR은 `curl -w "%{time_total}"`로 before/after 기록 (§37 권장 1·2·3번 참조).

@@ -180,6 +180,7 @@ sales-analysis-site/
   - 백엔드 `channel_issue` 채널별 `values`(P열 합계)+`products`(S열) 추가 → **Mac Mini 재배포 필요**.
   - selection은 타입 태그 id(`P:`/`R:`/`D:`/`S:`) 저장, 기존 평문 자동 마이그레이션. recharts dataKey=id/name=표시이름.
   - 상세: `docs/design_document.md §2.3.3.15`, 에러: `docs/error.md §36`
+  - **성능 후속 (24회차 same-day)**: S열 추가로 summary가 part당 ~7s로 회귀 → ① 채널당 `groupby` 1회 집계 ② 요청 part만 빌드. all 3.0s/ecommerce 1.7s/offline 1.3s로 회복. 에러: `docs/error.md §37`. → **Mac Mini 재배포 필요**.
 - **Sticky 컴팩트 바 (2026-05-19 16회차)**: 원본 컨트롤 영역이 화면 밖으로 나가면 페이지 상단에 고정 노출. 포함: `← 뒤로 / 월 리뷰` + `대상 월 / 파트` + `차트 표시 / PDF 다운로드`. 매출/목표 파일은 제외 (한 번 선택 후 자주 변경되지 않음). IntersectionObserver 기반 fade-in 200ms. 상세: `docs/design_document.md §2.3.3.9`
 - **Phase 3 브랜드 상세 (2026-05-19 구현, 동적 컴포넌트)**:
   - 단일 컴포넌트 `BrandSection` × 3 (마이비 / 누비 / 쏭레브). 각 브랜드 섹션이 자체적으로 3종류 차트 그룹 렌더:

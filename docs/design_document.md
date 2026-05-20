@@ -428,6 +428,12 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 
 **배포**: 백엔드 변경 포함 → Mac Mini 재배포 필요. 운영 백엔드 미반영 시 P열 `values`·S열 `products`가 없어 P열 라인=0/빈값·S열 옵션 없음으로 graceful degrade (프론트 optional 처리). `docs/error.md §22` 동시 배포 원칙.
 
+**성능 규약 (24회차 후속, 2026-05-20)**:
+- `_build_channel_issue`의 항목별 12개월 집계는 **`groupby([key, "월구분"]).sum().unstack()` 1회 + `reindex(last12).fillna(0)`** 패턴 필수. 항목·월마다 `df[df["월구분"]==월].sum()` 불리언 스캔 반복 **금지** (S열 107개 추가 시 요청당 ~7s로 회귀 → `docs/error.md §37`).
+- 빈 이름 필터는 행 단위 문자열 처리(`astype(str).str.strip()`) 대신 `dropna(subset=[key])` + value_counts unique 값 단위로.
+- **channel_issue는 요청 `part`만 빌드** (`channel_issue[part] = _build_channel_issue(df_part)`, 나머지 파트는 `{"channels": []}`). 프론트가 `summary.channel_issue?.[part]`만 사용하고 part 변경 시 재페치하므로 충분. 3파트 전부 빌드 금지.
+- 측정 결과: all 7.3→2.4~3.0s / ecommerce 7.1→1.7s / offline 6.7→1.3s.
+
 #### 2.3.3.10 스크롤 위치 보존 규약 (2026-05-19 17회차)
 
 파트 토글·월 변경 등 재페치 트리거 시 페이지 스크롤 위치가 맨 위로 리셋되지 않도록 차트 그리드를 **언마운트하지 않는** 패턴 적용.

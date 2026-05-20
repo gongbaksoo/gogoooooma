@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-05-20 (24회차) — 주요 채널 이슈: 표시 항목에 상·하위 레벨 동시 노출
+
+### 1. 배경
+- 사용자 요청: "표시 거래처 수정"에 R열뿐 아니라 **P열 값도 함께** 보이게, 두 묶음은 구분선으로, 표시 순서는 구분 없이 섞어서.
+- 확정: (b) 두 모달 모두 적용하되 **표시 브랜드 수정은 P열이 아니라 S열**. 위계 = P열은 R열의 그룹, D열은 S열의 그룹. P열 라인 = 채널 합계. 옵션 정렬 = 거래처 모달 P열 위 / 브랜드 모달 D열 위(둘 다 상위 레벨을 위로).
+
+### 2. 구현 (5개 파일)
+- `api/monthly_review.py` `_build_channel_issue`: 채널별 `values`(P열 12개월 합계) + `products`(S열 품목 구분 × 12개월) 추가. → **백엔드 변경(Mac Mini 재배포 필요)**.
+- `ProductSelectionModal.tsx`: `ProductOption`에 `id`(선택 식별, 이름 충돌 대비)+`group`(묶음 라벨) 추가. group별 헤더+구분선 렌더, 선택/순서/체크 모두 id 기준. "표시 순서"는 묶음 통합 단일 리스트.
+- `ChannelIssueSection.tsx`: 거래처=P열(채널 합계)+R열, 브랜드=D열+S열 옵션 합치기. 태그 id(`P:`/`R:`/`D:`/`S:`)로 집계·렌더. `<Line dataKey={id} name={표시이름}>`로 충돌 회피.
+- `channelIssueStorage.ts`: selection을 태그 id로 저장 + 기존 평문 자동 마이그레이션(`tagSelection`, vendor→`R:`, brand→`D:`).
+
+### 3. 검증 (로컬 백엔드 localhost:8000 + Playwright)
+- 백엔드 API 직접 확인: 채널 `values` 12개월 / vendors 19 / brands 11 / **products(S열) 107** 정상.
+- 거래처 모달: `채널 (P열)`(오픈마켓(사입) 합계) 위 + `거래처 (R열)` 아래 구분선. 브랜드 모달: `브랜드 (D열)` 위 + `상품 (S열)` 아래.
+- P+R 혼합 선택 → P를 ▲로 1번으로 정렬 → 적용: 차트에 5라인 공존, 범례·색상 모두 선택 순서대로(P=주색상 #000).
+- dev 프론트가 localhost:8000을 호출하는지 네트워크로 확정 후 검증 (env 중복 키 이슈 → error.md §36).
+
+### 4. 산출물
+- `monthly_review.py` + `ProductSelectionModal`/`ChannelIssueSection`/`channelIssueStorage` 수정, design_document §2.3.3.15, project_plan §4.7, error.md §36 + 권장 22, 본 항목.
+- 후속: 운영 반영 위해 **Mac Mini 백엔드 재배포 필요**.
+
+---
+
 ## 2026-05-20 (23회차) — 편집 모드 (보기 ↔ 편집 분리)
 
 ### 1. 배경

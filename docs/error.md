@@ -968,6 +968,26 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 
 ---
 
+## 36. `.env.local`에 `NEXT_PUBLIC_API_URL` 2줄 — 로컬 dev가 어느 백엔드를 보는지 모호
+
+작성일: 2026-05-20 (24회차)
+
+### 🚨 증상
+- `frontend/.env.local`에 `NEXT_PUBLIC_API_URL`이 **2줄**(`http://localhost:8000` + `https://api.gongbaksoo.com`) 존재.
+- 백엔드 변경(channel_issue P열/S열 추가)을 로컬에서 검증해야 하는데, dev 프론트가 로컬(8000)을 보는지 운영을 보는지 불확실 → 잘못 보면 "코드 고쳤는데 안 변함"으로 오판 위험 (§32와 유사).
+
+### 🧭 원인
+- dotenv는 같은 키 중복 시 **나중 줄이 우선**이라, 문자대로면 운영 URL이 적용될 수 있음. 단, `NODE_ENV==='development'` fallback·dev 서버 기동 시점 캐싱 등으로 실제 값이 달라질 수 있어 정적 추론만으로는 불확실.
+
+### ✅ 해결
+- 추측 대신 **브라우저 네트워크로 실제 호출 URL 확인**: `performance.getEntriesByType('resource')`로 `monthly-review` 요청이 `http://localhost:8000/api/...`로 가는 것 확인 → 로컬 백엔드 사용 확정 후 검증 진행.
+
+### 💡 향후 권장
+1. **env 중복 키 제거** — `.env.local`의 `NEXT_PUBLIC_API_URL`을 한 줄로 정리(로컬은 localhost만, 운영은 Vercel 대시보드). 중복은 혼란·오판의 원인.
+2. **백엔드 검증 전 타깃 URL부터 확정** — API 응답 구조 변경 검증 시, 정적 추론 말고 실제 네트워크 요청(또는 직접 `curl localhost:8000`)으로 어느 백엔드인지 먼저 확인.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -990,3 +1010,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 19. **케이스 민감 치환의 검증은 case-insensitive로** — `dot=` 필터가 `activeDot=`를 누락하지 않도록 검증 grep은 `-i` 또는 역-grep (§33 권장 1번 참조).
 20. **라이브러리 기본 옵션 끄기 + 풀 리로드 검증** — `undefined`는 defaultProps로 되돌아가니 끄려면 `null`/명시값; recharts 등 내부 store 라이브러리 설정 변경은 HMR 말고 풀 리로드로 확인 (§34 권장 1·2번 참조).
 21. **미해결 질문·복수 요청 큐잉** — 확인 질문이 미해결인 채 작업을 전환하면 pending 항목을 추적하고 마무리 때 환기 (§35 권장 1·2번 참조).
+22. **env 중복 키 제거 + 검증 전 타깃 URL 확정** — `NEXT_PUBLIC_API_URL` 같은 키는 한 줄로, 백엔드 변경 검증은 실제 네트워크 요청으로 어느 백엔드인지 먼저 확인 (§36 권장 1·2번 참조).

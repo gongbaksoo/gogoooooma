@@ -16,8 +16,21 @@ export interface GroupDef {
   id: string;
   name: string;
   channels: string[];       // P열 채널구분 매핑
-  vendorSelection: string[]; // R열 거래처 (상단 차트 표시)
-  brandSelection: string[];  // D열 브랜드 (하단 차트 표시)
+  // 표시 항목 selection — 타입 태그 id 저장 (이름 충돌·혼합 순서 대응)
+  //   거래처 차트: "P:<채널>" (P열) | "R:<거래처>" (R열)
+  //   브랜드 차트: "D:<브랜드>" (D열) | "S:<품목구분>" (S열)
+  vendorSelection: string[]; // 상단(거래처) 차트 표시 — P/R 혼합 가능
+  brandSelection: string[];  // 하단(브랜드) 차트 표시 — D/S 혼합 가능
+}
+
+/** 표시 항목 selection 태그 접두 (타입 구분) */
+export const SEL_PREFIXES = ["P:", "R:", "D:", "S:"] as const;
+
+/** 평문(접두 없는) selection을 기본 타입 접두로 마이그레이션 */
+function tagSelection(arr: string[], defaultPrefix: "R:" | "D:"): string[] {
+  return arr.map((v) =>
+    SEL_PREFIXES.some((p) => v.startsWith(p)) ? v : `${defaultPrefix}${v}`
+  );
 }
 
 export type PartScopedGroups = Record<Part, GroupDef[]>;
@@ -98,12 +111,18 @@ function sanitizeGroup(raw: unknown): GroupDef | null {
     id: r.id,
     name: r.name,
     channels: Array.isArray(r.channels) ? r.channels.filter((x): x is string => typeof x === "string") : [],
-    vendorSelection: Array.isArray(r.vendorSelection)
-      ? r.vendorSelection.filter((x): x is string => typeof x === "string")
-      : [],
-    brandSelection: Array.isArray(r.brandSelection)
-      ? r.brandSelection.filter((x): x is string => typeof x === "string")
-      : [],
+    vendorSelection: tagSelection(
+      Array.isArray(r.vendorSelection)
+        ? r.vendorSelection.filter((x): x is string => typeof x === "string")
+        : [],
+      "R:"
+    ),
+    brandSelection: tagSelection(
+      Array.isArray(r.brandSelection)
+        ? r.brandSelection.filter((x): x is string => typeof x === "string")
+        : [],
+      "D:"
+    ),
   };
 }
 

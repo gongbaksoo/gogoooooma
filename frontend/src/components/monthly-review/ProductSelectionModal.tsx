@@ -5,6 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 export interface ProductOption {
   name: string;
   row_count: number;
+  /** 선택 식별자 — 미지정 시 name 사용. 같은 이름이 다른 묶음에 있을 때 충돌 방지 */
+  id?: string;
+  /** 묶음 라벨 — 지정 시 옵션 목록을 묶음별 헤더+구분선으로 분리 표시 */
+  group?: string;
 }
 
 interface Props {
@@ -12,14 +16,16 @@ interface Props {
   onClose: () => void;
   title: string;
   description?: string;
-  /** 전체 옵션 (해당 브랜드의 모든 품목구분) */
+  /** 전체 옵션 */
   options: ProductOption[];
-  /** 현재 선택된 상품명 리스트 (순서 = 표시 우선순위) */
+  /** 현재 선택된 id 리스트 (순서 = 표시 우선순위) */
   selected: string[];
   onApply: (next: string[]) => void;
   /** 검색 가능 여부 (옵션 많을 때) */
   searchable?: boolean;
 }
+
+const optId = (o: ProductOption) => o.id ?? o.name;
 
 export default function ProductSelectionModal({
   open,
@@ -31,7 +37,7 @@ export default function ProductSelectionModal({
   onApply,
   searchable = true,
 }: Props) {
-  // draft = 선택된 항목의 순서 있는 배열 (표시 우선순위)
+  // draft = 선택된 id의 순서 있는 배열 (표시 우선순위)
   const [draft, setDraft] = useState<string[]>(selected);
   const [query, setQuery] = useState("");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -46,18 +52,42 @@ export default function ProductSelectionModal({
 
   const draftSet = useMemo(() => new Set(draft), [draft]);
 
+  // id → 표시 이름
+  const nameById = useMemo(() => {
+    const map = new Map<string, string>();
+    options.forEach((o) => map.set(optId(o), o.name));
+    return map;
+  }, [options]);
+
   const filteredOptions = useMemo(() => {
     if (!query.trim()) return options;
     const q = query.trim().toLowerCase();
     return options.filter((o) => o.name.toLowerCase().includes(q));
   }, [options, query]);
 
+  // 묶음별로 그룹핑 (group 미지정이면 단일 묶음)
+  const grouped = useMemo(() => {
+    const hasGroups = options.some((o) => o.group);
+    if (!hasGroups) return [{ label: null as string | null, items: filteredOptions }];
+    const order: string[] = [];
+    const map = new Map<string, ProductOption[]>();
+    for (const o of filteredOptions) {
+      const g = o.group ?? "";
+      if (!map.has(g)) {
+        map.set(g, []);
+        order.push(g);
+      }
+      map.get(g)!.push(o);
+    }
+    return order.map((g) => ({ label: g, items: map.get(g)! }));
+  }, [options, filteredOptions]);
+
   if (!open) return null;
 
   // 체크: 맨 뒤에 추가 / 해제: 제거 (순서 보존)
-  const toggle = (name: string) => {
+  const toggle = (id: string) => {
     setDraft((prev) =>
-      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
+      prev.includes(id) ? prev.filter((n) => n !== id) : [...prev, id]
     );
   };
 
@@ -118,7 +148,7 @@ export default function ProductSelectionModal({
             </span>
             <button
               type="button"
-              onClick={() => setDraft(options.map((o) => o.name))}
+              onClick={() => setDraft(options.map(optId))}
               className="ml-auto underline hover:text-black"
             >
               모두
@@ -142,7 +172,7 @@ export default function ProductSelectionModal({
           )}
         </div>
 
-        {/* 표시 순서 (드래그 / ▲▼ 로 정렬) */}
+        {/* 표시 순서 (드래그 / ▲▼ 로 정렬) — 묶음 구분 없이 통합 */}
         {draft.length > 0 && (
           <div className="px-4 pt-3 pb-2 border-b border-[#c4c4c4]">
             <div className="flex items-center justify-between mb-1.5">
@@ -154,9 +184,9 @@ export default function ProductSelectionModal({
               </span>
             </div>
             <div className="flex flex-col gap-1 max-h-[140px] overflow-y-auto">
-              {draft.map((name, i) => (
+              {draft.map((id, i) => (
                 <div
-                  key={name}
+                  key={id}
                   draggable
                   onDragStart={() => setDragIndex(i)}
                   onDragOver={(e) => e.preventDefault()}
@@ -176,7 +206,7 @@ export default function ProductSelectionModal({
                     ≡
                   </span>
                   <span className="text-[11px] text-[#9d9d9d] w-4 text-right">{i + 1}</span>
-                  <span className="text-black truncate flex-1">{name}</span>
+                  <span className="text-black truncate flex-1">{nameById.get(id) ?? id}</span>
                   <button
                     type="button"
                     onClick={() => move(i, -1)}
@@ -197,7 +227,7 @@ export default function ProductSelectionModal({
                   </button>
                   <button
                     type="button"
-                    onClick={() => toggle(name)}
+                    onClick={() => toggle(id)}
                     className="text-[#5d5d5d] hover:text-black px-1"
                     title="제거"
                   >
@@ -215,24 +245,41 @@ export default function ProductSelectionModal({
               검색 결과 없음
             </p>
           ) : (
-            filteredOptions.map((opt) => (
-              <label
-                key={opt.name}
-                className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-[#f5f5f5] rounded text-[13px]"
-              >
-                <input
-                  type="checkbox"
-                  checked={draftSet.has(opt.name)}
-                  onChange={() => toggle(opt.name)}
-                  className="w-4 h-4 accent-black"
-                />
-                <span className={draftSet.has(opt.name) ? "text-black" : "text-[#5d5d5d]"}>
-                  {opt.name}
-                </span>
-                <span className="ml-auto text-[11px] text-[#5d5d5d]">
-                  {opt.row_count.toLocaleString()} row
-                </span>
-              </label>
+            grouped.map((section, gi) => (
+              <div key={section.label ?? "default"}>
+                {section.label && (
+                  <div
+                    className={`px-2 pb-1 text-[11px] font-bold text-[#5d5d5d] uppercase tracking-wider ${
+                      gi > 0 ? "pt-3 mt-1 border-t border-[#c4c4c4]" : "pt-1"
+                    }`}
+                  >
+                    {section.label}
+                  </div>
+                )}
+                {section.items.map((opt) => {
+                  const id = optId(opt);
+                  const checked = draftSet.has(id);
+                  return (
+                    <label
+                      key={id}
+                      className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-[#f5f5f5] rounded text-[13px]"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggle(id)}
+                        className="w-4 h-4 accent-black"
+                      />
+                      <span className={checked ? "text-black" : "text-[#5d5d5d]"}>
+                        {opt.name}
+                      </span>
+                      <span className="ml-auto text-[11px] text-[#5d5d5d]">
+                        {opt.row_count.toLocaleString()} row
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
             ))
           )}
         </div>

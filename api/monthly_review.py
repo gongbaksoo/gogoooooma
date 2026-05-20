@@ -521,6 +521,9 @@ def get_summary(
         for chan in sorted(scope_df["채널구분"].dropna().unique().tolist()):
             cdf = scope_df[scope_df["채널구분"] == chan]
 
+            # 채널(P열) 전체 12개월 합계 — P열 라인용
+            chan_values = [float(cdf[cdf["월구분"] == yymm]["판매액"].sum()) for yymm in last12_yymm]
+
             # R열 거래처 unique × 12개월
             vendors = []
             v_counts = cdf["거래처명"].value_counts() if "거래처명" in cdf.columns else {}
@@ -549,11 +552,27 @@ def get_summary(
                     "values": values,
                 })
 
+            # S열 품목 구분 unique × 12개월 (D열 브랜드의 하위 세부)
+            products = []
+            p_counts = cdf["품목 구분"].value_counts() if "품목 구분" in cdf.columns else {}
+            for product, count in p_counts.items():
+                if pd.isna(product) or str(product).strip() == "":
+                    continue
+                pdf = cdf[cdf["품목 구분"] == product]
+                values = [float(pdf[pdf["월구분"] == yymm]["판매액"].sum()) for yymm in last12_yymm]
+                products.append({
+                    "name": str(product),
+                    "row_count": int(count),
+                    "values": values,
+                })
+
             channels_out.append({
                 "name": str(chan),
                 "row_count": int(len(cdf)),
+                "values": chan_values,
                 "vendors": vendors,
                 "brands": brands,
+                "products": products,
             })
         return {"channels": channels_out}
 

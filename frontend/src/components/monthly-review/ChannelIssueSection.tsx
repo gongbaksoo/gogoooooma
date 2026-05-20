@@ -16,11 +16,19 @@ import GroupConfigModal from "./GroupConfigModal";
 import { GroupDef, Part } from "./channelIssueStorage";
 import { getMultiSeriesStyle } from "@/lib/chartPalette";
 
+interface NamedSeries {
+  name: string;
+  row_count: number;
+  values: number[];
+}
+
 interface ChannelData {
   name: string;
   row_count: number;
-  vendors: { name: string; row_count: number; values: number[] }[];
-  brands: { name: string; row_count: number; values: number[] }[];
+  values?: number[]; // 채널(P열) 12개월 합계 (백엔드 보강)
+  vendors: NamedSeries[]; // R열 거래처명
+  brands: NamedSeries[]; // D열 품목그룹1
+  products?: NamedSeries[]; // S열 품목 구분 (백엔드 보강)
 }
 
 interface Props {
@@ -32,41 +40,67 @@ interface Props {
   editMode: boolean;
 }
 
-
 const toMan = (v: number) => Math.round(v / 1_000_000);
 const shortLabel = (m: string) => {
   const t = m.match(/^(\d{4})-(\d{2})$/);
   return t ? `${t[1].slice(-2)}.${t[2]}` : m;
 };
 
-interface AggregatedOption {
+// 차트/모달 공통 옵션 — id로 식별(이름 충돌 대비), group으로 묶음 구분
+interface ChartOption {
+  id: string; // "P:..." | "R:..." | "D:..." | "S:..."
   name: string;
   row_count: number;
   values: number[];
+  group: string;
 }
 
-// 그룹의 채널들에 속한 row를 vendor/brand 기준으로 합산
+// 그룹의 각 채널(P열)을 채널 합계 라인으로 (그룹 채널 순서 유지)
+function channelOptions(
+  channels: ChannelData[],
+  groupChannels: string[],
+  monthsCount: number,
+  group: string
+): ChartOption[] {
+  const byName = new Map(channels.map((c) => [c.name, c]));
+  const out: ChartOption[] = [];
+  for (const name of groupChannels) {
+    const ch = byName.get(name);
+    if (!ch) continue;
+    const values = ch.values ? [...ch.values] : new Array(monthsCount).fill(0);
+    out.push({ id: `P:${ch.name}`, name: ch.name, row_count: ch.row_count, values, group });
+  }
+  return out;
+}
+
+// 그룹 채널들을 가로질러 vendors/brands/products를 이름 기준 합산
 function aggregate(
   channels: ChannelData[],
   groupChannels: string[],
-  kind: "vendors" | "brands",
-  monthsCount: number
-): AggregatedOption[] {
-  const map = new Map<string, AggregatedOption>();
+  kind: "vendors" | "brands" | "products",
+  monthsCount: number,
+  prefix: string,
+  group: string
+): ChartOption[] {
+  const map = new Map<string, ChartOption>();
   for (const ch of channels) {
     if (!groupChannels.includes(ch.name)) continue;
-    for (const item of ch[kind]) {
-      const existing = map.get(item.name);
+    const items = (ch[kind] ?? []) as NamedSeries[];
+    for (const item of items) {
+      const id = `${prefix}${item.name}`;
+      const existing = map.get(id);
       if (existing) {
         existing.row_count += item.row_count;
         for (let i = 0; i < monthsCount; i++) {
           existing.values[i] += item.values[i] ?? 0;
         }
       } else {
-        map.set(item.name, {
+        map.set(id, {
+          id,
           name: item.name,
           row_count: item.row_count,
           values: [...item.values],
+          group,
         });
       }
     }
@@ -77,8 +111,8 @@ function aggregate(
 interface MiniChartProps {
   title: string;
   subtitle: string;
-  data: AggregatedOption[];
-  selected: string[];
+  data: ChartOption[];
+  selected: string[]; // id 리스트
   months: string[];
   onEdit: () => void;
   editLabel: string;
@@ -95,12 +129,12 @@ function MiniLineChart({
   editLabel,
   editMode,
 }: MiniChartProps) {
-  // 사용자가 정한 selected 순서 그대로 (표시 우선순위)
+  // 사용자가 정한 selected(id) 순서 그대로 (표시 우선순위)
   const selectedItems = useMemo(() => {
-    const byName = new Map(data.map((d) => [d.name, d]));
+    const byId = new Map(data.map((d) => [d.id, d]));
     return selected
-      .map((name) => byName.get(name))
-      .filter((d): d is AggregatedOption => Boolean(d));
+      .map((id) => byId.get(id))
+      .filter((d): d is ChartOption => Boolean(d));
   }, [data, selected]);
 
   const styles = selectedItems.map((_, i) => getMultiSeriesStyle(i));
@@ -108,7 +142,7 @@ function MiniLineChart({
   const chartData = months.map((m, idx) => {
     const row: Record<string, string | number> = { month: shortLabel(m) };
     selectedItems.forEach((it) => {
-      row[it.name] = toMan(it.values[idx] ?? 0);
+      row[it.id] = toMan(it.values[idx] ?? 0);
     });
     return row;
   });
@@ -153,9 +187,10 @@ function MiniLineChart({
                 const s = styles[i];
                 return (
                   <Line
-                    key={it.name}
+                    key={it.id}
                     type="monotone"
-                    dataKey={it.name}
+                    dataKey={it.id}
+                    name={it.name}
                     stroke={s.stroke}
                     strokeWidth={s.strokeWidth}
                     strokeDasharray={s.strokeDasharray}
@@ -193,12 +228,19 @@ export default function ChannelIssueSection({
     [channels]
   );
 
-  // 그룹별 집계 데이터
+  // 그룹별 차트 옵션 — 거래처 차트: P열(위)+R열(아래), 브랜드 차트: D열(위)+S열(아래)
   const groupAggs = useMemo(() => {
+    const n = months.length;
     return groups.map((g) => ({
       group: g,
-      vendors: aggregate(channels, g.channels, "vendors", months.length),
-      brands: aggregate(channels, g.channels, "brands", months.length),
+      vendorData: [
+        ...channelOptions(channels, g.channels, n, "채널 (P열)"),
+        ...aggregate(channels, g.channels, "vendors", n, "R:", "거래처 (R열)"),
+      ],
+      brandData: [
+        ...aggregate(channels, g.channels, "brands", n, "D:", "브랜드 (D열)"),
+        ...aggregate(channels, g.channels, "products", n, "S:", "상품 (S열)"),
+      ],
     }));
   }, [channels, groups, months.length]);
 
@@ -219,12 +261,20 @@ export default function ChannelIssueSection({
     if (!editing) return null;
     const ga = groupAggs.find((x) => x.group.id === editing.groupId);
     if (!ga) return null;
-    const items = editing.kind === "vendor" ? ga.vendors : ga.brands;
-    const selected = editing.kind === "vendor" ? ga.group.vendorSelection : ga.group.brandSelection;
+    const isVendor = editing.kind === "vendor";
+    const items = isVendor ? ga.vendorData : ga.brandData;
+    const selected = isVendor ? ga.group.vendorSelection : ga.group.brandSelection;
     return {
-      title: `${ga.group.name} — 표시 ${editing.kind === "vendor" ? "거래처" : "브랜드"} 수정`,
-      description: `${ga.group.name} 그룹 (${ga.group.channels.join(" / ") || "—"})의 ${editing.kind === "vendor" ? "R열 거래처" : "D열 브랜드"} unique 목록. 체크된 항목만 차트에 표시.`,
-      options: items.map((it) => ({ name: it.name, row_count: it.row_count })) as ProductOption[],
+      title: `${ga.group.name} — 표시 ${isVendor ? "거래처" : "브랜드"} 수정`,
+      description: isVendor
+        ? `${ga.group.name} 그룹 (${ga.group.channels.join(" / ") || "—"}) — 채널(P열) 합계와 거래처(R열) 항목. 체크된 항목만 차트에 표시.`
+        : `${ga.group.name} 그룹 (${ga.group.channels.join(" / ") || "—"}) — 브랜드(D열)와 하위 상품(S열) 항목. 체크된 항목만 차트에 표시.`,
+      options: items.map((it) => ({
+        id: it.id,
+        name: it.name,
+        row_count: it.row_count,
+        group: it.group,
+      })) as ProductOption[],
       selected,
     };
   }, [editing, groupAggs]);
@@ -270,10 +320,10 @@ export default function ChannelIssueSection({
               </div>
               <MiniLineChart
                 title="거래처별 매출 트렌드"
-                subtitle={`최근 12개월 (백만) · R열 거래처명 기준${
+                subtitle={`최근 12개월 (백만) · 채널(P열) + 거래처(R열)${
                   ga.group.channels.length > 0 ? "" : " · 채널 미지정 → 빈 데이터"
                 }`}
-                data={ga.vendors}
+                data={ga.vendorData}
                 selected={ga.group.vendorSelection}
                 months={months}
                 onEdit={() => setEditing({ groupId: ga.group.id, kind: "vendor" })}
@@ -282,8 +332,8 @@ export default function ChannelIssueSection({
               />
               <MiniLineChart
                 title="브랜드별 매출 트렌드"
-                subtitle="최근 12개월 (백만) · D열 품목그룹1 기준"
-                data={ga.brands}
+                subtitle="최근 12개월 (백만) · 브랜드(D열) + 상품(S열)"
+                data={ga.brandData}
                 selected={ga.group.brandSelection}
                 months={months}
                 onEdit={() => setEditing({ groupId: ga.group.id, kind: "brand" })}

@@ -397,6 +397,37 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 - `ChartVisibilityModal`에 `editMode` + `onEditModeChange` prop 추가, 내부 `draftEditMode`로 관리 후 `handleApply`에서 `onEditModeChange(draftEditMode)` 호출
 - **비영속 (transient)**: 새로고침 시 기본 **OFF** — "평소엔 숨김" 의도에 맞춤. localStorage 저장 안 함 (visibility는 저장, editMode는 미저장)
 
+#### 2.3.3.15 주요 채널 이슈 — 표시 항목에 상·하위 레벨 동시 노출 (2026-05-20 24회차)
+
+"표시 거래처/브랜드 수정" 모달에서 기존 한 레벨만 보이던 것을, **그룹핑 레벨 + 세부 레벨을 함께** 옵션으로 제공. 한 차트에 채널 합계 라인과 거래처 라인을 섞어 올리고 순서도 통합 정렬.
+
+**컬럼 위계 (엑셀)**: `P열(채널구분)` = `R열(거래처명)`의 그룹 / `D열(품목그룹1)` = `S열(품목 구분)`의 그룹.
+
+| 모달 | 묶음 (위) | 묶음 (아래) |
+|---|---|---|
+| 표시 거래처 수정 | **채널 (P열)** — 그룹 채널별 합계 라인 | 거래처 (R열) — 기존 |
+| 표시 브랜드 수정 | **브랜드 (D열)** — 기존 | 상품 (S열) — 세부 |
+
+> 거래처 모달은 상위(P)를 위에, 브랜드 모달은 상위(D)를 위에 — 양쪽 모두 **그룹핑(상위) 레벨을 위**로 통일.
+
+**백엔드 (`_build_channel_issue`)**: 채널별로 `values`(채널 12개월 합계 → P열 라인용) + `products`(S열 `품목 구분` unique × 12개월) 추가. 기존 `vendors`(R열)/`brands`(D열) 유지.
+
+**집계**:
+- P열 옵션 = 그룹의 각 채널(채널 합계, 그룹 채널 순서 유지) — 가로 합산 없음
+- R/D/S열 옵션 = 그룹 채널들을 가로질러 이름 기준 합산 (기존 `aggregate` 방식, row 수 내림차순)
+
+**ProductSelectionModal 확장**:
+- `ProductOption`에 `id`(선택 식별자, 미지정 시 name) + `group`(묶음 라벨) 추가
+- 옵션 목록을 group별 헤더 + 구분선으로 분리 렌더. 단일 묶음(브랜드 상세·채널 종합)은 기존과 동일
+- **선택 식별을 id 기준**으로 (같은 이름이 P/R 또는 D/S에 동시 존재 가능) — 표시 순서·체크·toggle 모두 id
+- "표시 순서" 영역은 묶음 구분 없이 **한 통합 리스트** (요구사항: 섞어서 정렬)
+
+**저장 (`channelIssueStorage`)**: `vendorSelection`/`brandSelection`에 **타입 태그 id** 저장 — `P:<채널>` / `R:<거래처>` / `D:<브랜드>` / `S:<품목구분>`. 기존 평문(접두 없는) 값은 로드 시 `vendorSelection→R:`, `brandSelection→D:`로 자동 마이그레이션 (`SEL_PREFIXES`, `tagSelection`).
+
+**recharts 충돌 회피**: `<Line dataKey={id} name={표시이름} />` — dataKey는 고유 id(이름 충돌 방지), 범례·툴팁은 `name`(표시 이름). chartData row 키도 id.
+
+**배포**: 백엔드 변경 포함 → Mac Mini 재배포 필요. 운영 백엔드 미반영 시 P열 `values`·S열 `products`가 없어 P열 라인=0/빈값·S열 옵션 없음으로 graceful degrade (프론트 optional 처리). `docs/error.md §22` 동시 배포 원칙.
+
 #### 2.3.3.10 스크롤 위치 보존 규약 (2026-05-19 17회차)
 
 파트 토글·월 변경 등 재페치 트리거 시 페이지 스크롤 위치가 맨 위로 리셋되지 않도록 차트 그리드를 **언마운트하지 않는** 패턴 적용.

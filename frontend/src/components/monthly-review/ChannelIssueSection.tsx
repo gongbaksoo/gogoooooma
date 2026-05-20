@@ -182,7 +182,7 @@ function MiniLineChart({
                 contentStyle={{ border: "1px solid #c4c4c4", borderRadius: 2, fontSize: 12 }}
                 formatter={(v: number, name: string) => [`${v.toLocaleString()} 백만`, name]}
               />
-              <Legend wrapperStyle={{ fontSize: 10 }} itemSorter={null} />
+              <Legend wrapperStyle={{ fontSize: 10 }} itemSorter={null} iconType="plainline" />
               {selectedItems.map((it, i) => {
                 const s = styles[i];
                 return (

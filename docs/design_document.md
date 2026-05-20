@@ -1157,6 +1157,15 @@ export function getDataTypeSeriesStyle(i: number, key: 'profitRate' | 'growth'):
 - 결과: 차트 툴팁 contentStyle 16개 전부 `fontSize: 12`.
 - **축 라벨(XAxis/YAxis tick)·범례(Legend)의 11px는 툴팁이 아니므로 미변경.**
 
+#### 범례 실선/점선 구분 — `iconType="plainline"` (2026-05-20 후속, 25회차)
+
+다중 시리즈에서 같은 색이 실선/점선으로 재사용되는데(예: 슬롯 1 검정 실선 vs 슬롯 5 검정 점선), recharts **기본 범례 아이콘(`iconType` 미지정 → `'line'`)은 strokeDasharray를 무시**하고 곡선 아이콘만 그려서 두 시리즈가 범례에서 **동일하게(검정 실선처럼) 보임**. 사용자 지적: "범례에서 마이비(실선)와 얼룩제거제(점선)가 같아 보인다".
+
+**규약**: 팔레트(`getMultiSeriesStyle`/`getDataTypeSeriesStyle`)를 쓰는 차트의 `<Legend>`에 **`iconType="plainline"`** 적용.
+- `plainline`은 `<line>` + `strokeDasharray`(payload)로 그려져 **범례에서도 실선/점선이 구분**됨 (recharts `DefaultLegendContent` 확인).
+- **차트 선 패턴(dasharray)은 기존 `4 4` 그대로 유지** — 선 자체를 더 잘게 쪼개지 않음. 구분 강화는 "범례 아이콘이 패턴을 반영"하는 것으로 충분 (사용자 요구: `docs/error.md §38`).
+- 적용 6개: BrandSection / ChannelSection / ChannelIssueSection / DynamicAnalysisSection / ProductGroupChartNew / SalesChartNew.
+
 #### 관련 항목
 
 - §8.5 차트 팔레트 v4 (데이터 종류 기반, 이익률/증감률 의미색 정의)

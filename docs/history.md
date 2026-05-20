@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-05-20 (25회차) — 범례 실선/점선 구분 (iconType="plainline")
+
+### 1. 배경
+- 사용자 지적: 다중 시리즈 차트에서 `마이비`(검정 실선)와 `얼룩제거제`(검정 점선)가 범례에서 같아 보임. "안 헷갈리게."
+
+### 2. 원인
+- recharts 기본 범례 아이콘(`iconType` 미지정 → `'line'`)은 `strokeDasharray`를 무시 → 같은 색이면 실선/점선 구분 없이 동일하게 보임.
+
+### 3. 진행 (1차 과잉 → 원복)
+- 1차: 차트 선 패턴을 `4 4`→`2 6`(점)·긴대시·대시닷으로 개편 + 범례 plainline. → 사용자: "잘게 쪼개진 점선은 요청한 게 아니다. 범례 부분만 만족." (error.md §38)
+- 원복: **차트 선 패턴은 기존 `4 4` 그대로**, 범례 `iconType="plainline"`만 유지.
+
+### 4. 최종 변경
+- `chartPalette.ts`: B-6 슬롯 로직 원복(주석만 보강).
+- `<Legend iconType="plainline">` 적용 6개: BrandSection / ChannelSection / ChannelIssueSection / DynamicAnalysisSection / ProductGroupChartNew / SalesChartNew.
+
+### 5. 검증 (Playwright, 마이비 주요 상품 라인 5시리즈)
+- 범례 아이콘(plainline): slot 0 검정 solid / slot 4 검정 `4 4` → 범례에서 실선/점선 구분됨.
+- 차트 선: slot 4 = `4 4`(원래대로), 잘게 쪼갠 `2 6` 등 제거 확인.
+
+### 6. 산출물
+- `chartPalette.ts` + Legend 6개 파일, design_document §8.14 "범례 실선/점선 구분" 추가, error.md §38 + 권장 24, 본 항목. (프론트 전용 — Vercel 자동 배포)
+
+---
+
 ## 2026-05-20 (24회차 후속) — channel_issue 성능 회귀 수정 (summary ~7s → 1.3~3s)
 
 ### 1. 배경

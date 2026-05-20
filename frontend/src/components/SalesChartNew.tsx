@@ -414,7 +414,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                                 padding: '10px', fontSize: 12
                             }}
                         />
-                        <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="line" />
+                        <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="plainline" />
 
                         {/* 시리즈 매핑 — sales/daily는 B-6 다중 hue (§8.14), profitRate/growth는 §8.5 v4 의미색 */}
                         {(() => {

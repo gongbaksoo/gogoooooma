@@ -283,7 +283,7 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                         <YAxis yAxisId="left" stroke="#5d5d5d" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={mode === 'profit_only' ? formatPercent : formatMillions} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="right" orientation="right" stroke="#ff0066" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatPercent} axisLine={false} tickLine={false} hide={isSingleView} />
                         <Tooltip formatter={(val: any, name: any) => (name === '이익률' || mode === 'profit_only') ? [formatPercent(val), name] : [formatMillions(val), name]} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #c4c4c4', borderRadius: '2px', padding: '10px', fontSize: 12 }} />
-                        <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                        <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="plainline" />
 
                         {isSingleView ? (
                             (() => {

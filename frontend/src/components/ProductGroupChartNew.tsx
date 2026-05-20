@@ -421,7 +421,7 @@ const ProductGroupChartNew: React.FC<ProductGroupChartProps> = ({ filename }) =>
                     />
                     <Legend
                         wrapperStyle={{ paddingTop: '20px' }}
-                        iconType="line"
+                        iconType="plainline"
                     />
                     {(() => {
                         // 합계가 1번째(메인), 나머지는 정의 순서대로 2~N번째

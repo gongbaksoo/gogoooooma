@@ -16,6 +16,7 @@ export type SeriesStyle = {
 //  5~8: 동일 4 hue × 점선
 //  9~11: 검정/네이비/베이지 연한 톤 × 실선 (회색 패스)
 // 12~14: 동일 3 hue × 점선
+// 참고: 실선/점선 구분은 범례에서도 보이도록 각 Legend에 iconType="plainline" 적용 (24회차 후속).
 const B6_PALETTE: { color: string; pattern: 'solid' | 'dashed' }[] = [
   { color: '#000000', pattern: 'solid'  },  // 1 검정 진/실
   { color: '#475d78', pattern: 'solid'  },  // 2 네이비 진/실

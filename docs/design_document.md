@@ -375,6 +375,28 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 
 **저장 구조**: 변경 없음. selection 배열(`string[]`)이 이미 순서를 보유하므로 localStorage 키/스키마·백엔드 응답 모두 그대로. 재정렬을 제거하고 순서를 "표시 우선순위"로 의미 부여한 것이 핵심.
 
+#### 2.3.3.14 편집 모드 (보기 ↔ 편집 분리, 2026-05-20 23회차)
+
+월 리뷰는 평소 **보기 전용(read-only)** 화면으로 두고, 편집 버튼은 **편집 모드를 켰을 때만** 노출. 보고서 열람 시 깔끔한 화면 + 의도치 않은 편집 방지.
+
+**버튼 / 진입점**:
+- 기존 `차트 표시` 버튼 → **`편집 모드`** 로 명칭 변경 (헤더 + sticky 바 2곳, 모달 제목도 변경)
+- 클릭 → 기존 `ChartVisibilityModal` 모달이 열리고, 상단에 **"편집 모드 활성화" 스위치** 추가 (그 아래 기존 5섹션 show/hide 토글 유지)
+- 스위치는 모달 draft 패턴 — `적용` 클릭 시 반영 (visibility 토글과 함께 저장/적용)
+- 편집 모드 ON이면 `편집 모드` 버튼이 **검정 배경(active)** 으로 표시 → 현재 상태 시각 피드백
+
+**숨김/노출 대상 (편집 모드 OFF→ON, scope = 모든 편집 버튼)**:
+| 컴포넌트 | 편집 UI |
+|---|---|
+| `BrandSection` | `표시 상품 수정 ▾`, 개별 카드 `×` 제거, `+ 상품 추가` 카드 |
+| `ChannelSection` | `표시 채널 수정 ▾` |
+| `ChannelIssueSection` | `그룹 설정 ▾`, `표시 거래처/브랜드 수정 ▾` (MiniLineChart) |
+
+**상태 관리**:
+- `page.tsx`의 `editMode: boolean` state → 자식 컴포넌트(`BrandSection`/`ChannelSection`/`ChannelIssueSection`)에 prop으로 하향 전달, 각 편집 버튼을 `{editMode && (...)}`로 게이팅
+- `ChartVisibilityModal`에 `editMode` + `onEditModeChange` prop 추가, 내부 `draftEditMode`로 관리 후 `handleApply`에서 `onEditModeChange(draftEditMode)` 호출
+- **비영속 (transient)**: 새로고침 시 기본 **OFF** — "평소엔 숨김" 의도에 맞춤. localStorage 저장 안 함 (visibility는 저장, editMode는 미저장)
+
 #### 2.3.3.10 스크롤 위치 보존 규약 (2026-05-19 17회차)
 
 파트 토글·월 변경 등 재페치 트리거 시 페이지 스크롤 위치가 맨 위로 리셋되지 않도록 차트 그리드를 **언마운트하지 않는** 패턴 적용.

@@ -97,14 +97,28 @@ interface Props {
   onClose: () => void;
   visibility: VisibilityMap;
   onChange: (next: VisibilityMap) => void;
+  /** 편집 모드: 켜면 화면에 상품 추가·수정 등 편집 버튼 노출 */
+  editMode: boolean;
+  onEditModeChange: (next: boolean) => void;
 }
 
-export default function ChartVisibilityModal({ open, onClose, visibility, onChange }: Props) {
+export default function ChartVisibilityModal({
+  open,
+  onClose,
+  visibility,
+  onChange,
+  editMode,
+  onEditModeChange,
+}: Props) {
   const [draft, setDraft] = useState<VisibilityMap>(visibility);
+  const [draftEditMode, setDraftEditMode] = useState<boolean>(editMode);
 
   useEffect(() => {
-    if (open) setDraft(visibility);
-  }, [open, visibility]);
+    if (open) {
+      setDraft(visibility);
+      setDraftEditMode(editMode);
+    }
+  }, [open, visibility, editMode]);
 
   if (!open) return null;
 
@@ -119,6 +133,7 @@ export default function ChartVisibilityModal({ open, onClose, visibility, onChan
   const handleApply = () => {
     onChange(draft);
     saveVisibility(draft);
+    onEditModeChange(draftEditMode);
     onClose();
   };
 
@@ -132,7 +147,7 @@ export default function ChartVisibilityModal({ open, onClose, visibility, onChan
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-5 border-b border-[#c4c4c4] sticky top-0 bg-white">
-          <h2 className="text-[18px] font-bold text-black">차트 표시</h2>
+          <h2 className="text-[18px] font-bold text-black">편집 모드</h2>
           <button
             type="button"
             onClick={onClose}
@@ -140,6 +155,33 @@ export default function ChartVisibilityModal({ open, onClose, visibility, onChan
           >
             닫기 ×
           </button>
+        </div>
+
+        {/* 편집 모드 스위치 */}
+        <div className="px-5 pt-4">
+          <div className="flex items-center justify-between bg-[#f5f5f5] border border-[#c4c4c4] rounded px-3 py-2.5">
+            <div className="pr-3">
+              <div className="text-[14px] font-bold text-black">편집 모드 활성화</div>
+              <div className="text-[11px] text-[#5d5d5d] leading-relaxed">
+                켜면 상품 추가·표시 항목 수정·그룹 설정 등 편집 버튼이 화면에 표시됩니다.
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={draftEditMode}
+              onClick={() => setDraftEditMode((v) => !v)}
+              className={`relative shrink-0 w-11 h-6 rounded-full transition-colors ${
+                draftEditMode ? "bg-black" : "bg-[#c4c4c4]"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                  draftEditMode ? "translate-x-5" : ""
+                }`}
+              />
+            </button>
+          </div>
         </div>
 
         <p className="px-5 pt-4 text-[12px] text-[#5d5d5d]">

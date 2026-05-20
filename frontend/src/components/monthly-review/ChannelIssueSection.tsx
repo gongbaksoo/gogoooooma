@@ -29,6 +29,7 @@ interface Props {
   months: string[];
   groups: GroupDef[];
   onGroupsChange: (next: GroupDef[]) => void;
+  editMode: boolean;
 }
 
 
@@ -81,6 +82,7 @@ interface MiniChartProps {
   months: string[];
   onEdit: () => void;
   editLabel: string;
+  editMode: boolean;
 }
 
 function MiniLineChart({
@@ -91,6 +93,7 @@ function MiniLineChart({
   months,
   onEdit,
   editLabel,
+  editMode,
 }: MiniChartProps) {
   // 사용자가 정한 selected 순서 그대로 (표시 우선순위)
   const selectedItems = useMemo(() => {
@@ -114,13 +117,15 @@ function MiniLineChart({
     <div className="bg-white border border-[#c4c4c4] p-4">
       <div className="flex items-baseline justify-between mb-1 gap-2">
         <h4 className="text-[13px] font-bold text-black">{title}</h4>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="text-[11px] border border-[#c4c4c4] px-2 py-1 rounded hover:border-black whitespace-nowrap"
-        >
-          {editLabel} ▾
-        </button>
+        {editMode && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="text-[11px] border border-[#c4c4c4] px-2 py-1 rounded hover:border-black whitespace-nowrap"
+          >
+            {editLabel} ▾
+          </button>
+        )}
       </div>
       <div className="text-[11px] text-[#5d5d5d] mb-2">{subtitle}</div>
       {selectedItems.length === 0 ? (
@@ -174,6 +179,7 @@ export default function ChannelIssueSection({
   months,
   groups,
   onGroupsChange,
+  editMode,
 }: Props) {
   const [groupModalOpen, setGroupModalOpen] = useState(false);
   // 모달 open: vendor/brand selection
@@ -235,13 +241,15 @@ export default function ChannelIssueSection({
     <>
       <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#c4c4c4]">
         <h2 className="text-[15px] font-bold text-black">주요 채널 이슈</h2>
-        <button
-          type="button"
-          onClick={() => setGroupModalOpen(true)}
-          className="text-[11px] border border-[#c4c4c4] px-2 py-1 rounded hover:border-black"
-        >
-          그룹 설정 ▾
-        </button>
+        {editMode && (
+          <button
+            type="button"
+            onClick={() => setGroupModalOpen(true)}
+            className="text-[11px] border border-[#c4c4c4] px-2 py-1 rounded hover:border-black"
+          >
+            그룹 설정 ▾
+          </button>
+        )}
       </div>
 
       {channels.length === 0 ? (
@@ -270,6 +278,7 @@ export default function ChannelIssueSection({
                 months={months}
                 onEdit={() => setEditing({ groupId: ga.group.id, kind: "vendor" })}
                 editLabel="표시 거래처 수정"
+                editMode={editMode}
               />
               <MiniLineChart
                 title="브랜드별 매출 트렌드"
@@ -279,6 +288,7 @@ export default function ChannelIssueSection({
                 months={months}
                 onEdit={() => setEditing({ groupId: ga.group.id, kind: "brand" })}
                 editLabel="표시 브랜드 수정"
+                editMode={editMode}
               />
             </div>
           ))}

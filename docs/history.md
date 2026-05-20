@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-05-20 (23회차) — 편집 모드 (보기 ↔ 편집 분리)
+
+### 1. 배경
+- 사용자 재지적: 이전에 요청한 "편집 모드" 3종이 화면에 하나도 반영 안 됨 → "다 반영이 안 된 거냐? 꼼꼼히 체크해줘."
+- 점검 결과 **반영 누락이 아니라 미구현**(grep `편집 모드`/`editMode` 0건). 확인 질문 미해결 상태에서 다른 작업으로 전환되며 유실됨 → error.md §35.
+
+### 2. 사용자 확정 사항
+- 숨김 범위: **모든 편집 버튼**(상품 추가/표시 수정/그룹 설정/× 제거 전부) — 평소 보기 전용, 편집 모드 ON에만 노출.
+- 버튼 동작: `편집 모드` 버튼 클릭 → 모달 안 **편집 모드 활성화 스위치**로 켤지 선택(기존 5섹션 토글은 같은 모달 유지).
+- 명칭: `차트 표시` → `편집 모드`.
+
+### 3. 구현 (5개 파일)
+- `page.tsx`: `editMode` state 추가, 버튼 2곳 문구 변경(+ON일 때 검정 active 스타일), 자식 3컴포넌트·모달에 prop 전달.
+- `ChartVisibilityModal.tsx`: 제목 `편집 모드`, 상단 "편집 모드 활성화" 스위치(draftEditMode, 적용 시 반영), `editMode`/`onEditModeChange` prop.
+- `BrandSection.tsx`/`ChannelSection.tsx`/`ChannelIssueSection.tsx`: 편집 버튼을 `{editMode && (...)}`로 게이팅. ChannelIssue는 MiniLineChart에도 editMode 전파.
+- 비영속: 새로고침 시 기본 OFF("평소엔 숨김" 의도, visibility만 저장).
+
+### 4. 검증 (Playwright, 260519.csv)
+- 기본 OFF: `편집 모드` 2개·`차트 표시` 0개, 편집 버튼 전부 숨김(0), × 제거 0.
+- 모달 스위치 ON→적용: 표시 상품 수정 3 / 표시 채널 1 / 거래처·브랜드 3·3 / 그룹 설정 1 / 상품 추가 3 / × 12 노출, 버튼 active(검정) 표시.
+- 다시 OFF→적용: 전부 숨김 복귀 확인 (왕복 정상).
+
+### 5. 산출물
+- `page.tsx` + `ChartVisibilityModal.tsx` + `BrandSection`/`ChannelSection`/`ChannelIssueSection`.tsx 수정, design_document §2.3.3.14, project_plan §4.7, error.md §35 + 권장 21, 본 항목.
+
+---
+
 ## 2026-05-20 (22회차) — 표시 항목 우선순위(순서) 설정
 
 ### 1. 배경

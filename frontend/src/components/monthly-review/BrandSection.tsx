@@ -35,6 +35,7 @@ interface Props {
   months: string[];          // 백엔드 brand_products_months
   selection: BrandSelection;
   onSelectionChange: (next: BrandSelection) => void;
+  editMode: boolean;
 }
 
 const toMan = (v: number) => Math.round(v / 1_000_000);
@@ -50,6 +51,7 @@ export default function BrandSection({
   months,
   selection,
   onSelectionChange,
+  editMode,
 }: Props) {
   const [editMainOpen, setEditMainOpen] = useState(false);
   const [addIndividualOpen, setAddIndividualOpen] = useState(false);
@@ -136,13 +138,15 @@ export default function BrandSection({
         <div className="bg-white border border-[#c4c4c4] p-5 lg:col-span-2">
           <div className="flex items-baseline justify-between mb-1">
             <h3 className="text-[15px] font-bold text-black">{brand} 주요 상품 라인</h3>
-            <button
-              type="button"
-              onClick={() => setEditMainOpen(true)}
-              className="text-[11px] border border-[#c4c4c4] px-2 py-1 rounded hover:border-black"
-            >
-              표시 상품 수정 ▾
-            </button>
+            {editMode && (
+              <button
+                type="button"
+                onClick={() => setEditMainOpen(true)}
+                className="text-[11px] border border-[#c4c4c4] px-2 py-1 rounded hover:border-black"
+              >
+                표시 상품 수정 ▾
+              </button>
+            )}
           </div>
           {mainLineData.names.length === 0 ? (
             <div className="h-[220px] flex items-center justify-center text-[13px] text-[#5d5d5d]">
@@ -197,14 +201,16 @@ export default function BrandSection({
             <div key={p.name} className="bg-white border border-[#c4c4c4] p-4">
               <div className="flex items-baseline justify-between mb-1">
                 <h4 className="text-[13px] font-bold text-black truncate">{p.name}</h4>
-                <button
-                  type="button"
-                  onClick={() => removeIndividual(p.name)}
-                  className="text-[12px] text-[#5d5d5d] hover:text-black px-1.5"
-                  title="이 차트 제거"
-                >
-                  ×
-                </button>
+                {editMode && (
+                  <button
+                    type="button"
+                    onClick={() => removeIndividual(p.name)}
+                    className="text-[12px] text-[#5d5d5d] hover:text-black px-1.5"
+                    title="이 차트 제거"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
               <div key={`ind-${p.name}-${months.length}`}>
                 <ResponsiveContainer width="100%" height={140}>
@@ -224,15 +230,17 @@ export default function BrandSection({
           );
         })}
 
-        {/* + 추가 카드 */}
-        <button
-          type="button"
-          onClick={() => setAddIndividualOpen(true)}
-          className="border border-dashed border-[#c4c4c4] bg-[#fafafa] min-h-[200px] flex flex-col items-center justify-center hover:border-black hover:bg-[#f5f5f5] transition"
-        >
-          <span className="text-[24px] text-black mb-1">+</span>
-          <span className="text-[13px] text-[#5d5d5d]">상품 추가</span>
-        </button>
+        {/* + 추가 카드 — 편집 모드에서만 노출 */}
+        {editMode && (
+          <button
+            type="button"
+            onClick={() => setAddIndividualOpen(true)}
+            className="border border-dashed border-[#c4c4c4] bg-[#fafafa] min-h-[200px] flex flex-col items-center justify-center hover:border-black hover:bg-[#f5f5f5] transition"
+          >
+            <span className="text-[24px] text-black mb-1">+</span>
+            <span className="text-[13px] text-[#5d5d5d]">상품 추가</span>
+          </button>
+        )}
       </div>
 
       {/* 모달 — 주요 상품 라인 수정 */}

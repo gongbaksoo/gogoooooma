@@ -35,6 +35,7 @@ interface Props {
   months: string[]; // 12개월 라벨
   selected: string[];
   onSelectedChange: (next: string[]) => void;
+  editMode: boolean;
 }
 
 const toMan = (v: number) => Math.round(v / 1_000_000);
@@ -43,7 +44,7 @@ const shortLabel = (m: string) => {
   return t ? `${t[1].slice(-2)}.${t[2]}` : m;
 };
 
-export default function ChannelSection({ part, options, months, selected, onSelectedChange }: Props) {
+export default function ChannelSection({ part, options, months, selected, onSelectedChange, editMode }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
 
   // 선택된 옵션만 추출 — 사용자가 정한 selected 순서 그대로 (표시 우선순위)
@@ -97,13 +98,15 @@ export default function ChannelSection({ part, options, months, selected, onSele
     <>
       <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#c4c4c4]">
         <h2 className="text-[15px] font-bold text-black">채널 종합</h2>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="text-[11px] border border-[#c4c4c4] px-2 py-1 rounded hover:border-black"
-        >
-          표시 채널 수정 ▾
-        </button>
+        {editMode && (
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="text-[11px] border border-[#c4c4c4] px-2 py-1 rounded hover:border-black"
+          >
+            표시 채널 수정 ▾
+          </button>
+        )}
       </div>
 
       {selectedOptions.length === 0 ? (

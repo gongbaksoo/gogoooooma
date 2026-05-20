@@ -125,6 +125,8 @@ export default function MonthlyReviewPage() {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [visibility, setVisibility] = useState<VisibilityMap>(defaultVisibility());
   const [visibilityModalOpen, setVisibilityModalOpen] = useState(false);
+  // 편집 모드: 켜면 상품 추가·수정 등 편집 UI 노출 (평소엔 숨김, 새로고침 시 기본 OFF)
+  const [editMode, setEditMode] = useState(false);
   const [brandSelections, setBrandSelections] = useState<PartScopedBrandSelections>(DEFAULT_BRAND_SELECTIONS);
   const [channelSelections, setChannelSelections] = useState<ChannelSelections>(DEFAULT_CHANNEL_SELECTIONS);
   const [channelIssueGroups, setChannelIssueGroups] = useState<PartScopedGroups>(DEFAULT_CHANNEL_ISSUE_GROUPS);
@@ -378,9 +380,13 @@ export default function MonthlyReviewPage() {
             <button
               type="button"
               onClick={() => setVisibilityModalOpen(true)}
-              className="border border-[#c4c4c4] bg-white text-black text-[12px] px-3 py-1 rounded hover:border-black"
+              className={`border text-[12px] px-3 py-1 rounded ${
+                editMode
+                  ? "border-black bg-black text-white"
+                  : "border-[#c4c4c4] bg-white text-black hover:border-black"
+              }`}
             >
-              차트 표시
+              편집 모드
             </button>
             <button
               type="button"
@@ -407,9 +413,13 @@ export default function MonthlyReviewPage() {
             <button
               type="button"
               onClick={() => setVisibilityModalOpen(true)}
-              className="border border-[#c4c4c4] bg-white text-black text-[13px] px-3 py-2 rounded hover:border-black"
+              className={`border text-[13px] px-3 py-2 rounded ${
+                editMode
+                  ? "border-black bg-black text-white"
+                  : "border-[#c4c4c4] bg-white text-black hover:border-black"
+              }`}
             >
-              차트 표시
+              편집 모드
             </button>
             <button
               type="button"
@@ -614,6 +624,7 @@ export default function MonthlyReviewPage() {
                       months={summary.brand_products_months}
                       selection={brandSelections[part][brand]}
                       onSelectionChange={(next) => updateBrandSelection(part, brand, next)}
+                      editMode={editMode}
                     />
                   ))}
                 </div>
@@ -628,6 +639,7 @@ export default function MonthlyReviewPage() {
                     months={summary.channel_months}
                     selected={channelSelections[part]}
                     onSelectedChange={(next) => updateChannelSelection(part, next)}
+                    editMode={editMode}
                   />
                 </section>
               )}
@@ -641,6 +653,7 @@ export default function MonthlyReviewPage() {
                     months={summary.channel_issue_months ?? summary.channel_months}
                     groups={channelIssueGroups[part]}
                     onGroupsChange={(next) => updateChannelIssueGroups(part, next)}
+                    editMode={editMode}
                   />
                 </section>
               )}
@@ -653,6 +666,8 @@ export default function MonthlyReviewPage() {
           onClose={() => setVisibilityModalOpen(false)}
           visibility={visibility}
           onChange={setVisibility}
+          editMode={editMode}
+          onEditModeChange={setEditMode}
         />
       </div>
     </div>

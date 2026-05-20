@@ -46,10 +46,12 @@ const shortLabel = (m: string) => {
 export default function ChannelSection({ part, options, months, selected, onSelectedChange }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
 
-  // 선택된 옵션만 필터링 (원본 순서 유지)
+  // 선택된 옵션만 추출 — 사용자가 정한 selected 순서 그대로 (표시 우선순위)
   const selectedOptions = useMemo(() => {
-    const set = new Set(selected);
-    return options.filter((o) => set.has(o.name));
+    const byName = new Map(options.map((o) => [o.name, o]));
+    return selected
+      .map((name) => byName.get(name))
+      .filter((o): o is ChannelOption => Boolean(o));
   }, [options, selected]);
 
   const styles = selectedOptions.map((_, i) => getMultiSeriesStyle(i));
@@ -126,7 +128,7 @@ export default function ChannelSection({ part, options, months, selected, onSele
                     contentStyle={{ border: "1px solid #c4c4c4", borderRadius: 2, fontSize: 12 }}
                     formatter={(v: number, name: string) => [`${v.toLocaleString()} 백만`, name]}
                   />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} itemSorter={null} />
                   {selectedOptions.map((o, i) => {
                     const s = styles[i];
                     return (
@@ -205,7 +207,7 @@ export default function ChannelSection({ part, options, months, selected, onSele
                     contentStyle={{ border: "1px solid #c4c4c4", borderRadius: 2, fontSize: 12 }}
                     formatter={(v: number, name: string) => [`${v.toLocaleString()} 백만`, name]}
                   />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} itemSorter={null} />
                   <Bar dataKey="월평균" fill="#5d5d5d" radius={[2, 2, 0, 0]} animationDuration={1500} animationEasing="ease-out">
                     <LabelList dataKey="월평균" position="top" style={{ fontSize: 10, fill: "#5d5d5d" }} />
                   </Bar>

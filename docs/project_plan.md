@@ -163,6 +163,12 @@ sales-analysis-site/
   - 섹션 OFF 시 sub-chart 자동 disabled.
   - `SectionId` 5개 추가: overview / brandOverview / brandDetail / channelOverview / channelIssue.
   - 상세: `docs/design_document.md §2.3.3.12`
+- **표시 항목 우선순위(순서) 설정 (2026-05-20 22회차)**:
+  - 차트에 표시할 항목을 체크한 뒤 **표시 순서를 사용자가 직접 지정** → 트렌드 차트 선 색상·범례 순서에 반영 (1번 = 주 색상 #000).
+  - 적용 범위: 표시 상품(브랜드 상세) / 표시 채널(채널 종합) / 표시 거래처·브랜드(주요 채널 이슈) — 공통 `ProductSelectionModal`.
+  - UI: 모달 상단 "표시 순서" 영역에 ▲▼ 버튼 + 드래그(≡) 정렬. 저장 구조·백엔드 변경 없음 (selection 배열이 순서 보유).
+  - recharts v3 Legend 기본 정렬(`itemSorter:'value'`) → `itemSorter={null}`로 끔 (트렌드 차트 3곳).
+  - 상세: `docs/design_document.md §2.3.3.13`, 에러: `docs/error.md §34`
 - **Sticky 컴팩트 바 (2026-05-19 16회차)**: 원본 컨트롤 영역이 화면 밖으로 나가면 페이지 상단에 고정 노출. 포함: `← 뒤로 / 월 리뷰` + `대상 월 / 파트` + `차트 표시 / PDF 다운로드`. 매출/목표 파일은 제외 (한 번 선택 후 자주 변경되지 않음). IntersectionObserver 기반 fade-in 200ms. 상세: `docs/design_document.md §2.3.3.9`
 - **Phase 3 브랜드 상세 (2026-05-19 구현, 동적 컴포넌트)**:
   - 단일 컴포넌트 `BrandSection` × 3 (마이비 / 누비 / 쏭레브). 각 브랜드 섹션이 자체적으로 3종류 차트 그룹 렌더:

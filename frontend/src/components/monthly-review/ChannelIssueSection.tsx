@@ -92,9 +92,12 @@ function MiniLineChart({
   onEdit,
   editLabel,
 }: MiniChartProps) {
+  // 사용자가 정한 selected 순서 그대로 (표시 우선순위)
   const selectedItems = useMemo(() => {
-    const set = new Set(selected);
-    return data.filter((d) => set.has(d.name));
+    const byName = new Map(data.map((d) => [d.name, d]));
+    return selected
+      .map((name) => byName.get(name))
+      .filter((d): d is AggregatedOption => Boolean(d));
   }, [data, selected]);
 
   const styles = selectedItems.map((_, i) => getMultiSeriesStyle(i));
@@ -140,7 +143,7 @@ function MiniLineChart({
                 contentStyle={{ border: "1px solid #c4c4c4", borderRadius: 2, fontSize: 12 }}
                 formatter={(v: number, name: string) => [`${v.toLocaleString()} 백만`, name]}
               />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Legend wrapperStyle={{ fontSize: 10 }} itemSorter={null} />
               {selectedItems.map((it, i) => {
                 const s = styles[i];
                 return (

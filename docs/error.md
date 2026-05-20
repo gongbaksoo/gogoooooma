@@ -922,6 +922,30 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 
 ---
 
+## 34. recharts Legend 순서가 안 바뀜 — `itemSorter={undefined}`가 defaultProps로 되돌아감 + HMR 미반영
+
+작성일: 2026-05-20 (22회차)
+
+### 🚨 증상
+- 표시 항목 순서 기능 구현 후, 트렌드 차트의 **선 색상은 선택 순서대로 맞는데 범례 텍스트만 가나다순**으로 고정.
+- 1차 수정으로 `<Legend itemSorter={undefined} />`를 줬으나 여전히 가나다순. (HMR 상태에서도 변화 없음)
+
+### 🧭 원인
+- **(주 원인) recharts v3 기본 정렬**: `<Legend>`의 defaultProps `itemSorter: 'value'` → 범례 payload를 라벨 값 기준 `sortBy`로 자동 정렬 (`lib/state/selectors/legendSelectors.js`: `itemSorter ? sortBy(flat, itemSorter) : flat`). 선 렌더 순서(=시리즈 children 순서)는 우리 순서지만 범례 표시만 정렬됨.
+- **(수정이 안 먹은 이유) React defaultProps**: `itemSorter={undefined}`로 주면 React가 prop을 "미지정"으로 보고 defaultProps(`'value'`)로 **되돌림** → 결국 정렬 유지. undefined는 끄는 값이 아니다.
+- **(검증 혼선) HMR 미반영**: 코드 수정 후 Turbopack HMR로는 recharts 내부 store(legend settings)가 갱신되지 않아 이전 정렬 상태가 남음 → 풀 리로드 전까지 효과 확인 불가.
+
+### ✅ 해결
+- `<Legend ... itemSorter={null} />` 로 변경 (트렌드 차트 3곳: BrandSection / ChannelSection / ChannelIssueSection).
+  - `null`은 falsy & **defaultProps 대체 대상이 아님** → 셀렉터가 `flat`(미정렬) 반환. 타입도 `LegendItemSorter | null` 허용.
+- 검증은 **풀 페이지 리로드 + 데이터 재업로드** 후 수행 → 범례 순서 = 선택 순서 확인.
+
+### 💡 향후 권장
+1. **라이브러리 기본값 끄기는 `null`/명시값으로** — `undefined`는 React defaultProps로 되돌아가 "끈 게 아님". 끄려면 falsy 명시값(`null`) 또는 no-op 함수.
+2. **차트 라이브러리 옵션 변경은 풀 리로드로 검증** — recharts 등 내부 store(redux 류)를 쓰는 라이브러리는 HMR로 설정 변경이 안 먹을 수 있음.
+
+---
+
 ## 향후 권장 사항
 1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -942,3 +966,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 17. **차트 컴포넌트 인벤토리** — multi-series mono palette 사용 컴포넌트 리스트를 design_document.md에 표로 유지 (§31 권장 2번 참조). → 21회차에 §8.14 "전 차트 적용 범위(13개)" 표로 반영 완료.
 18. **"안 변함" 보고 시 실행 환경 우선 점검** — 로컬 dev 실행/보고 URL/배포 여부 (§32 권장 1번 참조).
 19. **케이스 민감 치환의 검증은 case-insensitive로** — `dot=` 필터가 `activeDot=`를 누락하지 않도록 검증 grep은 `-i` 또는 역-grep (§33 권장 1번 참조).
+20. **라이브러리 기본 옵션 끄기 + 풀 리로드 검증** — `undefined`는 defaultProps로 되돌아가니 끄려면 `null`/명시값; recharts 등 내부 store 라이브러리 설정 변경은 HMR 말고 풀 리로드로 확인 (§34 권장 1·2번 참조).

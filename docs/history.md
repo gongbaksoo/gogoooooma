@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-05-20 (22회차) — 표시 항목 우선순위(순서) 설정
+
+### 1. 배경
+- 사용자 요청: "지금처럼 표시된 내역 체크해서 보이거나 숨기기하는것들 우선순위도 내가 설정하게 해줄래?"
+- 결정 사항: ① 적용 범위 = **모든 선택 모달**(표시 상품/채널/거래처·브랜드, scope b) ② 순서 반영 대상 = **종합 트렌드 차트의 선 색상·범례 순서** ③ UI 방식 = **▲▼ 버튼 + 드래그**(a+b) ④ 채널 종합 비중 파이·월평균 막대도 트렌드와 **함께 같은 순서**.
+
+### 2. 핵심 발견 — 저장 변경 불필요
+- selection은 이미 순서 있는 `string[]`로 저장 중. 다만 두 곳에서 **항상 row 수 기준 재정렬**해 사용자 순서를 무시하고 있었음:
+  - `ProductSelectionModal` 적용 시 `options.filter(...)`로 원본 순서 재정렬.
+  - `ChannelSection`/`ChannelIssueSection` 렌더 시 `options.filter(o => set.has(o.name))`로 원본 순서 재필터.
+- → 재정렬을 제거하고 순서를 "표시 우선순위"로 의미 부여. **백엔드·localStorage 스키마 변경 없음.**
+
+### 3. 구현 (3개 컴포넌트)
+- `ProductSelectionModal.tsx`: draft를 `Set` → 순서 있는 `string[]`로 변경(체크=뒤에 추가/해제=제거). 상단 "표시 순서" 영역 신설 — ▲▼ 이동(첫/끝 항목 자동 disabled) + HTML5 native 드래그(≡) 정렬. 적용 시 사용자 순서 그대로 반환.
+- `ChannelSection.tsx` / `ChannelIssueSection.tsx`: `options.filter(...)` → `selected` 배열을 `byName.get(name)`로 map하여 선택 순서 보존. (BrandSection은 기존부터 선택 순서 렌더 → 모달 수정만으로 자동 반영.)
+
+### 3-A. recharts Legend 정렬 끄기 — error.md §34
+- 검증 중 발견: recharts v3 `<Legend>` 기본값 `itemSorter:'value'`가 범례를 가나다순 자동 정렬(선 색상은 맞으나 범례 텍스트만 어긋남).
+- `itemSorter={undefined}`는 React defaultProps로 되돌아가 효과 없음 → **`itemSorter={null}`** 로 끔(트렌드 3곳). HMR 미반영이라 풀 리로드로 확인.
+
+### 4. 검증 (Playwright)
+- 260519.csv 업로드 후 표시 상품 수정 모달에서 ▲▼·드래그로 순서 변경 → localStorage `마이비.mainLine`이 지정 순서(`얼룩제거제/순한라인/삶기세제/건조기시트/구강티슈`)로 저장 확인.
+- 적용 후 차트: **범례 순서 = 선택 순서**, **1번 항목이 주 색상 #000000**(선 색상 `#000/#475d78/#a08e7a/#9d9d9d/#000`) 확인.
+- 수정 파일 신규 타입 에러 없음(잔존 tsc 경고는 기존 recharts Tooltip Formatter 타입, 무관).
+
+### 5. 산출물
+- `ProductSelectionModal.tsx`/`ChannelSection.tsx`/`ChannelIssueSection.tsx`/`BrandSection.tsx` 수정, design_document §2.3.3.13, project_plan §4.7, error.md §34 + 권장 20, 본 항목.
+
+---
+
 ## 2026-05-20 (21회차) — 전 차트 점·선 크기 통일 + 로컬 검증 환경 정리
 
 ### 1. 배경

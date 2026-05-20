@@ -347,6 +347,34 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 - `visibility.overview === false` → 종합 섹션 통째 숨김 (chart1/2/3 visibility 무시)
 - `visibility.brandOverview === false` → 브랜드 종합 섹션 통째 숨김
 
+#### 2.3.3.13 표시 항목 우선순위(순서) 설정 (2026-05-20 22회차)
+
+차트에 표시하기로 체크한 항목들의 **표시 순서(우선순위)를 사용자가 직접 지정**. 순서는 트렌드 차트의 **선 색상 매핑·범례 순서**에 반영된다 (1번 항목 = 주 색상 #000000).
+
+**적용 범위 (scope b — 모든 선택 모달)**:
+- 브랜드 상세 `표시 상품 수정` (BrandSection, 주요 상품 라인)
+- 채널 종합 `표시 채널 수정` (ChannelSection)
+- 주요 채널 이슈 `표시 거래처/브랜드 수정` (ChannelIssueSection)
+- 위 3곳 모두 공통 `ProductSelectionModal` 사용 → 모달 한 곳 수정으로 일괄 반영
+
+**모달 UI (`ProductSelectionModal.tsx`)**:
+- 내부 draft를 `Set<string>` → **순서 있는 `string[]`** 로 변경 (체크 = 맨 뒤 추가, 해제 = 제거 → 순서 보존)
+- 상단 "표시 순서" 영역: 체크된 항목만 순번과 함께 나열
+  - **▲▼ 버튼** (위/아래 1칸 이동, 첫/마지막 항목 자동 disabled) + **드래그(≡) 정렬** (HTML5 native drag-and-drop, 외부 라이브러리 없음)
+- `적용` 시 사용자 순서 그대로 반환 — 기존의 `options.filter(...)`(row 수 기준 재정렬) 제거
+
+**차트 렌더링 — 선택 순서 그대로**:
+- `ChannelSection` / `ChannelIssueSection`: 기존 `options.filter(o => set.has(o.name))`(원본=row 수 순) → **`selected` 배열을 map**(`byName.get(name)`)으로 변경하여 사용자 순서 보존
+- `BrandSection`: 기존부터 `selection.mainLine.map(...)`으로 이미 선택 순서 렌더 → 모달 수정만으로 자동 반영
+- 채널 종합의 **비중 파이·월평균 막대**도 동일 `selectedOptions`를 공유 → 트렌드와 같은 순서로 묶임 (사용자 합의: "함께 같은 순서")
+
+**recharts v3 Legend 정렬 끄기** (필수):
+- recharts v3 `<Legend>`는 기본값 `itemSorter: 'value'` → 범례를 라벨 가나다순 자동 정렬 (선 색상은 맞아도 범례 텍스트만 어긋남)
+- 트렌드 차트 3곳 Legend에 **`itemSorter={null}`** 적용 → 범례도 선택 순서대로
+- ⚠️ `itemSorter={undefined}`는 React defaultProps(`'value'`)로 되돌아가 효과 없음 → 반드시 `null`. 타입도 `LegendItemSorter | null` 허용 (`docs/error.md §34` 참조)
+
+**저장 구조**: 변경 없음. selection 배열(`string[]`)이 이미 순서를 보유하므로 localStorage 키/스키마·백엔드 응답 모두 그대로. 재정렬을 제거하고 순서를 "표시 우선순위"로 의미 부여한 것이 핵심.
+
 #### 2.3.3.10 스크롤 위치 보존 규약 (2026-05-19 17회차)
 
 파트 토글·월 변경 등 재페치 트리거 시 페이지 스크롤 위치가 맨 위로 리셋되지 않도록 차트 그리드를 **언마운트하지 않는** 패턴 적용.

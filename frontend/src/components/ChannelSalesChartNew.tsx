@@ -703,7 +703,7 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                                     backgroundColor: 'rgba(255, 255, 255, 0.95)',
                                     border: '1px solid #c4c4c4',
                                     borderRadius: '2px',
-                                    padding: '10px'
+                                    padding: '10px', fontSize: 12
                                 }}
                             />
                             <Legend wrapperStyle={{ paddingTop: '20px' }} />

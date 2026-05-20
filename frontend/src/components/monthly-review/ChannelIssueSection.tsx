@@ -137,7 +137,7 @@ function MiniLineChart({
               />
               <YAxis stroke="#5d5d5d" tick={{ fontSize: 10 }} axisLine={{ stroke: "#c4c4c4" }} />
               <Tooltip
-                contentStyle={{ border: "1px solid #c4c4c4", borderRadius: 2, fontSize: 11 }}
+                contentStyle={{ border: "1px solid #c4c4c4", borderRadius: 2, fontSize: 12 }}
                 formatter={(v: number, name: string) => [`${v.toLocaleString()} 백만`, name]}
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />

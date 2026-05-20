@@ -411,7 +411,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
                                 border: '1px solid #ddd',
                                 borderRadius: '8px',
-                                padding: '10px'
+                                padding: '10px', fontSize: 12
                             }}
                         />
                         <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="line" />

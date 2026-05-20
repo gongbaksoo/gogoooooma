@@ -1060,6 +1060,16 @@ export function getDataTypeSeriesStyle(i: number, key: 'profitRate' | 'growth'):
 | `components/ProductSearchChart.tsx` | 하드코딩 + daily 분기 |
 | `app/custom-dashboard/details/page.tsx` | 주력채널 브랜드 비교 (인라인) |
 
+#### 호버 툴팁 폰트 크기 통일 (2026-05-20 후속, 21회차)
+
+전 차트 Recharts `<Tooltip>`의 텍스트 크기를 **컨트롤 버튼(`text-xs` = 12px)과 동일하게 통일**. 사용자 지적: 큰 차트 툴팁이 너무 큼 → 버튼 텍스트 크기만큼 축소.
+
+- 큰 차트 8개 툴팁은 `contentStyle`에 `fontSize`가 없어 브라우저 기본값(~14px+)으로 크게 렌더 → `fontSize: 12` 추가.
+  (ProductGroupChartNew, SalesChartNew, DetailedSalesChartNew, ChannelSalesChartNew, ProductSearchChart, DynamicAnalysisSection, custom-dashboard/details ×2)
+- monthly-review 중 `fontSize: 11`이던 2개(BrandSection 개별, ChannelIssueSection)는 12로 통일.
+- 결과: 차트 툴팁 contentStyle 16개 전부 `fontSize: 12`.
+- **축 라벨(XAxis/YAxis tick)·범례(Legend)의 11px는 툴팁이 아니므로 미변경.**
+
 #### 관련 항목
 
 - §8.5 차트 팔레트 v4 (데이터 종류 기반, 이익률/증감률 의미색 정의)

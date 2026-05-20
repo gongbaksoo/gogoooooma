@@ -31,6 +31,12 @@
 ### 5. 산출물
 - `chartPalette.ts` + 차트 12개 파일 수정, design_document §8.5 주석 / §8.14 통일 규약·범위 표, error.md §32·§33 + 권장 18·19, 본 항목.
 
+### 6. 호버 툴팁 폰트 크기 통일 (후속)
+- 사용자 지적: 큰 차트의 호버 툴팁 텍스트가 너무 큼 → 컨트롤 버튼(`text-xs` = 12px)만큼 축소, 모든 그래프 적용.
+- 큰 차트 8개 툴팁은 `contentStyle`에 `fontSize`가 없어 기본값(~14px+)으로 컸음 → `fontSize: 12` 추가. monthly-review 11px 2개(BrandSection 개별·ChannelIssueSection)도 12로 통일.
+- 차트 툴팁 contentStyle 16개 전부 `fontSize: 12`로 일치. 축 tick·Legend 11px는 툴팁 아니므로 미변경.
+- design_document §8.14 "호버 툴팁 폰트 크기 통일" 항목 추가. (이 라운드는 오류 없이 1회 통과 — error.md 추가 없음)
+
 ---
 
 ## 2026-05-20 (20회차) — 다중 시리즈 차트 팔레트 B-6 도입 (4 hue × 실/점)

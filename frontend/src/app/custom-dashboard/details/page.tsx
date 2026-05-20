@@ -164,7 +164,7 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                         />
                         <YAxis yAxisId="left" stroke="#5d5d5d" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatMillions} axisLine={false} tickLine={false} />
                         <YAxis yAxisId="right" orientation="right" stroke="#ff0066" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatPercent} axisLine={false} tickLine={false} />
-                        <Tooltip formatter={(val: any, name: any) => name === '이익률' ? [formatPercent(val), name] : [formatMillions(val), name]} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #c4c4c4', borderRadius: '2px', padding: '10px' }} />
+                        <Tooltip formatter={(val: any, name: any) => name === '이익률' ? [formatPercent(val), name] : [formatMillions(val), name]} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #c4c4c4', borderRadius: '2px', padding: '10px', fontSize: 12 }} />
                         <Legend wrapperStyle={{ paddingTop: '20px' }} />
 
                         <Line
@@ -329,7 +329,7 @@ function DetailsContent() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                                 <XAxis dataKey="Month" tickFormatter={formatXAxisTick} stroke="#5d5d5d" style={{ fontSize: '9px', fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} interval={0} angle={-45} textAnchor="end" height={60} />
                                 <YAxis stroke="#5d5d5d" style={{ fontSize: '9px', fontWeight: 600 }} tickFormatter={formatMillions} axisLine={false} tickLine={false} />
-                                <Tooltip formatter={(val: any) => [formatMillions(val), '매출액']} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #c4c4c4', borderRadius: '2px', padding: '10px' }} />
+                                <Tooltip formatter={(val: any) => [formatMillions(val), '매출액']} contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #c4c4c4', borderRadius: '2px', padding: '10px', fontSize: 12 }} />
                                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
                                 {/* 8-pattern: 1=전체 진함실선, 2=마이비 진함점선, 3=누비 중간실선, 4=쏭레브 중간점선 — 모두 매출 데이터 (검정 계열) */}
                                 {/* B-6 4 hue 매핑: 검정 → 네이비 → 베이지 → 회색 (all solid) */}

@@ -46,7 +46,7 @@ export default function Chart2YoYTrend({ data }: { data: Chart2Point[] }) {
     <div className="bg-white border border-[#c4c4c4] p-5">
       <div className="flex items-baseline justify-between mb-1">
         <h3 className="text-[15px] font-bold text-black">전년비 트렌드</h3>
-        <span className="text-[12px] text-[#5d5d5d]">최근 12개월 (단위: 백만)</span>
+        <span className="text-[12px] text-[#5d5d5d]">단위: 백만</span>
       </div>
 
       <div key={`${data[0]?.month ?? ''}-${data.length}`}>

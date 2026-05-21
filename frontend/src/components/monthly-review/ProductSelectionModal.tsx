@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 
 export interface ProductOption {
   name: string;
-  row_count: number;
+  /** row 수 — 미지정 시 "n row" 표기를 숨김 (row 개념이 없는 시리즈용) */
+  row_count?: number;
   /** 선택 식별자 — 미지정 시 name 사용. 같은 이름이 다른 묶음에 있을 때 충돌 방지 */
   id?: string;
   /** 묶음 라벨 — 지정 시 옵션 목록을 묶음별 헤더+구분선으로 분리 표시 */
@@ -291,9 +292,11 @@ export default function ProductSelectionModal({
                       <span className={checked ? "text-black" : "text-[#5d5d5d]"}>
                         {opt.name}
                       </span>
-                      <span className="ml-auto text-[11px] text-[#5d5d5d]">
-                        {count.toLocaleString()} row
-                      </span>
+                      {count != null && (
+                        <span className="ml-auto text-[11px] text-[#5d5d5d]">
+                          {count.toLocaleString()} row
+                        </span>
+                      )}
                     </label>
                   );
                 })}

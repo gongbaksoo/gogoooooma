@@ -285,7 +285,7 @@ def get_summary(
             df_part[df_part["거래처명"] == "롯데마트"],
             df_part[df_part["거래처명"] == "다이소"],
         ]
-        title = "이마트 vs 롯데마트 vs 다이소"
+        title = "EM vs LM vs 다이소"
         series_names = ["이마트", "롯데마트", "다이소"]
         colors = ["#000000", "#5d5d5d", "#7d7d7d"]
     else:  # ecommerce
@@ -375,7 +375,7 @@ def get_summary(
 
     # chart5: 브랜드별 매출 비중 (파이, 최근 12개월 합계)
     chart5 = {
-        "title": "브랜드별 매출 비중 (최근 12개월)",
+        "title": "브랜드별 매출 비중",
         "series_names": brand_names,
         "colors": brand_colors,
         "data": _share_pie(brand_frames, brand_names),

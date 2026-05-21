@@ -40,6 +40,12 @@ import {
   loadChannelIssueGroups,
   saveChannelIssueGroups,
 } from "@/components/monthly-review/channelIssueStorage";
+import {
+  OverviewSelections,
+  DEFAULT_OVERVIEW_SELECTIONS,
+  loadOverviewSelections,
+  saveOverviewSelections,
+} from "@/components/monthly-review/overviewSelectionStorage";
 
 type Part = "all" | "ecommerce" | "offline";
 
@@ -132,6 +138,7 @@ export default function MonthlyReviewPage() {
   const [brandSelections, setBrandSelections] = useState<PartScopedBrandSelections>(DEFAULT_BRAND_SELECTIONS);
   const [channelSelections, setChannelSelections] = useState<ChannelSelections>(DEFAULT_CHANNEL_SELECTIONS);
   const [channelIssueGroups, setChannelIssueGroups] = useState<PartScopedGroups>(DEFAULT_CHANNEL_ISSUE_GROUPS);
+  const [overviewSelections, setOverviewSelections] = useState<OverviewSelections>(DEFAULT_OVERVIEW_SELECTIONS);
 
   // 마운트 시 localStorage에서 모든 selections 복원 (SSR 안전)
   useEffect(() => {
@@ -139,6 +146,7 @@ export default function MonthlyReviewPage() {
     setBrandSelections(loadBrandSelections());
     setChannelSelections(loadChannelSelections());
     setChannelIssueGroups(loadChannelIssueGroups());
+    setOverviewSelections(loadOverviewSelections());
   }, []);
 
   const updateBrandSelection = (p: Part, brand: Brand, next: BrandSelection) => {
@@ -164,6 +172,22 @@ export default function MonthlyReviewPage() {
     setChannelIssueGroups((prev) => {
       const updated = { ...prev, [p]: next };
       saveChannelIssueGroups(updated);
+      return updated;
+    });
+  };
+
+  const updateChart3Selection = (p: Part, next: string[]) => {
+    setOverviewSelections((prev) => {
+      const updated = { ...prev, chart3: { ...prev.chart3, [p]: next } };
+      saveOverviewSelections(updated);
+      return updated;
+    });
+  };
+
+  const updateBrandOverviewSelection = (p: Part, next: string[]) => {
+    setOverviewSelections((prev) => {
+      const updated = { ...prev, brand: { ...prev.brand, [p]: next } };
+      saveOverviewSelections(updated);
       return updated;
     });
   };
@@ -566,14 +590,33 @@ export default function MonthlyReviewPage() {
               charts: [
                 { id: "chart1", el: <Chart1Achievement data={summary.chart1} month={month} /> },
                 { id: "chart2", el: <Chart2YoYTrend data={summary.chart2} /> },
-                { id: "chart3", el: <Chart3MainVsCoupang chart3={summary.chart3} /> },
+                { id: "chart3", el: (
+                  <Chart3MainVsCoupang
+                    chart3={summary.chart3}
+                    editMode={editMode}
+                    selected={overviewSelections.chart3[part]}
+                    onSelectedChange={(next) => updateChart3Selection(part, next)}
+                  />
+                ) },
               ],
             },
             {
               title: "브랜드 종합",
               charts: [
-                { id: "chart4", el: <Chart4BrandTrend chart4={summary.chart4} /> },
-                { id: "chart5", el: <Chart5BrandShare chart5={summary.chart5} /> },
+                { id: "chart4", el: (
+                  <Chart4BrandTrend
+                    chart4={summary.chart4}
+                    editMode={editMode}
+                    selected={overviewSelections.brand[part]}
+                    onSelectedChange={(next) => updateBrandOverviewSelection(part, next)}
+                  />
+                ) },
+                { id: "chart5", el: (
+                  <Chart5BrandShare
+                    chart5={summary.chart5}
+                    selected={overviewSelections.brand[part]}
+                  />
+                ) },
                 { id: "chart6", el: <Chart6BrandVsAvg chart6={summary.chart6} /> },
               ],
             },

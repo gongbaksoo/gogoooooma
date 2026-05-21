@@ -4,6 +4,42 @@
 
 ---
 
+## 2026-05-21 (27회차) — 종합/브랜드 종합 차트 편집 모드 + 헤더·높이 정리
+
+### 1. 배경
+- 사용자: "이커머스 vs 오프라인 / 브랜드별 매출 트렌드 / 브랜드별 매출 비중도 편집 모드에서 수정 가능하게."
+- 요구 정밀화(AskUserQuestion): 수정 = **체크 선택 + 표시 순서(우선순위)**, 트렌드·비중은 **선택 공유**, 선·색은 **25회차 B-6 팔레트** 적용.
+
+### 2. 작업 — 편집 모드 확장 (백엔드 무변경)
+- **신규** `overviewSelectionStorage.ts`: `{ chart3, brand }` 각각 `Partial<Record<Part,string[]>>`. 미편집(undefined)=전체 표시(기존 동작), 빈배열=비움, 배열=선택+순서.
+- **`Chart3MainVsCoupang` / `Chart4BrandTrend` / `Chart5BrandShare`**: 편집 모드 시 `수정 ▾` 버튼 → `ProductSelectionModal` 재사용(체크+순서), `getMultiSeriesStyle(i)`로 선택 순서가 선 색·범례·파이 색 결정. chart3은 파트별 시리즈 상이 → 파트별 독립 선택.
+- **트렌드·비중 공유**: chart4·chart5가 같은 `brand[part]` 선택 사용. 편집 버튼은 트렌드(chart4)에만, 비중(chart5)은 `selected`만 받아 따라감(파이 비율 재계산).
+- **`ProductSelectionModal.tsx`**: `row_count` 옵셔널화 → 미지정 시 "n row" 숨김(시리즈는 row 개념 없음). 기존 호출부 불변.
+- **`page.tsx`**: `overviewSelections` 상태·핸들러, 세 차트에 props 연결.
+
+### 3. 작업 — 디자인 정리
+- 버튼 라벨 `표시 항목 수정 ▾` → `수정 ▾`(`whitespace-nowrap`).
+- 비중 차트(chart5) 편집 버튼 제거(트렌드에만 유지).
+- chart3 오프라인 제목 `이마트 vs 롯데마트 vs 다이소` → `EM vs LM vs 다이소`(백엔드, 범례 원명 유지).
+- `최근 12개월` 헤더 제거: chart2(전년비)·chart3·chart4 → `단위: 백만`.
+- 비중(chart5) 제목 `(최근 12개월)` 제거(백엔드) + 우측 메타 `최근 12개월 (단위: 백만)`로 통일.
+- 목표비 실적(chart1) 차트 높이 220→260→**227** — "달성률" footer(약 33px) 때문에 카드가 어긋남, 실측(362 vs 329) 후 227로 세 카드 **329px 통일** (error.md §41).
+
+### 4. 검증 (로컬 백엔드 :8000 + 프론트 :3000, Playwright)
+- 편집 모드 ON → 3개 차트 `수정 ▾` 노출, 모달 체크+순서·row 숨김 ✓
+- 트렌드·비중 공유: 에코보·기타 해제 시 두 차트 동시 갱신, 파이 재계산(마이비 76.9/누비 9.6/쏭레브 13.5) ✓ / chart6은 영향 없음 ✓
+- chart3 별도 선택, 백엔드 제목 `EM vs LM vs 다이소`·`브랜드별 매출 비중` curl 확인 ✓
+- 카드 높이 `getBoundingClientRect` 3개 모두 329px ✓
+- 신규 타입 에러 없음.
+
+### 5. 배포
+- 백엔드 제목 2건(chart3 offline, chart5) 변경 포함 → **Mac Mini 재배포 필요**(프론트 Vercel과 동반).
+
+### 6. 상세 문서
+- `design_document.md §2.3.3.17`, `project_plan.md §4.7`, `error.md §41`.
+
+---
+
 ## 2026-05-21 (26회차) — 주요 채널 이슈: 부모 그룹핑 + 부모-자식 교차필터
 
 ### 1. 배경

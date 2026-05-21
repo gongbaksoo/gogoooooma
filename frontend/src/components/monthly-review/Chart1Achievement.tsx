@@ -53,7 +53,7 @@ export default function Chart1Achievement({
       ) : (
         <>
           <div key={month}>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={227}>
             <BarChart data={chartData} margin={{ top: 28, right: 16, left: 0, bottom: 0 }}>
               <CartesianGrid stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="name" stroke="#5d5d5d" tick={{ fontSize: 12 }} axisLine={{ stroke: "#c4c4c4" }} />

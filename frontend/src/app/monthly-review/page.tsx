@@ -46,6 +46,12 @@ import {
   loadOverviewSelections,
   saveOverviewSelections,
 } from "@/components/monthly-review/overviewSelectionStorage";
+import {
+  OverviewNotes,
+  loadOverviewNotes,
+  getOverviewNote,
+  saveOverviewNote,
+} from "@/components/monthly-review/overviewNotesStorage";
 
 type Part = "all" | "ecommerce" | "offline";
 
@@ -152,6 +158,55 @@ function OverviewSummaryLine({
   );
 }
 
+// 종합 섹션 사용자 코멘트 — 편집 모드일 때만 입력(textarea + 저장 버튼).
+// 보기 모드: 내용 있으면 텍스트만, 없으면 아무것도 표시 안 함. 저장은 대상 월·파트별(부모에서 처리).
+function OverviewNote({
+  month,
+  part,
+  editMode,
+  note,
+  onSave,
+}: {
+  month: string;
+  part: Part;
+  editMode: boolean;
+  note: string;
+  onSave: (text: string) => void;
+}) {
+  const [draft, setDraft] = useState(note);
+  // 저장값·월·파트가 바뀌면 입력 초안을 해당 조합의 저장값으로 리셋
+  useEffect(() => {
+    setDraft(note);
+  }, [note, month, part]);
+
+  if (!editMode) {
+    if (!note.trim()) return null;
+    return <p className="text-[13px] text-black whitespace-pre-wrap mb-3">{note}</p>;
+  }
+
+  const dirty = draft !== note;
+  return (
+    <div className="mb-3">
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="종합 코멘트를 입력하세요 (대상 월·파트별 저장)"
+        rows={3}
+        className="w-full border border-[#c4c4c4] rounded px-2 py-1.5 text-[13px] focus:outline-none focus:border-black resize-y"
+      />
+      <div className="flex justify-end mt-1">
+        <button
+          onClick={() => onSave(draft)}
+          disabled={!dirty}
+          className="text-[11px] border border-[#c4c4c4] px-3 py-0.5 rounded hover:border-black disabled:opacity-40 disabled:hover:border-[#c4c4c4]"
+        >
+          저장
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function MonthlyReviewPage() {
   const [salesFiles, setSalesFiles] = useState<{ filename: string }[]>([]);
   const [targetFiles, setTargetFiles] = useState<TargetFile[]>([]);
@@ -175,6 +230,7 @@ export default function MonthlyReviewPage() {
   const [channelSelections, setChannelSelections] = useState<ChannelSelections>(DEFAULT_CHANNEL_SELECTIONS);
   const [channelIssueGroups, setChannelIssueGroups] = useState<PartScopedGroups>(DEFAULT_CHANNEL_ISSUE_GROUPS);
   const [overviewSelections, setOverviewSelections] = useState<OverviewSelections>(DEFAULT_OVERVIEW_SELECTIONS);
+  const [overviewNotes, setOverviewNotes] = useState<OverviewNotes>({});
 
   // 마운트 시 localStorage에서 모든 selections 복원 (SSR 안전)
   useEffect(() => {
@@ -183,7 +239,12 @@ export default function MonthlyReviewPage() {
     setChannelSelections(loadChannelSelections());
     setChannelIssueGroups(loadChannelIssueGroups());
     setOverviewSelections(loadOverviewSelections());
+    setOverviewNotes(loadOverviewNotes());
   }, []);
+
+  const updateOverviewNote = (text: string) => {
+    setOverviewNotes(saveOverviewNote(month, part, text));
+  };
 
   const updateBrandSelection = (p: Part, brand: Brand, next: BrandSelection) => {
     setBrandSelections((prev) => {
@@ -682,7 +743,16 @@ export default function MonthlyReviewPage() {
                       {section.title}
                     </h2>
                     {section.title === "종합" && (
-                      <OverviewSummaryLine chart1={summary.chart1} chart2={summary.chart2} />
+                      <>
+                        <OverviewSummaryLine chart1={summary.chart1} chart2={summary.chart2} />
+                        <OverviewNote
+                          month={month}
+                          part={part}
+                          editMode={editMode}
+                          note={getOverviewNote(overviewNotes, month, part)}
+                          onSave={updateOverviewNote}
+                        />
+                      </>
                     )}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                       {visibleCharts.map((c) => (

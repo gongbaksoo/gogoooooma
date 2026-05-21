@@ -116,6 +116,42 @@ const PART_LABELS: Record<Part, string> = {
   offline: "오프라인",
 };
 
+// 종합 섹션 요약 한 줄 — 현재 파트 기준 (summary가 파트별로 로드되므로 자동 반영)
+// 목표비: 비율(실적/목표×100), 전월비·직전3개월비·전년비: 증감률(±%), 3개월비 기준=직전 3개월 평균
+function OverviewSummaryLine({
+  chart1,
+  chart2,
+}: {
+  chart1: { target: number | null; actual: number; achievement_rate: number | null };
+  chart2: { month: string; current_year: number; prev_year: number }[];
+}) {
+  const actual = chart1.actual;
+  const actualMan = Math.round(actual / 1_000_000);
+  const fmtGrowth = (base: number | null) => {
+    if (base == null || base <= 0) return "-";
+    const g = ((actual - base) / base) * 100;
+    return `${g >= 0 ? "▲" : "▼"}${Math.abs(g).toFixed(1)}%`;
+  };
+  const n = chart2.length;
+  const prevMonth = n >= 2 ? chart2[n - 2].current_year : null;
+  const prev3Avg =
+    n >= 4
+      ? (chart2[n - 2].current_year + chart2[n - 3].current_year + chart2[n - 4].current_year) / 3
+      : null;
+  const prevYear = n >= 1 ? chart2[n - 1].prev_year : null;
+  const target = chart1.achievement_rate != null ? `${chart1.achievement_rate.toFixed(1)}%` : "-";
+
+  return (
+    <p className="text-[13px] text-black mb-3">
+      실적 : <span className="font-bold">{actualMan.toLocaleString()}</span> 백만{" "}
+      <span className="text-[#5d5d5d]">
+        (목표비 {target} , 전월비 {fmtGrowth(prevMonth)} , 직전 3개월비 {fmtGrowth(prev3Avg)} , 전년비{" "}
+        {fmtGrowth(prevYear)})
+      </span>
+    </p>
+  );
+}
+
 export default function MonthlyReviewPage() {
   const [salesFiles, setSalesFiles] = useState<{ filename: string }[]>([]);
   const [targetFiles, setTargetFiles] = useState<TargetFile[]>([]);
@@ -645,6 +681,9 @@ export default function MonthlyReviewPage() {
                     <h2 className="text-[15px] font-bold text-black mb-3 pb-2 border-b border-[#c4c4c4]">
                       {section.title}
                     </h2>
+                    {section.title === "종합" && (
+                      <OverviewSummaryLine chart1={summary.chart1} chart2={summary.chart2} />
+                    )}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                       {visibleCharts.map((c) => (
                         <div key={c.id}>{c.el}</div>

@@ -89,8 +89,10 @@ interface SummaryResponse {
     channels: {
       name: string;
       row_count: number;
+      values?: number[];
       vendors: { name: string; row_count: number; values: number[] }[];
       brands: { name: string; row_count: number; values: number[] }[];
+      products?: { name: string; brand: string; row_count: number; values: number[] }[];
     }[];
   }>;
   channel_issue_months: string[];

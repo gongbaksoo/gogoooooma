@@ -542,6 +542,36 @@ def get_summary(
             })
         return out
 
+    def _series_by_pair(cdf: pd.DataFrame, key_col: str, group_col: str) -> list:
+        """(group_col, key_col) 조합별 12개월 매출 — 같은 key라도 group이 다르면 별도 엔트리.
+        상품(S열)을 브랜드(D열)별로 분해해 내려보냄: 이름이 같아도 브랜드가 다르면 다른 매출
+        (예: 데일리케어 물티슈 vs 라포레띠 물티슈). 프론트가 선택된 브랜드로 동적 스코프."""
+        if key_col not in cdf.columns or group_col not in cdf.columns:
+            return []
+        sub = cdf[[group_col, key_col, "월구분", "판매액"]].dropna(subset=[key_col]).copy()
+        if sub.empty:
+            return []
+        sub[group_col] = sub[group_col].fillna("(미분류)")
+        counts = sub.groupby([group_col, key_col]).size()  # (group,key)별 row 수
+        pivot = (
+            sub.groupby([group_col, key_col, "월구분"])["판매액"].sum()
+            .unstack("월구분")
+            .reindex(columns=last12_yymm)
+            .fillna(0.0)
+        )
+        out = []
+        for (grp, name) in counts.index:
+            if str(name).strip() == "":
+                continue
+            vals = pivot.loc[(grp, name)]
+            out.append({
+                "name": str(name),
+                "brand": str(grp),
+                "row_count": int(counts[(grp, name)]),
+                "values": [float(vals[y]) for y in last12_yymm],
+            })
+        return out
+
     def _build_channel_issue(scope_df: pd.DataFrame) -> dict:
         channels_out = []
         if "채널구분" not in scope_df.columns:
@@ -559,7 +589,7 @@ def get_summary(
                 "values": chan_values,
                 "vendors": _series_by(cdf, "거래처명"),   # R열
                 "brands": _series_by(cdf, "품목그룹1"),    # D열
-                "products": _series_by(cdf, "품목 구분"),  # S열
+                "products": _series_by_pair(cdf, "품목 구분", "품목그룹1"),  # S열 × D열(브랜드)
             })
         return {"channels": channels_out}
 

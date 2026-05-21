@@ -4,6 +4,42 @@
 
 ---
 
+## 2026-05-21 (26회차) — 주요 채널 이슈: 부모 그룹핑 + 부모-자식 교차필터
+
+### 1. 배경
+- 사용자: "표시 브랜드 수정 체크리스트를 마이비/누비/쏭레브 … 브랜드별로 그룹핑하고 브랜드 안에서는 가나다순 정렬."
+- 거래처 모달도 동일(채널별 그룹핑) 적용.
+
+### 2. 요구 정밀화 (3라운드)
+- 1차 제안(동명 합산 + 대표 그룹 1곳) → 사용자: "데일리케어 물티슈 ≠ 라포레띠 물티슈, 합산하면 안 돼." (error.md §39)
+- 2차: "물티슈만 선택=합산인데, 라포레띠+물티슈=라포레띠 물티슈만" → 단순 합산/분리가 아닌 **교차필터**로 확정.
+- 엣지 확정: 무관 브랜드+상품(마이비+물티슈)=0 / 여러 브랜드 걸친 상품은 속한 모든 브랜드 그룹에 각각 표시.
+
+### 3. 작업
+- **백엔드** `api/monthly_review.py`: `_series_by_pair(cdf, "품목 구분", "품목그룹1")` 추가 → products를 `(브랜드, 상품)` 단위로 분해, `brand` 필드 부착. 브랜드 NaN은 `(미분류)`.
+- **`ProductSelectionModal.tsx`**: `groups?: string[]`(한 항목 여러 헤더 동시 표시) + `rowCountByGroup`(그룹 몫 row 수) 지원. 전체선택/카운트 id dedupe.
+- **`ChannelIssueSection.tsx`**: 전면 재구성 — `buildChartModel`(parentTotals·childByParent·childRowByParent), `MiniLineChart.selectedSeries`에서 선택 부모로 자식 라인 동적 스코프(미선택→전체 합산 / 선택→교집합 / 교집합 없음→0). 모달 옵션 = 부모합계(순서) → 자식(가나다), 자식은 속한 모든 부모 그룹에.
+- **`page.tsx`**: `channel_issue` 타입에 `values`/`products(brand)` 반영.
+
+### 4. 후속 수정 — 그룹별 row 수 (error.md §40)
+- 사용자 지적: 마이비 그룹의 `대상 X`가 2,048(전 브랜드 합)로 표시 → 마이비 몫(377)만 보이게 `rowCountByGroup` 적용.
+
+### 5. 검증 (로컬 백엔드 :8000 + 프론트 :3000, Playwright)
+- 백엔드 E2E: 물티슈→[데일리케어, 라포레띠], 면봉→[구브랜드, 마이비], 쿠팡 위탁/사입 분리, 대상 X `(미분류)` 보존.
+- 교차필터(실데이터): 물티슈만=합산 / 라포레띠+물티슈=라포레띠만 / 마이비+물티슈=0 ✓
+- 모달 UI: 헤더=브랜드명, 그룹 첫 줄=브랜드 합계, 상품 가나다순, 대상 X·젖병솔 다그룹 표시 ✓
+- 그룹별 row: 마이비 대상 X 2,048→377, 젖병솔 117→21, 누비 452 / 쏭레브 1,039 ✓
+- 프론트 프로덕션 빌드 통과(신규 타입 에러 없음).
+
+### 6. 식별자/배포
+- 자식 토큰 이름 기준 유지(`S:<상품>`/`R:<거래처>`) — 값만 동적 스코프 → **저장 선택값 마이그레이션 불필요**.
+- 백엔드 변경 포함 → **Mac Mini 재배포 필요**(프론트 Vercel과 동반). 미반영 시 브랜드 그룹 `(undefined)` 가능.
+
+### 7. 상세 문서
+- `design_document.md §2.3.3.16`, `project_plan.md §4.7`, `error.md §39·§40`.
+
+---
+
 ## 2026-05-20 (25회차) — 범례 실선/점선 구분 (iconType="plainline")
 
 ### 1. 배경
@@ -166,6 +202,12 @@
 - 큰 차트 8개 툴팁은 `contentStyle`에 `fontSize`가 없어 기본값(~14px+)으로 컸음 → `fontSize: 12` 추가. monthly-review 11px 2개(BrandSection 개별·ChannelIssueSection)도 12로 통일.
 - 차트 툴팁 contentStyle 16개 전부 `fontSize: 12`로 일치. 축 tick·Legend 11px는 툴팁 아니므로 미변경.
 - design_document §8.14 "호버 툴팁 폰트 크기 통일" 항목 추가. (이 라운드는 오류 없이 1회 통과 — error.md 추가 없음)
+
+### 7. 디자인 문서 역할 명확화 + 리네임 (후속)
+- 혼동 우려: `Design/DESIGN.md`(29CM 브랜드 레퍼런스)와 `docs/design_document.md`(앱 설계 = PDCA design)가 둘 다 "design" 이름이라 어느 게 권위 문서인지 헷갈림.
+- 조치 ①②③: 각 파일 상단에 **역할(Role) 한 줄 명시**, **양방향 cross-link** 추가, 브랜드 레퍼런스 파일만 `Design/DESIGN.md` → **`Design/29CM-brand-reference.md`로 리네임**(`git mv`).
+- 참조 경로 일괄 갱신: `docs/design_document.md`(레퍼런스 표·§8.5 주석), `docs/history.md`(과거 항목). 깨진 링크 없음 확인.
+- 결론: "브랜드 레퍼런스 1개 + 앱 설계 문서 1개" 구조 유지, PDCA design 문서는 `docs/design_document.md` 하나로 일원화.
 
 ---
 
@@ -1364,7 +1406,7 @@ Mac Mini에서 위 절차 수행 완료 (사용자 보고).
 ### 1. 배경
 
 - 기존 UI: 파랑/퍼플 그라데이션 + `rounded-3xl` + 다중 shadow + 이모지가 섞인 "프리미엄 분석 대시보드" 톤.
-- 신규 디자인 레퍼런스: `Design/DESIGN.md`에 정의된 **29CM 에디토리얼 셀렉트샵 디자인 시스템** (omd 0.1, 2026-05-15 검증).
+- 신규 디자인 레퍼런스: `Design/29CM-brand-reference.md`(구 `Design/DESIGN.md`, 21회차 리네임)에 정의된 **29CM 에디토리얼 셀렉트샵 디자인 시스템** (omd 0.1, 2026-05-15 검증).
 - 목표: 모노톤 + Pretendard + 평탄한(flat) 카드 + `#ff0066` 단일 액센트로 통일.
 
 ### 2. 전역 셋업
@@ -1433,7 +1475,7 @@ Mac Mini에서 위 절차 수행 완료 (사용자 보고).
 - 수정된 코드 파일: 19개 (전역 3 + 페이지 1 + 차트/분석 9 + 채팅/파일/모달 6)
 - 신규 파일: `frontend/.env.local` (git ignored), `pretendard` 의존성 추가
 - 문서 업데이트: `docs/design_document.md` (§8 추가), `docs/error.md` (§10-12 추가), `docs/history.md` (본 섹션)
-- 레퍼런스: `Design/DESIGN.md`
+- 레퍼런스: `Design/29CM-brand-reference.md` (구 `Design/DESIGN.md`)
 
 ### 8. 후속 권장 항목
 

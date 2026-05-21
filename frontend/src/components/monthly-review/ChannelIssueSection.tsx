@@ -22,13 +22,17 @@ interface NamedSeries {
   values: number[];
 }
 
+interface ProductSeries extends NamedSeries {
+  brand: string; // 품목그룹1 (D열) — 같은 상품명도 브랜드 다르면 별도 엔트리
+}
+
 interface ChannelData {
   name: string;
   row_count: number;
   values?: number[]; // 채널(P열) 12개월 합계 (백엔드 보강)
-  vendors: NamedSeries[]; // R열 거래처명
+  vendors: NamedSeries[]; // R열 거래처명 (채널별)
   brands: NamedSeries[]; // D열 품목그룹1
-  products?: NamedSeries[]; // S열 품목 구분 (백엔드 보강)
+  products?: ProductSeries[]; // S열 품목 구분 × 브랜드
 }
 
 interface Props {
@@ -45,74 +49,132 @@ const shortLabel = (m: string) => {
   const t = m.match(/^(\d{4})-(\d{2})$/);
   return t ? `${t[1].slice(-2)}.${t[2]}` : m;
 };
+const koSort = (a: string, b: string) => a.localeCompare(b, "ko");
 
-// 차트/모달 공통 옵션 — id로 식별(이름 충돌 대비), group으로 묶음 구분
-interface ChartOption {
-  id: string; // "P:..." | "R:..." | "D:..." | "S:..."
-  name: string;
-  row_count: number;
-  values: number[];
-  group: string;
+// 차트 모델 — 부모(채널 P열 / 브랜드 D열) 합계 + 자식(거래처 R열 / 상품 S열) 분해.
+// 자식 라인 값은 "선택된 부모"에 따라 동적 스코프되므로 부모/자식 값을 모두 보관.
+interface ChartModel {
+  parentPrefix: string; // "P:" | "D:"
+  childPrefix: string; // "R:" | "S:"
+  parentTotals: Map<string, number[]>; // 부모명 → 12개월 합계
+  childByParent: Map<string, Map<string, number[]>>; // 자식명 → 부모명 → 12개월 값
+  options: ProductOption[]; // 모달 옵션 (부모합계 먼저, 자식 가나다순 / 자식은 속한 모든 부모 그룹에 표시)
 }
 
-// 그룹의 각 채널(P열)을 채널 합계 라인으로 (그룹 채널 순서 유지)
-function channelOptions(
+// 한 그룹의 채널들로부터 부모-자식 차트 모델 구성.
+function buildChartModel(
   channels: ChannelData[],
   groupChannels: string[],
   monthsCount: number,
-  group: string
-): ChartOption[] {
-  const byName = new Map(channels.map((c) => [c.name, c]));
-  const out: ChartOption[] = [];
-  for (const name of groupChannels) {
-    const ch = byName.get(name);
-    if (!ch) continue;
-    const values = ch.values ? [...ch.values] : new Array(monthsCount).fill(0);
-    out.push({ id: `P:${ch.name}`, name: ch.name, row_count: ch.row_count, values, group });
-  }
-  return out;
-}
+  kind: "vendor" | "brand"
+): ChartModel {
+  const parentPrefix = kind === "vendor" ? "P:" : "D:";
+  const childPrefix = kind === "vendor" ? "R:" : "S:";
+  const inGroup = new Set(groupChannels);
+  const groupCh = channels.filter((c) => inGroup.has(c.name));
 
-// 그룹 채널들을 가로질러 vendors/brands/products를 이름 기준 합산
-function aggregate(
-  channels: ChannelData[],
-  groupChannels: string[],
-  kind: "vendors" | "brands" | "products",
-  monthsCount: number,
-  prefix: string,
-  group: string
-): ChartOption[] {
-  const map = new Map<string, ChartOption>();
-  for (const ch of channels) {
-    if (!groupChannels.includes(ch.name)) continue;
-    const items = (ch[kind] ?? []) as NamedSeries[];
-    for (const item of items) {
-      const id = `${prefix}${item.name}`;
-      const existing = map.get(id);
-      if (existing) {
-        existing.row_count += item.row_count;
-        for (let i = 0; i < monthsCount; i++) {
-          existing.values[i] += item.values[i] ?? 0;
-        }
-      } else {
-        map.set(id, {
-          id,
-          name: item.name,
-          row_count: item.row_count,
-          values: [...item.values],
-          group,
-        });
-      }
+  const parentTotals = new Map<string, number[]>();
+  const parentRowCount = new Map<string, number>();
+  const parentOrder: string[] = [];
+  const childByParent = new Map<string, Map<string, number[]>>();
+  const childRowCount = new Map<string, number>(); // 자식 전체 row (fallback)
+  const childRowByParent = new Map<string, Map<string, number>>(); // 자식 × 부모별 row
+
+  const addParent = (name: string, values: number[], rc: number) => {
+    if (!parentTotals.has(name)) {
+      parentTotals.set(name, new Array(monthsCount).fill(0));
+      parentRowCount.set(name, 0);
+      parentOrder.push(name);
+    }
+    const acc = parentTotals.get(name)!;
+    for (let i = 0; i < monthsCount; i++) acc[i] += values[i] ?? 0;
+    parentRowCount.set(name, parentRowCount.get(name)! + rc);
+  };
+  const addChild = (child: string, parent: string, values: number[], rc: number) => {
+    if (!childByParent.has(child)) {
+      childByParent.set(child, new Map());
+      childRowCount.set(child, 0);
+      childRowByParent.set(child, new Map());
+    }
+    const m = childByParent.get(child)!;
+    if (!m.has(parent)) m.set(parent, new Array(monthsCount).fill(0));
+    const acc = m.get(parent)!;
+    for (let i = 0; i < monthsCount; i++) acc[i] += values[i] ?? 0;
+    childRowCount.set(child, childRowCount.get(child)! + rc);
+    const rm = childRowByParent.get(child)!;
+    rm.set(parent, (rm.get(parent) ?? 0) + rc);
+  };
+
+  if (kind === "vendor") {
+    // 부모 = 채널(P열): 그룹의 채널 순서 유지. 자식 = 거래처(R열, 채널별)
+    for (const name of groupChannels) {
+      const ch = groupCh.find((c) => c.name === name);
+      if (!ch) continue;
+      addParent(ch.name, ch.values ?? new Array(monthsCount).fill(0), ch.row_count);
+      for (const v of ch.vendors ?? []) addChild(v.name, ch.name, v.values, v.row_count);
+    }
+  } else {
+    // 부모 = 브랜드(D열): 그룹 채널들 가로질러 합산. 자식 = 상품(S열) × 브랜드
+    for (const ch of groupCh) {
+      for (const b of ch.brands ?? []) addParent(b.name, b.values, b.row_count);
+      for (const p of ch.products ?? []) addChild(p.name, p.brand, p.values, p.row_count);
     }
   }
-  return Array.from(map.values()).sort((a, b) => b.row_count - a.row_count);
+
+  // 부모 표시 순서: 거래처 차트는 채널 순서, 브랜드 차트는 row_count 내림차순
+  let orderedParents = parentOrder;
+  if (kind === "brand") {
+    orderedParents = [...parentOrder].sort(
+      (a, b) => (parentRowCount.get(b) ?? 0) - (parentRowCount.get(a) ?? 0)
+    );
+  }
+  // 자식이 참조하지만 부모합계가 없는 orphan 부모(예: "(미분류)") → 뒤에 가나다로
+  const known = new Set(orderedParents);
+  const orphan: string[] = [];
+  for (const m of childByParent.values()) {
+    for (const p of m.keys()) {
+      if (!known.has(p) && !orphan.includes(p)) orphan.push(p);
+    }
+  }
+  orphan.sort(koSort);
+  const allParents = [...orderedParents, ...orphan];
+  const parentIndex = new Map(allParents.map((p, i) => [p, i]));
+
+  // 모달 옵션: 부모합계(순서) → 자식(가나다). 자식은 속한 모든 부모 그룹에 표시(groups[]).
+  const options: ProductOption[] = [];
+  for (const p of orderedParents) {
+    options.push({
+      id: `${parentPrefix}${p}`,
+      name: p,
+      row_count: parentRowCount.get(p) ?? 0,
+      group: p,
+    });
+  }
+  const children = [...childByParent.keys()].sort(koSort);
+  for (const c of children) {
+    const parents = [...childByParent.get(c)!.keys()].sort(
+      (a, b) => (parentIndex.get(a) ?? 0) - (parentIndex.get(b) ?? 0)
+    );
+    const rm = childRowByParent.get(c)!;
+    const rowCountByGroup: Record<string, number> = {};
+    for (const p of parents) rowCountByGroup[p] = rm.get(p) ?? 0;
+    options.push({
+      id: `${childPrefix}${c}`,
+      name: c,
+      row_count: childRowCount.get(c) ?? 0,
+      groups: parents,
+      rowCountByGroup,
+    });
+  }
+
+  return { parentPrefix, childPrefix, parentTotals, childByParent, options };
 }
 
 interface MiniChartProps {
   title: string;
   subtitle: string;
-  data: ChartOption[];
-  selected: string[]; // id 리스트
+  model: ChartModel;
+  selected: string[]; // id 리스트 (표시 순서)
   months: string[];
   onEdit: () => void;
   editLabel: string;
@@ -122,26 +184,50 @@ interface MiniChartProps {
 function MiniLineChart({
   title,
   subtitle,
-  data,
+  model,
   selected,
   months,
   onEdit,
   editLabel,
   editMode,
 }: MiniChartProps) {
-  // 사용자가 정한 selected(id) 순서 그대로 (표시 우선순위)
-  const selectedItems = useMemo(() => {
-    const byId = new Map(data.map((d) => [d.id, d]));
-    return selected
-      .map((id) => byId.get(id))
-      .filter((d): d is ChartOption => Boolean(d));
-  }, [data, selected]);
+  const { parentPrefix, childPrefix, parentTotals, childByParent } = model;
 
-  const styles = selectedItems.map((_, i) => getMultiSeriesStyle(i));
+  // 선택된 부모로 자식 라인을 동적 스코프:
+  //   부모 미선택 → 자식 전체 합산 / 부모 선택 → (선택 부모 ∩ 자식 소속 부모) 합산 / 교집합 없음 → 0
+  const selectedSeries = useMemo(() => {
+    const selParents = new Set(
+      selected
+        .filter((id) => id.startsWith(parentPrefix))
+        .map((id) => id.slice(parentPrefix.length))
+    );
+    const out: { id: string; name: string; values: number[] }[] = [];
+    for (const id of selected) {
+      if (id.startsWith(parentPrefix)) {
+        const name = id.slice(parentPrefix.length);
+        const vals = parentTotals.get(name);
+        if (vals) out.push({ id, name, values: vals });
+      } else if (id.startsWith(childPrefix)) {
+        const name = id.slice(childPrefix.length);
+        const byParent = childByParent.get(name);
+        if (!byParent) continue;
+        const allP = [...byParent.keys()];
+        const scope =
+          selParents.size === 0 ? allP : allP.filter((p) => selParents.has(p));
+        const values = months.map((_, i) =>
+          scope.reduce((s, p) => s + (byParent.get(p)?.[i] ?? 0), 0)
+        );
+        out.push({ id, name, values });
+      }
+    }
+    return out;
+  }, [selected, parentTotals, childByParent, parentPrefix, childPrefix, months]);
+
+  const styles = selectedSeries.map((_, i) => getMultiSeriesStyle(i));
 
   const chartData = months.map((m, idx) => {
     const row: Record<string, string | number> = { month: shortLabel(m) };
-    selectedItems.forEach((it) => {
+    selectedSeries.forEach((it) => {
       row[it.id] = toMan(it.values[idx] ?? 0);
     });
     return row;
@@ -162,7 +248,7 @@ function MiniLineChart({
         )}
       </div>
       <div className="text-[11px] text-[#5d5d5d] mb-2">{subtitle}</div>
-      {selectedItems.length === 0 ? (
+      {selectedSeries.length === 0 ? (
         <div className="text-center text-[12px] text-[#5d5d5d] py-12 border border-dashed border-[#c4c4c4]">
           표시할 항목을 선택해주세요
         </div>
@@ -183,7 +269,7 @@ function MiniLineChart({
                 formatter={(v: number, name: string) => [`${v.toLocaleString()} 백만`, name]}
               />
               <Legend wrapperStyle={{ fontSize: 10 }} itemSorter={null} iconType="plainline" />
-              {selectedItems.map((it, i) => {
+              {selectedSeries.map((it, i) => {
                 const s = styles[i];
                 return (
                   <Line
@@ -217,34 +303,23 @@ export default function ChannelIssueSection({
   editMode,
 }: Props) {
   const [groupModalOpen, setGroupModalOpen] = useState(false);
-  // 모달 open: vendor/brand selection
   const [editing, setEditing] = useState<{
     groupId: string;
     kind: "vendor" | "brand";
   } | null>(null);
 
-  const availableChannels = useMemo(
-    () => channels.map((c) => c.name),
-    [channels]
-  );
+  const availableChannels = useMemo(() => channels.map((c) => c.name), [channels]);
 
-  // 그룹별 차트 옵션 — 거래처 차트: P열(위)+R열(아래), 브랜드 차트: D열(위)+S열(아래)
-  const groupAggs = useMemo(() => {
+  // 그룹별 차트 모델 — 거래처 차트: 채널(P열)+거래처(R열), 브랜드 차트: 브랜드(D열)+상품(S열)
+  const groupModels = useMemo(() => {
     const n = months.length;
     return groups.map((g) => ({
       group: g,
-      vendorData: [
-        ...channelOptions(channels, g.channels, n, "채널 (P열)"),
-        ...aggregate(channels, g.channels, "vendors", n, "R:", "거래처 (R열)"),
-      ],
-      brandData: [
-        ...aggregate(channels, g.channels, "brands", n, "D:", "브랜드 (D열)"),
-        ...aggregate(channels, g.channels, "products", n, "S:", "상품 (S열)"),
-      ],
+      vendor: buildChartModel(channels, g.channels, n, "vendor"),
+      brand: buildChartModel(channels, g.channels, n, "brand"),
     }));
   }, [channels, groups, months.length]);
 
-  // 모달 적용 → 해당 그룹의 vendorSelection 또는 brandSelection 업데이트
   const handleApplySelection = (next: string[]) => {
     if (!editing) return;
     const updated = groups.map((g) => {
@@ -256,30 +331,23 @@ export default function ChannelIssueSection({
     onGroupsChange(updated);
   };
 
-  // editing 정보 → 모달 props
   const editingContext = useMemo(() => {
     if (!editing) return null;
-    const ga = groupAggs.find((x) => x.group.id === editing.groupId);
-    if (!ga) return null;
+    const gm = groupModels.find((x) => x.group.id === editing.groupId);
+    if (!gm) return null;
     const isVendor = editing.kind === "vendor";
-    const items = isVendor ? ga.vendorData : ga.brandData;
-    const selected = isVendor ? ga.group.vendorSelection : ga.group.brandSelection;
+    const model = isVendor ? gm.vendor : gm.brand;
+    const selected = isVendor ? gm.group.vendorSelection : gm.group.brandSelection;
     return {
-      title: `${ga.group.name} — 표시 ${isVendor ? "거래처" : "브랜드"} 수정`,
+      title: `${gm.group.name} — 표시 ${isVendor ? "거래처" : "브랜드"} 수정`,
       description: isVendor
-        ? `${ga.group.name} 그룹 (${ga.group.channels.join(" / ") || "—"}) — 채널(P열) 합계와 거래처(R열) 항목. 체크된 항목만 차트에 표시.`
-        : `${ga.group.name} 그룹 (${ga.group.channels.join(" / ") || "—"}) — 브랜드(D열)와 하위 상품(S열) 항목. 체크된 항목만 차트에 표시.`,
-      options: items.map((it) => ({
-        id: it.id,
-        name: it.name,
-        row_count: it.row_count,
-        group: it.group,
-      })) as ProductOption[],
+        ? `${gm.group.name} 그룹 (${gm.group.channels.join(" / ") || "—"}) — 채널(P열)별로 거래처(R열)를 묶어 표시. 채널을 함께 선택하면 그 채널의 거래처만, 채널 미선택 시 전체 채널 합산.`
+        : `${gm.group.name} 그룹 (${gm.group.channels.join(" / ") || "—"}) — 브랜드(D열)별로 상품(S열)을 묶어 표시. 브랜드를 함께 선택하면 그 브랜드의 상품만, 브랜드 미선택 시 전체 브랜드 합산.`,
+      options: model.options,
       selected,
     };
-  }, [editing, groupAggs]);
+  }, [editing, groupModels]);
 
-  // 그리드: 그룹 수에 따라 컬럼 수 결정 (1~3은 그대로, 4+ 는 자동 줄바꿈)
   const gridCols =
     groups.length === 1
       ? "grid-cols-1"
@@ -308,11 +376,11 @@ export default function ChannelIssueSection({
         </div>
       ) : (
         <div className={`grid ${gridCols} gap-4`}>
-          {groupAggs.map((ga) => (
-            <div key={ga.group.id} className="flex flex-col gap-3">
+          {groupModels.map((gm) => (
+            <div key={gm.group.id} className="flex flex-col gap-3">
               <div className="text-[12px] font-bold text-[#5d5d5d] uppercase tracking-wide pb-1 border-b border-dashed border-[#c4c4c4]">
-                {ga.group.name}
-                {ga.group.channels.length === 0 && (
+                {gm.group.name}
+                {gm.group.channels.length === 0 && (
                   <span className="ml-2 text-[10px] font-normal text-[#ff0066]">
                     채널 미지정
                   </span>
@@ -321,22 +389,22 @@ export default function ChannelIssueSection({
               <MiniLineChart
                 title="거래처별 매출 트렌드"
                 subtitle={`최근 12개월 (백만) · 채널(P열) + 거래처(R열)${
-                  ga.group.channels.length > 0 ? "" : " · 채널 미지정 → 빈 데이터"
+                  gm.group.channels.length > 0 ? "" : " · 채널 미지정 → 빈 데이터"
                 }`}
-                data={ga.vendorData}
-                selected={ga.group.vendorSelection}
+                model={gm.vendor}
+                selected={gm.group.vendorSelection}
                 months={months}
-                onEdit={() => setEditing({ groupId: ga.group.id, kind: "vendor" })}
+                onEdit={() => setEditing({ groupId: gm.group.id, kind: "vendor" })}
                 editLabel="표시 거래처 수정"
                 editMode={editMode}
               />
               <MiniLineChart
                 title="브랜드별 매출 트렌드"
                 subtitle="최근 12개월 (백만) · 브랜드(D열) + 상품(S열)"
-                data={ga.brandData}
-                selected={ga.group.brandSelection}
+                model={gm.brand}
+                selected={gm.group.brandSelection}
                 months={months}
-                onEdit={() => setEditing({ groupId: ga.group.id, kind: "brand" })}
+                onEdit={() => setEditing({ groupId: gm.group.id, kind: "brand" })}
                 editLabel="표시 브랜드 수정"
                 editMode={editMode}
               />

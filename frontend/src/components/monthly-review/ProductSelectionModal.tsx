@@ -9,6 +9,10 @@ export interface ProductOption {
   id?: string;
   /** 묶음 라벨 — 지정 시 옵션 목록을 묶음별 헤더+구분선으로 분리 표시 */
   group?: string;
+  /** 다중 묶음 — 지정 시 항목이 여러 헤더 아래 동시 표시 (체크박스는 id 기준 1개로 동기화) */
+  groups?: string[];
+  /** 묶음별 row 수 — 지정 시 각 헤더 아래에서 그 묶음 몫의 row 수를 표시 (미지정 묶음은 row_count) */
+  rowCountByGroup?: Record<string, number>;
 }
 
 interface Props {
@@ -52,6 +56,13 @@ export default function ProductSelectionModal({
 
   const draftSet = useMemo(() => new Set(draft), [draft]);
 
+  // 옵션 고유 id 집합 (한 항목이 여러 그룹에 중복 표시될 수 있어 카운트/전체선택은 dedupe)
+  const uniqueIds = useMemo(() => {
+    const s = new Set<string>();
+    options.forEach((o) => s.add(optId(o)));
+    return s;
+  }, [options]);
+
   // id → 표시 이름
   const nameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -65,19 +76,21 @@ export default function ProductSelectionModal({
     return options.filter((o) => o.name.toLowerCase().includes(q));
   }, [options, query]);
 
-  // 묶음별로 그룹핑 (group 미지정이면 단일 묶음)
+  // 묶음별로 그룹핑 (group/groups 미지정이면 단일 묶음). groups 지정 시 여러 헤더에 동시 표시.
   const grouped = useMemo(() => {
-    const hasGroups = options.some((o) => o.group);
+    const hasGroups = options.some((o) => o.group || (o.groups && o.groups.length));
     if (!hasGroups) return [{ label: null as string | null, items: filteredOptions }];
     const order: string[] = [];
     const map = new Map<string, ProductOption[]>();
     for (const o of filteredOptions) {
-      const g = o.group ?? "";
-      if (!map.has(g)) {
-        map.set(g, []);
-        order.push(g);
+      const gs = o.groups && o.groups.length ? o.groups : [o.group ?? ""];
+      for (const g of gs) {
+        if (!map.has(g)) {
+          map.set(g, []);
+          order.push(g);
+        }
+        map.get(g)!.push(o);
       }
-      map.get(g)!.push(o);
     }
     return order.map((g) => ({ label: g, items: map.get(g)! }));
   }, [options, filteredOptions]);
@@ -144,11 +157,11 @@ export default function ProductSelectionModal({
           )}
           <div className="flex items-center gap-2 text-[12px] text-[#5d5d5d]">
             <span>
-              선택 <strong className="text-black">{draft.length}</strong> / {options.length}개
+              선택 <strong className="text-black">{draft.length}</strong> / {uniqueIds.size}개
             </span>
             <button
               type="button"
-              onClick={() => setDraft(options.map(optId))}
+              onClick={() => setDraft([...uniqueIds])}
               className="ml-auto underline hover:text-black"
             >
               모두
@@ -259,6 +272,11 @@ export default function ProductSelectionModal({
                 {section.items.map((opt) => {
                   const id = optId(opt);
                   const checked = draftSet.has(id);
+                  // 묶음별 row 수 우선 (대상 X 처럼 여러 묶음에 걸친 항목은 그 묶음 몫만 표시)
+                  const count =
+                    section.label != null && opt.rowCountByGroup?.[section.label] != null
+                      ? opt.rowCountByGroup[section.label]
+                      : opt.row_count;
                   return (
                     <label
                       key={id}
@@ -274,7 +292,7 @@ export default function ProductSelectionModal({
                         {opt.name}
                       </span>
                       <span className="ml-auto text-[11px] text-[#5d5d5d]">
-                        {opt.row_count.toLocaleString()} row
+                        {count.toLocaleString()} row
                       </span>
                     </label>
                   );

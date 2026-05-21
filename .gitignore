@@ -42,6 +42,9 @@ backend/uploads/*.csv
 # Config files with sensitive data
 backend/security_config.json
 
+# Runtime data (per-deployment, not source) — 사용자가 저장한 AI 분석 프롬프트
+api/analysis_prompts.json
+
 # Python virtual environment
 venv/
 env/

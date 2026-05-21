@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-05-21 (28회차) — 종합 섹션 AI 매출 분석 (Gemini)
+
+### 1. 배경
+- 사용자: "대상 월에 대한 AI 매출 분석을 하고 싶다. Gemini를 붙여, 사용자가 분석 가이드(프롬프트)를 미리 작성해두고, 대상 월 선택 후 'AI 분석'을 누르면 별도 창이 떠서 그 프롬프트대로 분석."
+- 요구 정밀화(AskUserQuestion): 데이터 범위 = **종합+트렌드+채널이슈**, 프롬프트 = **파트별 따로**, 창 = **모달 팝업**, 저장 = **백엔드 파일**. 추가 확인: 프롬프트 편집은 **편집 모드일 때만**.
+- 기존 인프라 재사용: `google-generativeai`(채팅용 이미 연동), `load_server_api_key()`(env→`security_config.json`), `gemini-2.0-flash-exp`.
+
+### 2. 작업 — 백엔드 (`api/monthly_review.py`, 엔드포인트 신규)
+- `GET/POST /monthly-review/analysis-prompt/`: 파트별 프롬프트 로드·저장(`analysis_prompts.json`).
+- `POST /monthly-review/ai-analysis/`: 프론트가 보낸 `summary`(종합+트렌드+채널이슈)를 `_build_analysis_context`로 한국어 컨텍스트화 → 저장된 파트 프롬프트와 합쳐 Gemini 호출 → 분석 텍스트 반환.
+- 가드: 잘못된 파트/키 미설정/프롬프트 미작성 시 400. 키는 `"server_managed"` → 서버 보관 키 사용.
+- import에 `json`·`pydantic.BaseModel` 추가.
+
+### 3. 작업 — 프론트 (`AIAnalysisModal.tsx` 신규 + `page.tsx`)
+- 종합 섹션 코멘트 아래 `AI 분석` 버튼(ghost, 이모지 없음) → 모달.
+- 편집 모드: 프롬프트 textarea + `프롬프트 저장`, 미저장 변경 시 분석 비활성+안내. 보기 모드: 편집 영역 숨김, `분석하기`+결과.
+- 분석은 **백엔드 저장 프롬프트 기준**. summary 재계산 없이 화면 데이터 그대로 분석.
+
+### 4. 검증 / 배포
+- 로컬 dev `:8000`(노트북 `.venv`로 재기동): 프롬프트 저장/로드 왕복·빈 프롬프트 가드 OK, 페이지 200 컴파일.
+- **배포 이슈 규명**: 이 머신은 MacBook Pro(노트북)이고 운영 백엔드는 **별도 맥미니**(`com.avk.backend`, Tunnel→api.gongbaksoo.com)임을 확인. 백엔드 변경 포함 → `error.md §22` SOP대로 **맥미니 먼저 반영**.
+- 맥미니 AI에 self-contained 작업 브리핑 전달 → 수동 패치 + 재시작 + curl 검증 완료. 노트북에서 공개 API 재확인: `analysis-prompt/` 정상, `ai-analysis/` 빈 프롬프트 400 정상.
+
+### 5. 에러/시행착오
+- **§42**: `AI 분석` 버튼에 이모지(🤖) 삽입 → 디자인 규약("이모지 전면 금지") 위반. 사용자 지적 후 `AI 분석`으로 수정. 신규 UI 작성 전 디자인 규약 선확인 SOP 추가.
+
+---
+
 ## 2026-05-21 (27회차) — 종합/브랜드 종합 차트 편집 모드 + 헤더·높이 정리
 
 ### 1. 배경

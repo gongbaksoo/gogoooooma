@@ -539,6 +539,29 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
   - 빈 문자열 저장 = 키 삭제 → 보기 모드에서 아무것도 안 보임.
 - 컴포넌트 `OverviewNote`(page.tsx 모듈 레벨). 로컬 초안(`draft`) 상태, `note`/`month`/`part` 변경 시 `useEffect`로 초안 리셋. 렌더는 `section.title === "종합"`일 때 요약 라인 다음. **프론트 단독**(재배포 불필요).
 
+#### 2.3.3.20 종합 섹션 AI 매출 분석 (2026-05-21 28회차)
+
+대상 월을 선택한 상태에서 "AI 분석" 버튼 → 모달 팝업이 떠서, **사용자가 미리 작성한 분석 가이드(프롬프트)**대로 Gemini가 그 달의 매출을 분석. **백엔드 변경 포함(엔드포인트 신규) → Mac Mini 재배포 필요** (`docs/error.md §22` 동시 배포 SOP).
+
+**구성**
+- 종합 섹션, 사용자 코멘트 아래에 `AI 분석` 버튼(1px `#c4c4c4` 아웃라인 ghost, **이모지 금지** — §6.1 디자인 규약). 클릭 시 모달 오픈.
+- 모달(`AIAnalysisModal.tsx`):
+  - **편집 모드**: 분석 가이드 `textarea`(rows=6) + `프롬프트 저장` 버튼. 미저장 변경(`dirty`) 시 분석 비활성 + "변경사항을 저장해야 분석에 반영" 안내.
+  - **보기 모드**: 프롬프트 편집 영역 숨김(미작성 시 안내 문구). `분석하기` 버튼 + 결과(`whitespace-pre-wrap`).
+  - 분석은 **백엔드에 저장된 프롬프트 기준**(편집 중 초안 아님).
+
+**프롬프트 저장 (파트별, 백엔드 파일)**
+- 파일 `api/analysis_prompts.json` → `{ "all": "...", "ecommerce": "...", "offline": "..." }`.
+- `GET /monthly-review/analysis-prompt/?part=` → `{ part, prompt }`.
+- `POST /monthly-review/analysis-prompt/` (body: `part`, `prompt`) → 저장.
+
+**AI 분석 실행**
+- `POST /monthly-review/ai-analysis/` (body: `month`, `part`, `summary`, `api_key`).
+- 프론트가 **화면에 표시 중인 `summary`(종합+트렌드+채널이슈)를 그대로 전송** → 백엔드가 한국어 데이터 컨텍스트(`_build_analysis_context`: chart1 종합 / chart2 12개월 트렌드 / channel_issue[part] 채널·상위 거래처·브랜드)로 변환 → 저장된 파트 프롬프트와 합쳐 Gemini(`gemini-2.0-flash-exp`) 호출.
+- 키: 기존 `load_server_api_key()` 패턴 재사용(env `GOOGLE_API_KEY` → `security_config.json`). 프론트는 `"server_managed"` 전송.
+- 가드: 잘못된 파트 400, 키 미설정 400, 프롬프트 미작성 400.
+- summary 재계산 없음(프론트 데이터 그대로) → "화면에 보이는 값을 그대로 분석".
+
 #### 2.3.3.10 스크롤 위치 보존 규약 (2026-05-19 17회차)
 
 파트 토글·월 변경 등 재페치 트리거 시 페이지 스크롤 위치가 맨 위로 리셋되지 않도록 차트 그리드를 **언마운트하지 않는** 패턴 적용.

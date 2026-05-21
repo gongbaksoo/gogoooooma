@@ -5,12 +5,14 @@ PPT 월간 리뷰 보고서를 화면에서 재현하기 위한 집계 엔드포
 Phase 1: 종합 슬라이드 차트 3개 (목표비 실적 / 전년비 트렌드 / 주력 vs 쿠팡사입).
 """
 import os
+import json
 import logging
 import re
 from typing import Optional
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException, UploadFile, File, Query
+from pydantic import BaseModel
 
 from dashboard import get_dataframe
 from database import get_file_from_db
@@ -622,3 +624,181 @@ def get_summary(
         "channel_issue": channel_issue,
         "channel_issue_months": last12_labels,
     }
+
+
+# ===================================================================
+# AI 매출 분석 (대상 월) — Gemini
+#   - 분석 가이드(프롬프트)는 파트별로 백엔드 파일에 저장
+#   - 분석은 프론트가 표시 중인 summary(종합+트렌드+채널이슈)를 그대로 받아 수행
+# ===================================================================
+
+ANALYSIS_PROMPTS_FILE = os.path.join(BASE_DIR, "analysis_prompts.json")
+SECURITY_CONFIG_FILE = os.path.join(BASE_DIR, "security_config.json")
+_VALID_PARTS = {"all", "ecommerce", "offline"}
+PART_LABELS_KR = {"all": "전체", "ecommerce": "이커머스", "offline": "오프라인"}
+
+
+def _load_analysis_prompts() -> dict:
+    """파트별 분석 프롬프트 로드. { "all": "...", "ecommerce": "...", "offline": "..." }"""
+    if os.path.exists(ANALYSIS_PROMPTS_FILE):
+        try:
+            with open(ANALYSIS_PROMPTS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+        except Exception:
+            pass
+    return {}
+
+
+def _save_analysis_prompts(prompts: dict) -> None:
+    with open(ANALYSIS_PROMPTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(prompts, f, ensure_ascii=False, indent=2)
+
+
+def _resolve_api_key(provided: Optional[str]) -> Optional[str]:
+    """클라이언트가 보낸 키 우선, 없으면 서버 보관 키(env → config file)."""
+    if provided and provided != "server_managed":
+        return provided
+    env_key = os.getenv("GOOGLE_API_KEY")
+    if env_key:
+        return env_key
+    if os.path.exists(SECURITY_CONFIG_FILE):
+        try:
+            with open(SECURITY_CONFIG_FILE, "r") as f:
+                return json.load(f).get("api_key")
+        except Exception:
+            return None
+    return None
+
+
+def _won_to_man(v) -> str:
+    """원 → 백만원 반올림 문자열."""
+    try:
+        return f"{round(float(v) / 1_000_000):,}백만원"
+    except Exception:
+        return "-"
+
+
+def _build_analysis_context(summary: dict, month: str, part: str) -> str:
+    """프론트 summary(JSON)를 사람이 읽기 좋은 한국어 데이터 컨텍스트로 변환.
+    범위: 종합 실적 + 12개월 트렌드(전년비) + 주요 채널 이슈."""
+    lines: list[str] = []
+    lines.append(f"대상 월: {month}")
+    lines.append(f"파트: {PART_LABELS_KR.get(part, part)}")
+
+    # ----- 종합 실적 -----
+    c1 = summary.get("chart1") or {}
+    rate = c1.get("achievement_rate")
+    target = c1.get("target")
+    lines.append("")
+    lines.append("[종합 실적]")
+    lines.append(f"- 실적: {_won_to_man(c1.get('actual'))}")
+    lines.append(f"- 목표: {_won_to_man(target) if target else '미설정'}")
+    lines.append(f"- 목표 달성률: {rate}%" if rate is not None else "- 목표 달성률: -")
+
+    # ----- 12개월 트렌드 (전년비) -----
+    c2 = summary.get("chart2") or []
+    if c2:
+        lines.append("")
+        lines.append("[12개월 트렌드 — 당해 vs 전년]")
+        for row in c2:
+            m = row.get("month", "")
+            cur = _won_to_man(row.get("current_year"))
+            prev = _won_to_man(row.get("prev_year"))
+            lines.append(f"- {m}: 당해 {cur} / 전년 {prev}")
+
+    # ----- 주요 채널 이슈 (대상월 기준) -----
+    ci = (summary.get("channel_issue") or {}).get(part) or {}
+    channels = ci.get("channels") or []
+    if channels:
+        lines.append("")
+        lines.append("[주요 채널 이슈 — 채널별 대상월 매출 / 상위 거래처·브랜드]")
+        for ch in channels:
+            vals = ch.get("values") or []
+            cur_v = _won_to_man(vals[-1]) if vals else "-"
+            prev_v = _won_to_man(vals[-2]) if len(vals) >= 2 else "-"
+            lines.append(f"- {ch.get('name', '')}: 대상월 {cur_v} (직전월 {prev_v})")
+            vendors = (ch.get("vendors") or [])[:3]
+            if vendors:
+                vtxt = ", ".join(
+                    f"{v.get('name')} {_won_to_man((v.get('values') or [0])[-1])}" for v in vendors
+                )
+                lines.append(f"    · 주요 거래처: {vtxt}")
+            brands = (ch.get("brands") or [])[:3]
+            if brands:
+                btxt = ", ".join(
+                    f"{b.get('name')} {_won_to_man((b.get('values') or [0])[-1])}" for b in brands
+                )
+                lines.append(f"    · 주요 브랜드: {btxt}")
+
+    return "\n".join(lines)
+
+
+class AnalysisPromptRequest(BaseModel):
+    part: str
+    prompt: str
+
+
+class AIAnalysisRequest(BaseModel):
+    month: str
+    part: str = "all"
+    summary: dict
+    api_key: Optional[str] = None
+
+
+@router.get("/analysis-prompt/")
+def get_analysis_prompt(part: str = Query("all")):
+    if part not in _VALID_PARTS:
+        raise HTTPException(status_code=400, detail="잘못된 파트입니다.")
+    prompts = _load_analysis_prompts()
+    return {"part": part, "prompt": prompts.get(part, "")}
+
+
+@router.post("/analysis-prompt/")
+def set_analysis_prompt(req: AnalysisPromptRequest):
+    if req.part not in _VALID_PARTS:
+        raise HTTPException(status_code=400, detail="잘못된 파트입니다.")
+    prompts = _load_analysis_prompts()
+    prompts[req.part] = req.prompt
+    try:
+        _save_analysis_prompts(prompts)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"프롬프트 저장 실패: {e}")
+    return {"part": req.part, "prompt": req.prompt}
+
+
+@router.post("/ai-analysis/")
+def run_ai_analysis(req: AIAnalysisRequest):
+    if req.part not in _VALID_PARTS:
+        raise HTTPException(status_code=400, detail="잘못된 파트입니다.")
+
+    api_key = _resolve_api_key(req.api_key)
+    if not api_key:
+        raise HTTPException(status_code=400, detail="API Key가 설정되지 않았습니다. 관리자에게 문의하세요.")
+
+    user_prompt = (_load_analysis_prompts().get(req.part, "") or "").strip()
+    if not user_prompt:
+        raise HTTPException(
+            status_code=400,
+            detail="분석 가이드(프롬프트)가 작성되지 않았습니다. 편집 모드에서 먼저 작성해 주세요.",
+        )
+
+    context = _build_analysis_context(req.summary, req.month, req.part)
+    full_prompt = (
+        "당신은 매출 데이터 분석 전문가입니다.\n"
+        f"아래 [데이터]는 {req.month} 대상 월의 매출 집계입니다.\n"
+        "[분석 지침]에 따라 한국어로 분석 결과를 작성하세요. "
+        "수치는 데이터에 있는 값만 사용하고, 추측하지 마세요.\n\n"
+        f"[분석 지침]\n{user_prompt}\n\n"
+        f"[데이터]\n{context}\n"
+    )
+
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash-exp")
+        resp = model.generate_content(full_prompt)
+        return {"analysis": resp.text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI 분석 실패: {e}")

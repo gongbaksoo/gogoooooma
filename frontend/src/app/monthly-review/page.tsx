@@ -52,6 +52,7 @@ import {
   getOverviewNote,
   saveOverviewNote,
 } from "@/components/monthly-review/overviewNotesStorage";
+import AIAnalysisModal from "@/components/monthly-review/AIAnalysisModal";
 
 type Part = "all" | "ecommerce" | "offline";
 
@@ -231,6 +232,7 @@ export default function MonthlyReviewPage() {
   const [channelIssueGroups, setChannelIssueGroups] = useState<PartScopedGroups>(DEFAULT_CHANNEL_ISSUE_GROUPS);
   const [overviewSelections, setOverviewSelections] = useState<OverviewSelections>(DEFAULT_OVERVIEW_SELECTIONS);
   const [overviewNotes, setOverviewNotes] = useState<OverviewNotes>({});
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   // 마운트 시 localStorage에서 모든 selections 복원 (SSR 안전)
   useEffect(() => {
@@ -752,6 +754,14 @@ export default function MonthlyReviewPage() {
                           note={getOverviewNote(overviewNotes, month, part)}
                           onSave={updateOverviewNote}
                         />
+                        <div className="mb-3">
+                          <button
+                            onClick={() => setAiModalOpen(true)}
+                            className="text-[12px] border border-[#c4c4c4] px-3 py-1 rounded hover:border-black"
+                          >
+                            AI 분석
+                          </button>
+                        </div>
                       </>
                     )}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -823,6 +833,17 @@ export default function MonthlyReviewPage() {
           editMode={editMode}
           onEditModeChange={setEditMode}
         />
+
+        {summary && (
+          <AIAnalysisModal
+            open={aiModalOpen}
+            onClose={() => setAiModalOpen(false)}
+            month={month}
+            part={part}
+            editMode={editMode}
+            summary={summary}
+          />
+        )}
       </div>
     </div>
   );

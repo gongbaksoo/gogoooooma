@@ -73,8 +73,7 @@ export default function Chart1Achievement({
                   dataKey="value"
                   position="top"
                   content={(props: any) => {
-                    const { x, y, width, value, index } = props;
-                    if (index !== chartData.length - 1) return null;
+                    const { x, y, width, value } = props;
                     if (value === undefined || value === null) return null;
                     return (
                       <text

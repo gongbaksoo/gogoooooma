@@ -504,6 +504,13 @@ export default function MonthlyReviewPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => setAiModalOpen(true)}
+              className="border border-[#c4c4c4] bg-white text-black text-[12px] px-3 py-1 rounded hover:border-black"
+            >
+              AI 분석
+            </button>
+            <button
+              type="button"
               onClick={() => setVisibilityModalOpen(true)}
               className={`border text-[12px] px-3 py-1 rounded ${
                 editMode

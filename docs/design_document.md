@@ -546,7 +546,7 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 **구성**
 - 메인 헤더 우측 버튼군에 `AI 분석` 버튼 — **`편집 모드` 버튼 왼쪽**(`AI 분석 | 편집 모드 | PDF 다운로드` 순). 스타일은 `편집 모드`(비활성 상태)와 **동일**: `border border-[#c4c4c4] bg-white text-black text-[13px] px-3 py-2 rounded hover:border-black`(1px ghost, **이모지 금지** — §6.1). 클릭 시 모달 오픈.
   - 버튼은 **항상 활성**(데이터 유무와 무관). 두 버튼의 디자인 일치를 위해 `disabled` 미적용 — 비활성 시 `opacity-50`로 색·크기가 달라 보였던 이슈(`docs/error.md §43`) 회피.
-  - sticky 컴팩트 바에는 미배치(메인 헤더에만).
+  - **sticky 컴팩트 바에도 동일 배치**(`편집 모드` 왼쪽) — sticky 사이즈 `text-[12px] px-3 py-1`. 메인 헤더·sticky 모두 `AI 분석 | 편집 모드 | PDF 다운로드` 순.
 - 모달(`AIAnalysisModal.tsx`):
   - **편집 모드**: 분석 가이드 `textarea`(rows=6) + `프롬프트 저장` 버튼. 미저장 변경(`dirty`) 시 분석 비활성 + "변경사항을 저장해야 분석에 반영" 안내.
   - **보기 모드**: 프롬프트 편집 영역 숨김(미작성 시 안내 문구). `분석하기` 버튼 + 결과(`whitespace-pre-wrap`).

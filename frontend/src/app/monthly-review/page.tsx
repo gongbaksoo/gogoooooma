@@ -537,6 +537,13 @@ export default function MonthlyReviewPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => setAiModalOpen(true)}
+              className="border border-[#c4c4c4] bg-white text-black text-[13px] px-3 py-2 rounded hover:border-black"
+            >
+              AI 분석
+            </button>
+            <button
+              type="button"
               onClick={() => setVisibilityModalOpen(true)}
               className={`border text-[13px] px-3 py-2 rounded ${
                 editMode
@@ -754,14 +761,6 @@ export default function MonthlyReviewPage() {
                           note={getOverviewNote(overviewNotes, month, part)}
                           onSave={updateOverviewNote}
                         />
-                        <div className="mb-3">
-                          <button
-                            onClick={() => setAiModalOpen(true)}
-                            className="text-[12px] border border-[#c4c4c4] px-3 py-1 rounded hover:border-black"
-                          >
-                            AI 분석
-                          </button>
-                        </div>
                       </>
                     )}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -834,16 +833,14 @@ export default function MonthlyReviewPage() {
           onEditModeChange={setEditMode}
         />
 
-        {summary && (
-          <AIAnalysisModal
-            open={aiModalOpen}
-            onClose={() => setAiModalOpen(false)}
-            month={month}
-            part={part}
-            editMode={editMode}
-            summary={summary}
-          />
-        )}
+        <AIAnalysisModal
+          open={aiModalOpen}
+          onClose={() => setAiModalOpen(false)}
+          month={month}
+          part={part}
+          editMode={editMode}
+          summary={summary}
+        />
       </div>
     </div>
   );

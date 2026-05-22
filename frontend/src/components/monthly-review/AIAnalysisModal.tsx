@@ -97,7 +97,8 @@ export default function AIAnalysisModal({
     }
   };
 
-  const canAnalyze = !analyzing && prompt.trim() !== "" && !(editMode && dirty);
+  const hasData = summary != null;
+  const canAnalyze = !analyzing && hasData && prompt.trim() !== "" && !(editMode && dirty);
 
   return (
     <div
@@ -162,7 +163,7 @@ export default function AIAnalysisModal({
           )}
 
           {/* 분석 실행 */}
-          <div>
+          <div className="flex items-center gap-2">
             <button
               onClick={runAnalysis}
               disabled={!canAnalyze}
@@ -170,6 +171,11 @@ export default function AIAnalysisModal({
             >
               {analyzing ? "분석 중…" : "분석하기"}
             </button>
+            {!hasData && (
+              <span className="text-[12px] text-[#888]">
+                매출·목표 파일과 대상 월을 먼저 선택하면 분석할 수 있습니다.
+              </span>
+            )}
           </div>
 
           {error && <p className="text-[12px] text-red-600 whitespace-pre-wrap">{error}</p>}

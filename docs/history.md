@@ -9,7 +9,7 @@
 ### 1. 배경
 - 사용자: "대상 월에 대한 AI 매출 분석을 하고 싶다. Gemini를 붙여, 사용자가 분석 가이드(프롬프트)를 미리 작성해두고, 대상 월 선택 후 'AI 분석'을 누르면 별도 창이 떠서 그 프롬프트대로 분석."
 - 요구 정밀화(AskUserQuestion): 데이터 범위 = **종합+트렌드+채널이슈**, 프롬프트 = **파트별 따로**, 창 = **모달 팝업**, 저장 = **백엔드 파일**. 추가 확인: 프롬프트 편집은 **편집 모드일 때만**.
-- 기존 인프라 재사용: `google-generativeai`(채팅용 이미 연동), `load_server_api_key()`(env→`security_config.json`), Gemini 모델 `gemini-2.5-flash`(6. 후속에서 확정).
+- 기존 인프라 재사용: `google-generativeai`(채팅용 이미 연동), `load_server_api_key()`(env→`security_config.json`), Gemini 모델 `gemini-3.5-flash`(6. 후속에서 확정).
 
 ### 2. 작업 — 백엔드 (`api/monthly_review.py`, 엔드포인트 신규)
 - `GET/POST /monthly-review/analysis-prompt/`: 파트별 프롬프트 로드·저장(`analysis_prompts.json`).
@@ -32,8 +32,8 @@
 
 ### 6. 후속 — API 키 갱신 + 모델 교체 (2026-05-22)
 - 첫 실행 시 `API_KEY_INVALID: API key expired` → 서버 키(`security_config.json`) 만료 확인. 새 Gemini 키로 교체.
-- 새 키가 `gemini-2.0-flash-exp`(실험 모델) 미지원 → `genai.list_models()`로 가용 모델 조회 후 GA 모델 **`gemini-2.5-flash`**로 교체(`monthly_review.py`). 로컬 실호출 검증 OK("2026년 4월 매출은 목표 586백만원 대비 107.5%…").
-- 서버 키 공용 → 동일 키로 기존 채팅(`direct_gemini.py`)도 `gemini-2.0-flash-exp`→`gemini-2.5-flash` 동반 교체.
+- 새 키가 `gemini-2.0-flash-exp`(실험 모델) 미지원 → `genai.list_models()`로 가용 모델 조회. 1차로 `gemini-2.5-flash`, 이후 **사용자 선택으로 최신 `gemini-3.5-flash`로 확정**(`monthly_review.py`). 로컬 실호출 검증 OK("2026년 4월 전체 매출 실적은 630백만원…107.5% 달성률…").
+- 서버 키 공용 → 동일 키로 기존 채팅(`direct_gemini.py`)도 `gemini-3.5-flash` 동반 교체.
 - 키 자체는 비밀이라 git 커밋 제외(직접 파일 반영). 모델 변경(`monthly_review.py`/`direct_gemini.py`)만 커밋·맥미니 pull.
 
 ---

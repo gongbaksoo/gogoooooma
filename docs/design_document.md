@@ -557,7 +557,7 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 
 **AI 분석 실행**
 - `POST /monthly-review/ai-analysis/` (body: `month`, `part`, `summary`, `api_key`).
-- 프론트가 **화면에 표시 중인 `summary`(종합+트렌드+채널이슈)를 그대로 전송** → 백엔드가 한국어 데이터 컨텍스트(`_build_analysis_context`: chart1 종합 / chart2 12개월 트렌드 / channel_issue[part] 채널·상위 거래처·브랜드)로 변환 → 저장된 파트 프롬프트와 합쳐 Gemini(`gemini-2.5-flash`) 호출.
+- 프론트가 **화면에 표시 중인 `summary`(종합+트렌드+채널이슈)를 그대로 전송** → 백엔드가 한국어 데이터 컨텍스트(`_build_analysis_context`: chart1 종합 / chart2 12개월 트렌드 / channel_issue[part] 채널·상위 거래처·브랜드)로 변환 → 저장된 파트 프롬프트와 합쳐 Gemini(`gemini-3.5-flash`) 호출.
 - 키: 기존 `load_server_api_key()` 패턴 재사용(env `GOOGLE_API_KEY` → `security_config.json`). 프론트는 `"server_managed"` 전송.
 - 가드: 잘못된 파트 400, 키 미설정 400, 프롬프트 미작성 400.
 - summary 재계산 없음(프론트 데이터 그대로) → "화면에 보이는 값을 그대로 분석".

@@ -125,7 +125,7 @@ Python 코드:
 """
     
     # Gemini API 호출
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-3.5-flash')
     response = model.generate_content(prompt)
     
     # 코드 추출

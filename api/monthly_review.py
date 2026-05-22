@@ -797,7 +797,7 @@ def run_ai_analysis(req: AIAnalysisRequest):
     try:
         import google.generativeai as genai
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-3.5-flash")
         resp = model.generate_content(full_prompt)
         return {"analysis": resp.text}
     except Exception as e:

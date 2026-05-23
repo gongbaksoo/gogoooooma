@@ -34,10 +34,16 @@ Thumbs.db
 *.swp
 *.swo
 
-# Uploads (temporary files)
-backend/uploads/*.xlsx
-backend/uploads/*.csv
-!backend/uploads/.gitkeep
+# Uploads (사용자가 올린 런타임 데이터 — 소스 아님, 운영 데이터)
+api/uploads/*
+!api/uploads/.gitkeep
+api/uploads/targets/*
+!api/uploads/targets/.gitkeep
+
+# SQLite 메타데이터 DB (업로드 파일 BLOB이 저장되는 운영 런타임 데이터)
+# git에 추적되면 배포 시 운영 DB가 빈 DB로 덮어써져 업로드가 전부 날아감
+api/metadata.db
+api/*.db
 
 # Config files with sensitive data
 backend/security_config.json

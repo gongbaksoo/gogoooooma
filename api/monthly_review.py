@@ -506,6 +506,7 @@ def get_summary(
     MONO_PALETTE = ["#000000", "#5d5d5d", "#7d7d7d", "#9d9d9d", "#b8b8b8"]
 
     def _brand_total_chart(brand_name: str) -> dict:
+        # 브랜드 상세 섹션은 전년비(전년 동월 대비)를 위해 13개월: 대상월-12 ~ 대상월
         f = df_part[df_part["품목그룹1"] == brand_name]
         return {
             "title": f"{brand_name} 종합 트렌드",
@@ -516,7 +517,7 @@ def get_summary(
                     "month": f"{y}-{str(m).zfill(2)}",
                     "values": [float(f[f["월구분"] == f"{str(y)[-2:]}{str(m).zfill(2)}"]["판매액"].sum())],
                 }
-                for y, m in last12
+                for y, m in last13
             ],
         }
 
@@ -543,10 +544,13 @@ def get_summary(
     chart12 = _brand_total_chart("누비")
     chart14 = _brand_total_chart("쏭레브")
 
-    # ----- brand_products: 각 브랜드별 S열(품목 구분) 모든 옵션 + 12개월 데이터 -----
+    # ----- brand_products: 각 브랜드별 S열(품목 구분) 모든 옵션 + 13개월 데이터 -----
     # 프론트엔드가 localStorage selection 기반으로 주요 상품 라인·개별 상품 차트 동적 렌더
+    # 브랜드 상세 섹션은 전년비를 위해 13개월(대상월-12~대상월)로 통일 → 채널 이슈(12개월)와 별도.
     last12_yymm = [f"{str(y)[-2:]}{str(m).zfill(2)}" for y, m in last12]
     last12_labels = [f"{y}-{str(m).zfill(2)}" for y, m in last12]
+    last13_yymm = [f"{str(y)[-2:]}{str(m).zfill(2)}" for y, m in last13]
+    last13_labels = [f"{y}-{str(m).zfill(2)}" for y, m in last13]
 
     brand_products = {}
     for brand in ["마이비", "누비", "쏭레브"]:
@@ -558,7 +562,7 @@ def get_summary(
             if pd.isna(product) or str(product).strip() == "" or str(product) == "대상 X":
                 continue
             pdf = bdf[bdf["품목 구분"] == product]
-            values = [float(pdf[pdf["월구분"] == yymm]["판매액"].sum()) for yymm in last12_yymm]
+            values = [float(pdf[pdf["월구분"] == yymm]["판매액"].sum()) for yymm in last13_yymm]
             items.append({
                 "name": str(product),
                 "row_count": int(count),
@@ -672,7 +676,7 @@ def get_summary(
         "chart12": chart12,
         "chart14": chart14,
         "brand_products": brand_products,
-        "brand_products_months": last12_labels,
+        "brand_products_months": last13_labels,
         "channel_options": channel_options,
         "channel_defaults": channel_defaults,
         "channel_months": last12_labels,

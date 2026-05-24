@@ -92,6 +92,36 @@ export default function BrandSection({
     [brand]: toMillion(d.values[0] ?? 0),
   }));
 
+  // 13개월(대상월-12~대상월) 시계열 → 실적 요약 지표. 마지막=당월, [0]=전년 동월.
+  const summarize = (vals: number[]) => {
+    const n = vals.length;
+    if (n === 0) return null;
+    return {
+      actual: vals[n - 1],
+      prevMonth: n >= 2 ? vals[n - 2] : null,
+      prev3Avg: n >= 4 ? (vals[n - 2] + vals[n - 3] + vals[n - 4]) / 3 : null,
+      prevYear: n >= 13 ? vals[0] : null, // 13개월 첫 점 = 전년 동월
+    };
+  };
+  // 헤더 아래 브랜드 전체 요약 — 「종합」 형식, 목표 데이터 없어 목표비 제외.
+  const summary = useMemo(
+    () => summarize(totalChart.data.map((d) => d.values[0] ?? 0)),
+    [totalChart.data]
+  );
+  // 선택된 주요 상품 라인별 요약 (만원 단위). selection.mainLine 순서 유지.
+  const productSummaries = useMemo(() => {
+    return selection.mainLine
+      .map((name) => productByName.get(name))
+      .filter(Boolean)
+      .map((p) => ({ name: p!.name, s: summarize(p!.values) }))
+      .filter((x) => x.s != null);
+  }, [selection.mainLine, productByName]);
+  const fmtGrowth = (actual: number, base: number | null) => {
+    if (base == null || base <= 0) return "-";
+    const g = ((actual - base) / base) * 100;
+    return `${g >= 0 ? "▲" : "▼"}${Math.abs(g).toFixed(1)}%`;
+  };
+
   // 개별 상품 차트들 (selection.individual 순서대로)
   const individualProducts = selection.individual
     .map((name) => productByName.get(name))
@@ -113,13 +143,36 @@ export default function BrandSection({
         {brand}
       </h2>
 
+      {/* 실적 요약 — 브랜드 전체(백만) + 선택 주요 상품별(만원). 목표비 제외(목표 미보유) */}
+      {summary && (
+        <div className="mb-3 space-y-0.5">
+          <p className="text-[13px] text-black">
+            실적 : <span className="font-bold">{Math.round(summary.actual / 1_000_000).toLocaleString()}</span> 백만{" "}
+            <span className="text-[#5d5d5d]">
+              (전월비 {fmtGrowth(summary.actual, summary.prevMonth)} , 직전 3개월비{" "}
+              {fmtGrowth(summary.actual, summary.prev3Avg)} , 전년비 {fmtGrowth(summary.actual, summary.prevYear)})
+            </span>
+          </p>
+          {productSummaries.map(({ name, s }) => (
+            <p key={name} className="text-[13px] text-black">
+              <span className="font-bold">{name}</span> 실적 :{" "}
+              <span className="font-bold">{Math.round(s!.actual / 10_000).toLocaleString()}</span> 만원{" "}
+              <span className="text-[#5d5d5d]">
+                (전월비 {fmtGrowth(s!.actual, s!.prevMonth)} , 직전 3개월비 {fmtGrowth(s!.actual, s!.prev3Avg)} , 전년비{" "}
+                {fmtGrowth(s!.actual, s!.prevYear)})
+              </span>
+            </p>
+          ))}
+        </div>
+      )}
+
       {/* Row 1: 종합 (1) + 주요 상품 라인 (2 wide) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         {/* ① 종합 트렌드 */}
         <div className="bg-white border border-[#c4c4c4] p-5">
           <div className="flex items-baseline justify-between mb-1">
             <h3 className="text-[15px] font-bold text-black">{brand} 종합 트렌드</h3>
-            <span className="text-[12px] text-[#5d5d5d]">12개월 (단위: 백만)</span>
+            <span className="text-[12px] text-[#5d5d5d]">13개월 (단위: 백만)</span>
           </div>
           <div key={`total-${brand}-${months.length}`}>
             <ResponsiveContainer width="100%" height={220}>

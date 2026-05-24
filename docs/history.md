@@ -38,6 +38,17 @@
 - 문서: `design_document §2.3.3.22` 신규 + chart4 인라인 표기 갱신(line 126·478), `project_plan §4.7` 항목 추가. 에러 없음(error.md 미변경).
 - **백엔드 변경 포함 → Mac Mini 재배포 필요**.
 
+### 7. 후속 — 브랜드 종합 요약 라인 + 트렌드 13개월 + 브랜드 목표 (2026-05-24)
+- 사용자 요청: "브랜드 종합 헤더 아래에도 '종합'처럼 텍스트 요약을 넣되, 선택한 브랜드별로 줄바꿈."
+- 요구 정밀화(AskUserQuestion): 목표비는 원본에 브랜드 목표 있음 → 추출 / 전년비는 트렌드 13개월로 확장 / 목표비는 매핑 가능한 5개 브랜드만.
+- 목표 데이터: 사용자 지적으로 원본 엑셀 '전사' 시트 재확인 → 브랜드별 월별 목표(25·26년) 존재 확인. 마이비/누비/쏭레브/데일리케어/에코보 × 월별 "목표" 컬럼 추출 → **`api/brand_targets.csv`**(120행). ('전사' 기타는 차트 동적 기타와 구성 불일치로 제외.) 현재 운영 목표 CSV(`full_targets_extracted.csv`)는 파트 단위뿐임도 재확인.
+- 백엔드(`monthly_review.py`): chart4 트렌드 **12→13개월**(`_trailing_series(periods=last13)`, 대상월-12~대상월 = 전년 동월 포함), `_load_brand_targets()` + summary `brand_targets`(대상월, **part=all에서만**).
+- 프론트(`page.tsx`): `BrandSummaryLines` 컴포넌트 — 선택 브랜드별 한 줄(실적·목표비·전월비·직전3개월비·전년비), "브랜드 종합" 헤더 아래 렌더. 목표 없는 브랜드/비-all 파트는 목표비 `-`.
+- 검증(로컬 `/summary`): chart4 13개월, brand_targets 5개. 마이비 실적 414백만(목표비 90.4%·전년비 ▲6.8%) 등 — "월 평균 대비 실적" 당월 막대(414/45/87)와 일치.
+- 에러: **§47**(`brand_targets.csv`를 gitignore된 `uploads/`에 둘 뻔 → 추적 경로 `api/`로 이동) + 향후 권장 #33.
+- 문서: `design_document §2.3.3.23` 신규, `project_plan §4.7` 항목 추가.
+- **백엔드 변경 + 신규 데이터 파일 포함 → Mac Mini 재배포 필요**(git pull로 `brand_targets.csv` 동반).
+
 ---
 
 ## 2026-05-23 (29회차) — 운영 매출 파일 유실 버그 수정 (metadata.db git 추적 제외)

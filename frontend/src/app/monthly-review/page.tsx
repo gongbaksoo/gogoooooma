@@ -89,6 +89,7 @@ interface SummaryResponse {
   chart14: TrendChart;
   brand_products: Record<Brand, { name: string; row_count: number; values: number[] }[]>;
   brand_products_months: string[];
+  brand_targets?: Record<string, number>; // 대상 월 브랜드별 목표(전사, part=all에서만)
   channel_options: Record<"all" | "ecommerce" | "offline", {
     name: string;
     row_count: number;
@@ -156,6 +157,64 @@ function OverviewSummaryLine({
         {fmtGrowth(prevYear)})
       </span>
     </p>
+  );
+}
+
+// 브랜드 종합 요약 — 선택 브랜드별로 한 줄씩(줄바꿈). "종합" 요약 라인과 동일 형식.
+//   - chart4(브랜드 트렌드, 13개월=대상월-12~대상월)에서 계산. vals[마지막]=대상월, vals[0]=전년 동월.
+//   - 목표비: brand_targets(전사 기준, part=all에서만 전달)에서 매칭. 목표 없는 브랜드는 "-".
+function BrandSummaryLines({
+  chart4,
+  selected,
+  brandTargets,
+}: {
+  chart4: { series_names: string[]; data: { month: string; values: number[] }[] };
+  selected: string[];
+  brandTargets: Record<string, number>;
+}) {
+  const idxByName = new Map(chart4.series_names.map((n, i) => [n, i]));
+  const fmtGrowth = (actual: number, base: number | null) => {
+    if (base == null || base <= 0) return "-";
+    const g = ((actual - base) / base) * 100;
+    return `${g >= 0 ? "▲" : "▼"}${Math.abs(g).toFixed(1)}%`;
+  };
+  const data = chart4.data;
+  const n = data.length; // 13개월
+  const lines = selected
+    .filter((name) => idxByName.has(name))
+    .map((name) => {
+      const i = idxByName.get(name)!;
+      const vals = data.map((d) => d.values[i] ?? 0);
+      const actual = vals[n - 1];
+      const prevMonth = n >= 2 ? vals[n - 2] : null;
+      const prev3Avg = n >= 4 ? (vals[n - 2] + vals[n - 3] + vals[n - 4]) / 3 : null;
+      const prevYear = n >= 13 ? vals[0] : null; // 13개월 첫 점 = 전년 동월
+      const target = brandTargets[name];
+      const targetRatio = target && target > 0 ? `${((actual / target) * 100).toFixed(1)}%` : "-";
+      return {
+        name,
+        actualMan: Math.round(actual / 1_000_000),
+        actual,
+        targetRatio,
+        prevMonth,
+        prev3Avg,
+        prevYear,
+      };
+    });
+  if (lines.length === 0) return null;
+  return (
+    <div className="mb-3 space-y-0.5">
+      {lines.map((l) => (
+        <p key={l.name} className="text-[13px] text-black">
+          <span className="font-bold">{l.name}</span> 실적 :{" "}
+          <span className="font-bold">{l.actualMan.toLocaleString()}</span> 백만{" "}
+          <span className="text-[#5d5d5d]">
+            (목표비 {l.targetRatio} , 전월비 {fmtGrowth(l.actual, l.prevMonth)} , 직전 3개월비{" "}
+            {fmtGrowth(l.actual, l.prev3Avg)} , 전년비 {fmtGrowth(l.actual, l.prevYear)})
+          </span>
+        </p>
+      ))}
+    </div>
   );
 }
 
@@ -769,6 +828,15 @@ export default function MonthlyReviewPage() {
                           onSave={updateOverviewNote}
                         />
                       </>
+                    )}
+                    {section.title === "브랜드 종합" && (
+                      <BrandSummaryLines
+                        chart4={summary.chart4}
+                        selected={
+                          overviewSelections.brand[part] ?? summary.chart4.series_names.slice(0, 3)
+                        }
+                        brandTargets={summary.brand_targets ?? {}}
+                      />
                     )}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                       {visibleCharts.map((c) => (

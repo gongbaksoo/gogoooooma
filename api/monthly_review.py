@@ -142,6 +142,41 @@ def _load_targets(target_filename: Optional[str]) -> Optional[pd.DataFrame]:
         raise HTTPException(status_code=500, detail=f"목표 파일 로드 실패: {e}")
 
 
+# 브랜드별 목표 파일 (월/브랜드/목표) — '전사' 시트에서 추출, 전사(전 파트) 기준.
+# 브랜드 종합 요약 라인의 목표비(part=all)용. 마이비/누비/쏭레브/데일리케어/에코보만 존재.
+# 업로드 런타임 데이터가 아닌 추출 레퍼런스라 코드와 함께 git 추적되는 경로(api/)에 둠 → 배포 시 git pull로 반영.
+BRAND_TARGETS_FILE = os.path.join(BASE_DIR, "brand_targets.csv")
+
+
+def _load_brand_targets() -> dict:
+    """{ 'YYYY-MM': { 브랜드: 목표(원) } } 반환. 파일 없으면 빈 dict."""
+    if not os.path.exists(BRAND_TARGETS_FILE):
+        return {}
+    try:
+        df = None
+        for enc in ["utf-8-sig", "utf-8", "cp949", "euc-kr"]:
+            try:
+                df = pd.read_csv(BRAND_TARGETS_FILE, encoding=enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        if df is None:
+            return {}
+        df.columns = df.columns.astype(str).str.strip()
+        if not {"월", "브랜드", "목표"}.issubset(set(df.columns)):
+            return {}
+        df["월"] = df["월"].astype(str).str.strip()
+        df["브랜드"] = df["브랜드"].astype(str).str.strip()
+        df["목표"] = pd.to_numeric(df["목표"], errors="coerce").fillna(0)
+        out: dict = {}
+        for _, row in df.iterrows():
+            out.setdefault(row["월"], {})[row["브랜드"]] = float(row["목표"])
+        return out
+    except Exception:
+        logging.exception("브랜드 목표 파일 로드 실패")
+        return {}
+
+
 # ---------- endpoints ----------
 
 @router.get("/months/")
@@ -257,6 +292,8 @@ def get_summary(
         return list(reversed(out))
 
     last12 = _months_back(month, 12)
+    # 브랜드 트렌드(chart4)는 전년 동월 비교(전년비)를 위해 13개월: 대상월-12 ~ 대상월
+    last13 = _months_back(month, 13)
 
     # ----- chart2: 전년비 트렌드 — 직전 12개월 vs 같은 기간 1년 전 -----
     chart2 = []
@@ -317,8 +354,9 @@ def get_summary(
     }
 
     # ----- 공통 헬퍼: 카테고리별 trailing 12개월 집계 -----
-    def _trailing_series(category_frames: list, name: str) -> dict:
-        """N개 카테고리 frame 리스트 → trailing 12개월 line chart 데이터"""
+    def _trailing_series(category_frames: list, name: str, periods: list = None) -> dict:
+        """N개 카테고리 frame 리스트 → trailing line chart 데이터 (기본 12개월, periods로 조정)"""
+        months_iter = periods if periods is not None else last12
         return {
             "title": name,
             "data": [
@@ -329,7 +367,7 @@ def get_summary(
                         for f in category_frames
                     ],
                 }
-                for y, m in last12
+                for y, m in months_iter
             ],
         }
 
@@ -379,12 +417,12 @@ def get_summary(
     # colors는 프론트가 getMultiSeriesStyle 팔레트로 대체 → 길이 맞춰 placeholder만 전달
     brand_colors = ["#000000"] * len(brand_names)
 
-    # chart4: 브랜드별 매출 트렌드 (라인, 5-series, trailing 12개월)
+    # chart4: 브랜드별 매출 트렌드 (라인, N-series, 13개월=대상월-12~대상월, 전년비용)
     chart4 = {
         "title": "브랜드별 매출 트렌드",
         "series_names": brand_names,
         "colors": brand_colors,
-        "data": _trailing_series(brand_frames, "")["data"],
+        "data": _trailing_series(brand_frames, "", periods=last13)["data"],
     }
 
     # chart5: 브랜드별 매출 비중 (파이, 최근 12개월 합계)
@@ -616,6 +654,10 @@ def get_summary(
     }
     channel_issue[part] = _build_channel_issue(df_part)
 
+    # 브랜드 종합 요약 라인용 — 대상 월의 브랜드별 목표(전사 기준).
+    # 전사(전 파트) 목표라 part=all에서만 의미 → 그 외 파트는 빈 dict(목표비 "-").
+    brand_targets = _load_brand_targets().get(month, {}) if part == "all" else {}
+
     return {
         "month": month,
         "part": part,
@@ -625,6 +667,7 @@ def get_summary(
         "chart4": chart4,
         "chart5": chart5,
         "chart6": chart6,
+        "brand_targets": brand_targets,
         "chart10": chart10,
         "chart12": chart12,
         "chart14": chart14,

@@ -44,7 +44,9 @@ interface Props {
   editMode: boolean;
 }
 
-const toMan = (v: number) => Math.round(v / 1_000_000);
+// 만원 단위 (천원 자리에서 반올림). 채널 이슈 섹션은 품목(S열)처럼 100만원 미만 항목이 많아
+// 백만원 반올림(÷1,000,000)이면 0/1로 뭉개지므로 만원 단위로 해상도를 높임. (error.md §45)
+const toMan = (v: number) => Math.round(v / 10_000);
 const shortLabel = (m: string) => {
   const t = m.match(/^(\d{4})-(\d{2})$/);
   return t ? `${t[1].slice(-2)}.${t[2]}` : m;
@@ -266,7 +268,7 @@ function MiniLineChart({
               <YAxis stroke="#5d5d5d" tick={{ fontSize: 10 }} axisLine={{ stroke: "#c4c4c4" }} />
               <Tooltip
                 contentStyle={{ border: "1px solid #c4c4c4", borderRadius: 2, fontSize: 12 }}
-                formatter={(v: number, name: string) => [`${v.toLocaleString()} 백만`, name]}
+                formatter={(v: number, name: string) => [`${v.toLocaleString()} 만원`, name]}
               />
               <Legend wrapperStyle={{ fontSize: 10 }} itemSorter={null} iconType="plainline" />
               {selectedSeries.map((it, i) => {
@@ -388,7 +390,7 @@ export default function ChannelIssueSection({
               </div>
               <MiniLineChart
                 title="거래처별 매출 트렌드"
-                subtitle={`최근 12개월 (백만) · 채널(P열) + 거래처(R열)${
+                subtitle={`최근 12개월 (만원) · 채널(P열) + 거래처(R열)${
                   gm.group.channels.length > 0 ? "" : " · 채널 미지정 → 빈 데이터"
                 }`}
                 model={gm.vendor}
@@ -400,7 +402,7 @@ export default function ChannelIssueSection({
               />
               <MiniLineChart
                 title="브랜드별 매출 트렌드"
-                subtitle="최근 12개월 (백만) · 브랜드(D열) + 상품(S열)"
+                subtitle="최근 12개월 (만원) · 브랜드(D열) + 상품(S열)"
                 model={gm.brand}
                 selected={gm.group.brandSelection}
                 months={months}

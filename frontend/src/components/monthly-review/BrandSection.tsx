@@ -145,7 +145,7 @@ export default function BrandSection({
 
       {/* 실적 요약 — 브랜드 전체(백만) + 선택 주요 상품별(만원). 목표비 제외(목표 미보유) */}
       {summary && (
-        <div className="mb-3 space-y-0.5">
+        <div className="mb-3">
           <p className="text-[13px] text-black">
             실적 : <span className="font-bold">{Math.round(summary.actual / 1_000_000).toLocaleString()}</span> 백만{" "}
             <span className="text-[#5d5d5d]">
@@ -153,16 +153,19 @@ export default function BrandSection({
               {fmtGrowth(summary.actual, summary.prev3Avg)} , 전년비 {fmtGrowth(summary.actual, summary.prevYear)})
             </span>
           </p>
-          {productSummaries.map(({ name, s }) => (
-            <p key={name} className="text-[13px] text-black">
-              <span className="font-bold">{name}</span> 실적 :{" "}
-              <span className="font-bold">{Math.round(s!.actual / 10_000).toLocaleString()}</span> 만원{" "}
-              <span className="text-[#5d5d5d]">
-                (전월비 {fmtGrowth(s!.actual, s!.prevMonth)} , 직전 3개월비 {fmtGrowth(s!.actual, s!.prev3Avg)} , 전년비{" "}
-                {fmtGrowth(s!.actual, s!.prevYear)})
-              </span>
-            </p>
-          ))}
+          {/* 브랜드 전체 ↔ 상품 요약 사이 한 줄 간격 */}
+          <div className="mt-3 space-y-0.5">
+            {productSummaries.map(({ name, s }) => (
+              <p key={name} className="text-[13px] text-black">
+                <span className="font-bold">{name}</span> 실적 :{" "}
+                <span className="font-bold">{Math.round(s!.actual / 10_000).toLocaleString()}</span> 만원{" "}
+                <span className="text-[#5d5d5d]">
+                  (전월비 {fmtGrowth(s!.actual, s!.prevMonth)} , 직전 3개월비 {fmtGrowth(s!.actual, s!.prev3Avg)} , 전년비{" "}
+                  {fmtGrowth(s!.actual, s!.prevYear)})
+                </span>
+              </p>
+            ))}
+          </div>
         </div>
       )}
 

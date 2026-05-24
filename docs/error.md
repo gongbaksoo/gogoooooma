@@ -1137,8 +1137,33 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 
 ---
 
+## 44. 운영 매출 파일이 배포 때마다 유실 — `metadata.db`가 git에 추적됨
+
+작성일: 2026-05-23 (29회차)
+
+### 🚨 증상
+- 사용자: "새 파일 업로드하고 새로고침하니 새로 올린 파일만 보이고 기존 파일은 안 보인다", "왜 자꾸 매출 자료가 사라지나".
+- 운영 `GET /api/files/`가 방금 올린 1건만 반환. 로컬 DB에는 정상적으로 존재 → 운영에서만 발생.
+
+### 🧭 원인
+- 업로드 파일은 BLOB으로 **`api/metadata.db`(SQLite)** 에 저장되는데, **이 DB 파일이 git에 추적**되고 있었음(`git ls-files` 확인). 저장소 커밋본(HEAD)의 `uploaded_files` 테이블은 **0행**(마지막 커밋 `517e551 "Railway deployment"`).
+- 운영 백엔드(맥미니)를 배포할 때마다 코드를 받아오며(`git pull`/checkout) **빈 DB가 운영 DB를 덮어써서** 그 안의 업로드 파일이 전부 유실됨. 최근 AI 분석 기능으로 여러 번 배포 → 매 배포마다 사라짐("자꾸").
+- `.gitignore`는 존재하지 않는 경로 `backend/uploads/...`만 무시하고 있어, 실제 경로 `api/uploads`·`api/metadata.db`는 한 번도 무시되지 않았음. (본 문서 "향후 권장 사항 #1"에 이미 동일 권장이 있었으나 미조치 상태에서 사고로 이어짐.)
+
+### ✅ 해결
+- `git rm --cached api/metadata.db`, `git rm --cached -r api/uploads`(디스크 파일은 보존, `.gitkeep`만 재추가)로 **git 추적 제외**.
+- `.gitignore`의 `backend/uploads` 룰을 실제 경로로 교정: `api/uploads/*`(+`targets/*`, `!.gitkeep`), `api/metadata.db`, `api/*.db` 등록. 커밋 `ee440ec` 푸시.
+- 맥미니 안전 반영(추적 파일 삭제 커밋이 pull 시 운영 DB를 지울 수 있으므로): **① 운영 `metadata.db`·`uploads` 백업 → ② `git pull` → ③ pull이 metadata.db를 삭제하면 백업에서 복원 → ④ 재기동·`curl /api/files/` 검증**. 맥미니에 더 많은 파일이 든 옛 DB 백업은 없어, 유실 파일은 노트북 디스크에 보존돼 있던 `260210_2.csv`·`260519.csv`를 운영으로 재업로드(`curl -F file=@...`)하여 복구.
+
+### 💡 향후 권장
+1. **런타임/사용자 데이터는 절대 git에 두지 않는다** — DB 파일(`*.db`)·업로드 디렉토리는 소스가 아니라 운영 데이터. 신규 생성 즉시 `.gitignore`에 등록하고 `git ls-files`로 추적 여부를 점검. 이미 추적 중이면 `git rm --cached`로 즉시 제외.
+2. **추적 해제 커밋은 배포처 데이터를 지울 수 있다** — 추적되던 파일을 삭제하는 커밋을 다른 클론이 pull하면 working tree 파일이 삭제될 수 있음. 운영 반영 전 **반드시 백업 → pull → 필요 시 복원** 순서 준수(`§22` 배포 SOP와 병행).
+3. **`.gitignore` 경로 실재 검증** — 룰 작성 시 실제 디렉토리 경로(`api/` vs `backend/`)가 맞는지 확인. 잘못된 경로 룰은 아무것도 막지 못함(`§29`와 동류).
+
+---
+
 ## 향후 권장 사항
-1. **`api/metadata.db`를 `.gitignore`에 추가** — 동적 DB 파일이 git에 추적되어 매 부팅마다 변경분 발생 (file_hash 백필 등). 이번에도 관련 변경이 발생함.
+1. ~~**`api/metadata.db`를 `.gitignore`에 추가**~~ — ✅ **2026-05-23 29회차에 조치 완료**(`§44`). 미조치 기간 동안 배포 시 운영 업로드 파일이 유실되는 사고가 실제 발생함. 동적 DB 파일이 git에 추적되면 매 부팅·배포마다 변경분/유실 발생.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
 3. **TCC 안정 위치 권장** — 향후 작업은 `~/Projects` 등 권한 트러블이 적은 위치에서 진행.
 4. **디자인 시스템 전환 SOP** — 캡처 1대1이 아니라, ① 컴포넌트 리스트 합의 → ② 토큰 정의 → ③ grep 기반 일괄 치환 → ④ 잔여 수동 수정 → ⑤ 캡처 검증 순서로 진행하면 라운드 수 감소.
@@ -1167,3 +1192,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 27. **카드 높이 일치는 외곽 실측으로** — footer/부가 라인 있는 카드는 차트 height만 맞추지 말고 `getBoundingClientRect`로 카드 외곽 측정 후 역산, "작다/크다" 반복 시 추측 말고 먼저 측정 (§41 권장 1·2번 참조).
 28. **신규 UI 작성 전 디자인 규약 선확인 (이모지 금지)** — 버튼/라벨/카피 신규 작성 시 `design_document.md` 디자인 규약을 먼저 읽고 적용, 이모지는 전면 금지 (§42 권장 1번 참조).
 29. **인접 버튼은 disabled 상태까지 일치 검토** — 나란히 둘 버튼은 enabled·disabled(opacity 등) 외형을 모두 맞추고, 한쪽만 비활성될 수 있으면 비활성 표현을 버튼 밖으로 이전 (§43 권장 1번 참조).
+30. **런타임/사용자 데이터 git 추적 금지** — DB 파일(`*.db`)·업로드 디렉토리는 소스가 아닌 운영 데이터. 즉시 `.gitignore` 등록 + `git ls-files` 점검, 이미 추적 중이면 `git rm --cached`. 추적 해제 커밋의 운영 반영은 백업→pull→복원 순서 (§44 권장 1·2·3번 참조).

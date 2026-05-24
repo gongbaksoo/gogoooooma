@@ -34,7 +34,8 @@ sales-analysis-site/
 │   ├── index.py                  # API 라우터 (엔드포인트 정의)
 │   ├── dashboard.py              # 핵심 비즈니스 로직 (매출 계산)
 │   ├── monthly_review.py         # 월 리뷰 집계 로직 ⭐ NEW
-│   ├── uploads/                  # 업로드된 CSV/XLSX 파일 저장
+│   ├── metadata.db               # SQLite — 업로드 파일 BLOB 저장 ⚠️ git 추적 금지(운영 런타임 데이터)
+│   ├── uploads/                  # 업로드 파일 디스크 fallback ⚠️ git 추적 금지(.gitkeep만 추적)
 │   │   ├── cache/                # Parquet 캐시 파일
 │   │   └── targets/              # 월 리뷰용 목표 파일 ⭐ NEW
 │   └── verify_daily_api.py       # API 검증 스크립트
@@ -70,6 +71,8 @@ sales-analysis-site/
 - CSV/XLSX 파일 업로드 (`/api/upload`)
 - 업로드된 파일 목록 조회
 - 파일 선택 시 대시보드 자동 로드
+- **저장 구조**: 업로드 파일은 SQLite `api/metadata.db`의 `uploaded_files` 테이블에 **BLOB으로 저장**(DB 불가 시 `api/uploads/` 디스크 fallback). 목록은 `list_files_in_db()`(최신순), 최대 5건 유지(`cleanup_old_files_in_db`).
+- ⚠️ **운영 데이터 git 추적 금지 (2026-05-23 29회차)**: `metadata.db`·`api/uploads/` 데이터 파일은 **소스가 아니라 운영 런타임 데이터**다. git에 추적되면 배포(`git pull`) 때 저장소의 빈/구버전 DB로 **덮어써져 업로드가 전부 유실**된다(실제 발생, `docs/error.md §44`). `.gitignore`에 등록되어 있어야 하며, `.gitkeep`만 추적한다.
 
 ### 4.2 월간 매출 현황 보고서 (SalesSummary)
 - **API**: `/api/dashboard/summary`

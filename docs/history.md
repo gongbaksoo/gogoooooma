@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-05-23 (29회차) — 운영 매출 파일 유실 버그 수정 (metadata.db git 추적 제외)
+
+### 1. 배경 / 증상
+- 사용자: "새 파일 업로드 후 새로고침하니 새로 올린 파일만 보이고 기존 파일은 안 보인다", "왜 자꾸 매출 자료가 사라지나".
+- 운영 `GET /api/files/`가 방금 올린 1건(`260522.csv`)만 반환. 로컬 DB에는 2건 정상 존재 → 운영에서만 반복 발생하는 데이터 유실.
+
+### 2. 원인 규명
+- 업로드 파일은 BLOB으로 **SQLite `api/metadata.db`** 에 저장(`save_file_to_db`)되고 목록은 `list_files_in_db()`로 반환. DB 불가 시 `api/uploads/` 디스크 fallback.
+- **`api/metadata.db`가 git에 추적**되고 있었고(`git ls-files` 확인), 커밋본(HEAD)의 `uploaded_files`는 **0행**(마지막 커밋 `517e551`). 운영 배포(`git pull`) 때마다 **빈 DB가 운영 DB를 덮어써** 업로드가 전부 유실됨. 최근 AI 기능으로 여러 번 배포 → "자꾸" 사라짐.
+- `.gitignore`가 실재하지 않는 `backend/uploads` 경로만 무시 → `api/uploads`·`api/metadata.db`는 한 번도 무시된 적 없음. (error.md "향후 권장 #1"에 이미 동일 권장이 있었으나 미조치.)
+
+### 3. 조치 — 재발 방지 (커밋 `ee440ec`)
+- `git rm --cached api/metadata.db`, `git rm --cached -r api/uploads`(디스크 파일 보존, `.gitkeep`만 재추가) → **git 추적 제외**.
+- `.gitignore` 교정: `api/uploads/*`(+`targets/*`, `!.gitkeep`), `api/metadata.db`, `api/*.db` 등록. 잘못된 `backend/uploads` 룰 제거.
+
+### 4. 맥미니 안전 반영 + 데이터 복구
+- 추적 해제 커밋은 pull 시 운영 DB를 지울 수 있어, 맥미니에서 **① 백업(`metadata.db`·`uploads`) → ② `git pull` → ③ pull이 metadata.db 삭제 시 백업 복원 → ④ `launchctl kickstart` 재기동 → ⑤ `curl /api/files/` 검증** 순으로 진행(맥미니 AI 수행).
+- 맥미니에 더 많은 파일이 든 옛 DB 백업은 없음. 유실 파일은 노트북 디스크에 보존돼 있던 `260210_2.csv`·`260519.csv`를 운영으로 **재업로드**(`curl -F file=@...`)하여 복구. 현재 운영 목록 = `260519.csv`·`260210_2.csv`·`260522.csv` 3건 정상.
+
+### 5. 에러/시행착오
+- **§44**: 운영 매출 파일이 배포마다 유실 — `metadata.db` git 추적이 근본 원인. 향후 권장: 런타임/사용자 데이터 git 추적 금지 + 추적 해제 커밋은 백업→pull→복원.
+- 이번 건은 코드 로직이 아닌 git 추적 설정 결함 → `metadata.db` 본문(BLOB) 변경은 없음.
+
+### 6. 문서
+- `project_plan.md`: 디렉토리 트리에 `metadata.db`·`uploads` 런타임 데이터 표기, §4.1에 저장 구조 + git 추적 금지 항목 추가.
+- `error.md`: §44 신규 + 향후 권장 #30 + 기존 권장 #1을 "조치 완료"로 갱신.
+- `history.md`: 본 29회차 entry.
+
+---
+
 ## 2026-05-21 (28회차) — 종합 섹션 AI 매출 분석 (Gemini)
 
 ### 1. 배경

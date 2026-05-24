@@ -720,14 +720,14 @@ export default function MonthlyReviewPage() {
                   <Chart4BrandTrend
                     chart4={summary.chart4}
                     editMode={editMode}
-                    selected={overviewSelections.brand[part]}
+                    selected={overviewSelections.brand[part] ?? summary.chart4.series_names.slice(0, 3)}
                     onSelectedChange={(next) => updateBrandOverviewSelection(part, next)}
                   />
                 ) },
                 { id: "chart5", el: (
                   <Chart5BrandShare
                     chart5={summary.chart5}
-                    selected={overviewSelections.brand[part]}
+                    selected={overviewSelections.brand[part] ?? summary.chart4.series_names.slice(0, 3)}
                   />
                 ) },
                 { id: "chart6", el: <Chart6BrandVsAvg chart6={summary.chart6} /> },

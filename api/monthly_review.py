@@ -358,14 +358,26 @@ def get_summary(
         return out
 
     # ----- 브랜드 분류 (df_part 기반: 파트 필터 적용 후) -----
-    # 메인 4: 마이비/누비/쏭레브/에코보 + 기타(나머지 품목그룹1)
+    # D열(품목그룹1) 실제 고유값을 개별 브랜드로 노출 (판매액 desc 정렬).
+    # 단, 비-브랜드 값(BRAND_ETC)과 빈값은 "기타" 한 칸으로 묶음.
+    # 프론트 수정 모달에서 전체 브랜드를 선택할 수 있고, 기본은 상위 3개만 표시(프론트 처리).
     if "품목그룹1" not in df.columns:
         raise HTTPException(status_code=400, detail="CSV에 '품목그룹1' 컬럼이 없습니다.")
-    BRAND_MAIN = ["마이비", "누비", "쏭레브", "에코보"]
-    brand_frames = [df_part[df_part["품목그룹1"] == b] for b in BRAND_MAIN]
-    brand_frames.append(df_part[~df_part["품목그룹1"].isin(BRAND_MAIN)])
-    brand_names = BRAND_MAIN + ["기타"]
-    brand_colors = ["#000000", "#5d5d5d", "#7d7d7d", "#9d9d9d", "#b8b8b8"]
+    BRAND_ETC = ["기타(타사)", "부자재(공통)", "구브랜드"]
+    _g1 = df_part["품목그룹1"]
+    _is_etc = _g1.isna() | _g1.isin(BRAND_ETC) | (_g1.astype(str).str.strip() == "")
+    brand_individual = (
+        df_part[~_is_etc]
+        .groupby("품목그룹1")["판매액"]
+        .sum()
+        .sort_values(ascending=False)
+        .index.tolist()
+    )
+    brand_frames = [df_part[df_part["품목그룹1"] == b] for b in brand_individual]
+    brand_frames.append(df_part[_is_etc])  # 기타: BRAND_ETC + 빈값
+    brand_names = brand_individual + ["기타"]
+    # colors는 프론트가 getMultiSeriesStyle 팔레트로 대체 → 길이 맞춰 placeholder만 전달
+    brand_colors = ["#000000"] * len(brand_names)
 
     # chart4: 브랜드별 매출 트렌드 (라인, 5-series, trailing 12개월)
     chart4 = {

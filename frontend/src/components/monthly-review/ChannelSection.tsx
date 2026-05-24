@@ -24,7 +24,8 @@ import { getMultiSeriesStyle } from "@/lib/chartPalette";
 interface ChannelOption {
   name: string;
   row_count: number;
-  values: number[]; // 12개월
+  values: number[]; // 12개월 (비중 파이·월평균용)
+  values13?: number[]; // 13개월 (트렌드·전년비용, 대상월-12~대상월)
   monthly_avg: number;
   current_month: number;
 }
@@ -32,7 +33,8 @@ interface ChannelOption {
 interface Props {
   part: Part;
   options: ChannelOption[];
-  months: string[]; // 12개월 라벨
+  months: string[]; // 12개월 라벨 (비중·월평균용)
+  months13: string[]; // 13개월 라벨 (트렌드용)
   selected: string[];
   onSelectedChange: (next: string[]) => void;
   editMode: boolean;
@@ -44,7 +46,7 @@ const shortLabel = (m: string) => {
   return t ? `${t[1].slice(-2)}.${t[2]}` : m;
 };
 
-export default function ChannelSection({ part, options, months, selected, onSelectedChange, editMode }: Props) {
+export default function ChannelSection({ part, options, months, months13, selected, onSelectedChange, editMode }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
 
   // 선택된 옵션만 추출 — 사용자가 정한 selected 순서 그대로 (표시 우선순위)
@@ -58,13 +60,35 @@ export default function ChannelSection({ part, options, months, selected, onSele
   const styles = selectedOptions.map((_, i) => getMultiSeriesStyle(i));
   const colors = styles.map((s) => s.stroke);
 
-  // 트렌드 데이터
-  const trendData = months.map((m, idx) => {
+  // 13개월 시계열(values13) 기준 채널 라벨 — 트렌드 차트용. 백엔드 미배포 폴백: 12개월.
+  const trendMonths = months13.length ? months13 : months;
+  const seriesOf = (o: ChannelOption) => (o.values13 && o.values13.length ? o.values13 : o.values);
+  // 트렌드 데이터 (13개월)
+  const trendData = trendMonths.map((m, idx) => {
     const row: Record<string, string | number> = { month: shortLabel(m) };
     selectedOptions.forEach((o) => {
-      row[o.name] = toMan(o.values[idx] ?? 0);
+      row[o.name] = toMan(seriesOf(o)[idx] ?? 0);
     });
     return row;
+  });
+
+  // 헤더 아래 채널별 실적 요약 (백만). 13개월 시계열: 마지막=당월, [0]=전년 동월. 목표비 제외.
+  const fmtGrowth = (actual: number, base: number | null) => {
+    if (base == null || base <= 0) return "-";
+    const g = ((actual - base) / base) * 100;
+    return `${g >= 0 ? "▲" : "▼"}${Math.abs(g).toFixed(1)}%`;
+  };
+  const channelSummaries = selectedOptions.map((o) => {
+    const vals = seriesOf(o);
+    const n = vals.length;
+    const actual = vals[n - 1] ?? 0;
+    return {
+      name: o.name,
+      actual,
+      prevMonth: n >= 2 ? vals[n - 2] : null,
+      prev3Avg: n >= 4 ? (vals[n - 2] + vals[n - 3] + vals[n - 4]) / 3 : null,
+      prevYear: n >= 13 ? vals[0] : null,
+    };
   });
 
   // 비중 파이
@@ -109,6 +133,22 @@ export default function ChannelSection({ part, options, months, selected, onSele
         )}
       </div>
 
+      {/* 채널별 실적 요약 — 선택 채널별 한 줄(백만), 목표비 제외 (채널 목표 미보유) */}
+      {channelSummaries.length > 0 && (
+        <div className="mb-3 space-y-0.5">
+          {channelSummaries.map((c) => (
+            <p key={c.name} className="text-[13px] text-black">
+              <span className="font-bold">{c.name}</span> 실적 :{" "}
+              <span className="font-bold">{Math.round(c.actual / 1_000_000).toLocaleString()}</span> 백만{" "}
+              <span className="text-[#5d5d5d]">
+                (전월비 {fmtGrowth(c.actual, c.prevMonth)} , 직전 3개월비 {fmtGrowth(c.actual, c.prev3Avg)} , 전년비{" "}
+                {fmtGrowth(c.actual, c.prevYear)})
+              </span>
+            </p>
+          ))}
+        </div>
+      )}
+
       {selectedOptions.length === 0 ? (
         <div className="text-center text-[13px] text-[#5d5d5d] py-12 border border-[#c4c4c4]">
           표시할 채널을 선택해주세요
@@ -119,7 +159,7 @@ export default function ChannelSection({ part, options, months, selected, onSele
           <div className="bg-white border border-[#c4c4c4] p-5">
             <div className="flex items-baseline justify-between mb-1">
               <h3 className="text-[15px] font-bold text-black">채널별 매출 트렌드</h3>
-              <span className="text-[12px] text-[#5d5d5d]">최근 12개월 (백만)</span>
+              <span className="text-[12px] text-[#5d5d5d]">최근 13개월 (백만)</span>
             </div>
             <div key={`trend-${part}-${selected.join("|")}`}>
               <ResponsiveContainer width="100%" height={260}>

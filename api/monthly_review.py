@@ -453,15 +453,20 @@ def get_summary(
         raise HTTPException(status_code=400, detail="CSV에 '채널구분' 컬럼이 없습니다.")
 
     last12_yymm_set = [f"{str(y)[-2:]}{str(m).zfill(2)}" for y, m in last12]
+    last13_yymm_set = [f"{str(y)[-2:]}{str(m).zfill(2)}" for y, m in last13]
 
     def _option_from_frame(name: str, f: pd.DataFrame) -> dict:
-        """단일 옵션 = name + row_count + 12개월 values + monthly_avg + current_month"""
-        values = [float(f[f["월구분"] == yymm]["판매액"].sum()) for yymm in last12_yymm_set]
+        """단일 옵션 = name + row_count + 12개월 values(비중·월평균용) + 13개월 values13(트렌드·요약 전년비용) + monthly_avg + current_month"""
+        # 월별 집계 1회 후 12·13개월 슬라이스 (전년 동월 포함 13개월은 트렌드·전년비 전용)
+        month_sum = f.groupby("월구분")["판매액"].sum()
+        values = [float(month_sum.get(yymm, 0.0)) for yymm in last12_yymm_set]
+        values13 = [float(month_sum.get(yymm, 0.0)) for yymm in last13_yymm_set]
         total_12 = sum(values)
         return {
             "name": name,
             "row_count": int(len(f)),
             "values": values,
+            "values13": values13,
             "monthly_avg": total_12 / 12 if values else 0.0,
             "current_month": float(f[f["월구분"] == target_yymm]["판매액"].sum()),
         }
@@ -680,6 +685,7 @@ def get_summary(
         "channel_options": channel_options,
         "channel_defaults": channel_defaults,
         "channel_months": last12_labels,
+        "channel_months13": last13_labels,
         "channel_issue": channel_issue,
         "channel_issue_months": last12_labels,
     }

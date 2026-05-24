@@ -94,11 +94,13 @@ interface SummaryResponse {
     name: string;
     row_count: number;
     values: number[];
+    values13?: number[];
     monthly_avg: number;
     current_month: number;
   }[]>;
   channel_defaults: Record<"all" | "ecommerce" | "offline", string[]>;
   channel_months: string[];
+  channel_months13?: string[];
   channel_issue: Record<"all" | "ecommerce" | "offline", {
     channels: {
       name: string;
@@ -875,6 +877,7 @@ export default function MonthlyReviewPage() {
                     part={part}
                     options={summary.channel_options[part] ?? []}
                     months={summary.channel_months}
+                    months13={summary.channel_months13 ?? summary.channel_months}
                     selected={channelSelections[part]}
                     onSelectedChange={(next) => updateChannelSelection(part, next)}
                     editMode={editMode}

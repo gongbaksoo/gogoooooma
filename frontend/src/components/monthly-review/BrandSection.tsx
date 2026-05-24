@@ -38,7 +38,10 @@ interface Props {
   editMode: boolean;
 }
 
-const toMan = (v: number) => Math.round(v / 1_000_000);
+// 브랜드 종합 트렌드는 집계값(수백만~수천만)이라 백만원 단위.
+const toMillion = (v: number) => Math.round(v / 1_000_000);
+// 품목(상품) 차트는 100만원 미만 항목이 많아 백만 반올림이면 0/1로 뭉개지므로 만원 단위(천원 반올림). (error.md §45)
+const toManWon = (v: number) => Math.round(v / 10_000);
 const shortLabel = (m: string) => {
   const t = m.match(/^(\d{4})-(\d{2})$/);
   return t ? `${t[1].slice(-2)}.${t[2]}` : m;
@@ -75,7 +78,7 @@ export default function BrandSection({
     const data = months.map((m, idx) => {
       const row: Record<string, string | number> = { month: shortLabel(m) };
       selected.forEach((p) => {
-        row[p.name] = toMan(p.values[idx] ?? 0);
+        row[p.name] = toManWon(p.values[idx] ?? 0);
       });
       return row;
     });
@@ -86,7 +89,7 @@ export default function BrandSection({
   // 종합 트렌드 차트 데이터
   const totalData = totalChart.data.map((d) => ({
     month: shortLabel(d.month),
-    [brand]: toMan(d.values[0] ?? 0),
+    [brand]: toMillion(d.values[0] ?? 0),
   }));
 
   // 개별 상품 차트들 (selection.individual 순서대로)
@@ -161,7 +164,7 @@ export default function BrandSection({
                   <YAxis stroke="#5d5d5d" tick={{ fontSize: 11 }} axisLine={{ stroke: "#c4c4c4" }} />
                   <Tooltip
                     contentStyle={{ border: "1px solid #c4c4c4", borderRadius: 2, fontSize: 12 }}
-                    formatter={(v: number, name: string) => [`${v.toLocaleString()} 백만`, name]}
+                    formatter={(v: number, name: string) => [`${v.toLocaleString()} 만원`, name]}
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} itemSorter={null} iconType="plainline" />
                   {mainLineData.names.map((name, i) => {
@@ -195,7 +198,7 @@ export default function BrandSection({
         {individualProducts.map((p) => {
           const data = months.map((m, idx) => ({
             month: shortLabel(m),
-            [p.name]: toMan(p.values[idx] ?? 0),
+            [p.name]: toManWon(p.values[idx] ?? 0),
           }));
           return (
             <div key={p.name} className="bg-white border border-[#c4c4c4] p-4">
@@ -220,7 +223,7 @@ export default function BrandSection({
                     <YAxis stroke="#5d5d5d" tick={{ fontSize: 10 }} axisLine={{ stroke: "#c4c4c4" }} />
                     <Tooltip
                       contentStyle={{ border: "1px solid #c4c4c4", borderRadius: 2, fontSize: 12 }}
-                      formatter={(v: number, name: string) => [`${v.toLocaleString()} 백만`, name]}
+                      formatter={(v: number, name: string) => [`${v.toLocaleString()} 만원`, name]}
                     />
                     <Line type="monotone" dataKey={p.name} stroke="#000000" strokeWidth={2} dot={{ r: 1.5 }} animationDuration={1500} animationEasing="ease-out" />
                   </LineChart>

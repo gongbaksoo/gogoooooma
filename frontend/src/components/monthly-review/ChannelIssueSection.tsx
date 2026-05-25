@@ -350,13 +350,6 @@ export default function ChannelIssueSection({
     };
   }, [editing, groupModels]);
 
-  const gridCols =
-    groups.length === 1
-      ? "grid-cols-1"
-      : groups.length === 2
-      ? "grid-cols-1 lg:grid-cols-2"
-      : "grid-cols-1 lg:grid-cols-3";
-
   return (
     <>
       <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#c4c4c4]">
@@ -377,10 +370,10 @@ export default function ChannelIssueSection({
           해당 파트에 P열 채널구분 값이 없습니다.
         </div>
       ) : (
-        <div className={`grid ${gridCols} gap-4`}>
+        <div className="flex flex-col gap-8">
           {groupModels.map((gm) => (
-            <div key={gm.group.id} className="flex flex-col gap-3">
-              <div className="text-[12px] font-bold text-[#5d5d5d] uppercase tracking-wide pb-1 border-b border-dashed border-[#c4c4c4]">
+            <div key={gm.group.id}>
+              <div className="text-[12px] font-bold text-[#5d5d5d] uppercase tracking-wide pb-1 mb-3 border-b border-dashed border-[#c4c4c4]">
                 {gm.group.name}
                 {gm.group.channels.length === 0 && (
                   <span className="ml-2 text-[10px] font-normal text-[#ff0066]">
@@ -388,28 +381,31 @@ export default function ChannelIssueSection({
                   </span>
                 )}
               </div>
-              <MiniLineChart
-                title="거래처별 매출 트렌드"
-                subtitle={`최근 12개월 (만원) · 채널(P열) + 거래처(R열)${
-                  gm.group.channels.length > 0 ? "" : " · 채널 미지정 → 빈 데이터"
-                }`}
-                model={gm.vendor}
-                selected={gm.group.vendorSelection}
-                months={months}
-                onEdit={() => setEditing({ groupId: gm.group.id, kind: "vendor" })}
-                editLabel="표시 거래처 수정"
-                editMode={editMode}
-              />
-              <MiniLineChart
-                title="브랜드별 매출 트렌드"
-                subtitle="최근 12개월 (만원) · 브랜드(D열) + 상품(S열)"
-                model={gm.brand}
-                selected={gm.group.brandSelection}
-                months={months}
-                onEdit={() => setEditing({ groupId: gm.group.id, kind: "brand" })}
-                editLabel="표시 브랜드 수정"
-                editMode={editMode}
-              />
+              {/* 그룹 내부: 거래처별 | 브랜드별 트렌드 2열 나란히 */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <MiniLineChart
+                  title="거래처별 매출 트렌드"
+                  subtitle={`최근 12개월 (만원) · 채널(P열) + 거래처(R열)${
+                    gm.group.channels.length > 0 ? "" : " · 채널 미지정 → 빈 데이터"
+                  }`}
+                  model={gm.vendor}
+                  selected={gm.group.vendorSelection}
+                  months={months}
+                  onEdit={() => setEditing({ groupId: gm.group.id, kind: "vendor" })}
+                  editLabel="표시 거래처 수정"
+                  editMode={editMode}
+                />
+                <MiniLineChart
+                  title="브랜드별 매출 트렌드"
+                  subtitle="최근 12개월 (만원) · 브랜드(D열) + 상품(S열)"
+                  model={gm.brand}
+                  selected={gm.group.brandSelection}
+                  months={months}
+                  onEdit={() => setEditing({ groupId: gm.group.id, kind: "brand" })}
+                  editLabel="표시 브랜드 수정"
+                  editMode={editMode}
+                />
+              </div>
             </div>
           ))}
         </div>

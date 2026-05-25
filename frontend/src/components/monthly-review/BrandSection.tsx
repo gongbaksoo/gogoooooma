@@ -258,7 +258,7 @@ export default function BrandSection({
           }));
           return (
             <div key={p.name} className="bg-white border border-[#c4c4c4] p-4">
-              <div className="flex items-baseline justify-between mb-1">
+              <div className="flex items-baseline justify-between">
                 <h4 className="text-[13px] font-bold text-black truncate">{p.name}</h4>
                 {editMode && (
                   <button
@@ -271,6 +271,7 @@ export default function BrandSection({
                   </button>
                 )}
               </div>
+              <p className="text-[11px] text-[#5d5d5d] mb-1">13개월 (단위: 만)</p>
               <div key={`ind-${p.name}-${months.length}`}>
                 <ResponsiveContainer width="100%" height={140}>
                   <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>

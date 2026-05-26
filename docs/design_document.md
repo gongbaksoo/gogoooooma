@@ -38,6 +38,24 @@
 - 파일 업로드 / FileSelector 변경 시 `persistSelectedFile()`로 동기 저장.
 - SSR 안전: `typeof window !== "undefined"` 가드.
 
+#### 상태 영속성 (그래프 기간/날짜 — 기기 간 공유, 2026-05-26 35회차)
+> 선택 파일은 브라우저 `localStorage`(기기 한정)인 반면, **그래프 기간은 백엔드 저장 → 다른 기기/브라우저에서도 동일하게 복원**된다. (사용자 요구: "다른 기기에 접속해도 똑같이 유지")
+- 대상: 매출 분석 대시보드의 **날짜(기간) 선택이 있는 그래프 6종**. 월 리뷰는 대상 아님.
+  | chart_id | 컴포넌트 |
+  |---|---|
+  | `sales` | SalesChartNew |
+  | `channel` | ChannelSalesChartNew |
+  | `product-group` | ProductGroupChartNew |
+  | `detailed` | DetailedSalesChartNew |
+  | `product-search` | ProductSearchChart |
+  | `brand` | BrandAnalysisSection |
+- 저장 단위: **그래프별 독립**. 각 그래프가 마지막으로 설정한 `시작월~종료월`을 따로 기억.
+- 저장 매체: 백엔드 `dashboard_dates.json` (기존 `schema_aliases.json` 패턴 동일). 모든 기기가 같은 백엔드를 보므로 기기 간 공유 성립.
+- 프론트 헬퍼: `lib/dashboardDateStorage.ts` — 모듈 캐시 + 인플라이트 공유로 6개 그래프가 GET 1회만 호출. `loadDashboardDate(chartId)` / `saveDashboardDate(chartId, start, end)`.
+- 복원 규칙: 데이터 로드 시 저장값이 **현재 데이터의 월 목록에 모두 존재하고 start ≤ end**일 때만 복원, 아니면 기존 기본값(`첫 달~마지막 달`)으로 폴백 → 파일 교체 시 빈 그래프 방지.
+- 월/일 토글 차트(`channel`/`detailed`/`product-search`)는 **월 모드에서만** 저장·복원(일 모드 기존 동작 유지). 저장 범위는 **날짜(시작월·종료월)만** — 채널/브랜드/토글 등 다른 선택은 미저장.
+- 안전 폴백: 백엔드 미배포·오류 시 GET/POST 실패를 조용히 무시 → 그래프는 기본 동작 유지(앱 깨지지 않음).
+
 ### 2.3 월 리뷰 (`/monthly-review`) ⭐ NEW
 
 PPT 월간 리뷰 보고서를 화면에서 재현하고 PDF로 출력하는 정형 대시보드.

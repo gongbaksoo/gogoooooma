@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-05-26 (35회차) — 매출 분석 대시보드 그래프 기간(날짜) 기기 간 유지
+
+### 1. 배경 / 요청
+- 사용자: "최근에 설정했던 값(날짜)을 다음에 접속/새로고침해도 유지. **다른 기기에 접속해도 똑같이** 유지. 매출 분석 대시보드 안 모든 그래프 적용. 월 리뷰는 건들지 말 것."
+- 확인 질문 결과: 저장 단위는 **그래프마다 독립**(하나로 통일 아님).
+
+### 2. 파악 (코드 변경 전)
+- 매출 분석 대시보드(`/custom-dashboard`)에서 날짜 선택이 있는 그래프 **6종** 식별: SalesChartNew, ChannelSalesChartNew, ProductGroupChartNew, DetailedSalesChartNew, ProductSearchChart, BrandAnalysisSection. (SalesSummary·SalesAlerts는 날짜 없음 → 제외)
+- 각 그래프가 데이터 로드 시 `시작월~종료월`을 매번 `[첫 달~마지막 달]`로 리셋, 저장 없음.
+- "기기 간 유지" → localStorage(기기 한정) 불가 → **백엔드 저장 필수**로 설계 결정.
+
+### 3. 조치
+- **백엔드** (`api/index.py`): `dashboard_dates.json` 저장소 + `GET/POST /custom/dashboard-dates/` 추가(기존 `schema_aliases.json` load/save 패턴 재사용). 그래프별 `{chart_id: {start, end}}` 병합 저장.
+- **프론트 공용 헬퍼** (`frontend/src/lib/dashboardDateStorage.ts`, 신규): 모듈 캐시 + 인플라이트 공유로 6개 그래프가 GET 1회만 호출. `loadDashboardDate` / `saveDashboardDate`.
+- **그래프 6종**: `chart_id` 부여 + 데이터 로드 시 저장값 복원(유효성 검사: 현재 월 목록에 존재 & start ≤ end, 아니면 기본값 폴백) + 시작/종료 select 변경 시 저장. 월/일 토글 차트(`channel`/`detailed`/`product-search`)는 **월 모드에서만** 적용. 저장 범위 = **날짜만**.
+- **안전 폴백**: 백엔드 미배포·오류 시 GET/POST 실패를 조용히 무시 → 그래프 기본 동작 유지(앱 안 깨짐).
+
+### 4. 검증
+- 백엔드 `python3 -m py_compile index.py` 통과.
+- 프론트 `tsc --noEmit`: 수정/신규 파일 6+1개 타입 에러 없음(기존 monthly-review/details의 recharts 타입 경고는 무관, `next.config.js`가 `ignoreBuildErrors: true`).
+
+### 5. 문서 / 배포
+- `design_document §2.2`(그래프 기간 기기 간 공유 절 신설), `project_plan §4.8·§6`(엔드포인트 2종 추가), `error.md §50`+마스터 권장 #36(기기 간 유지=서버 저장, 분리 배포 폴백) 갱신.
+- 배포: 프론트 push → Vercel 자동. **백엔드는 맥미니에서 `git pull` + `com.avk.backend` 재시작 필요**(노트북에서 운영 백엔드 배포 불가). 백엔드 배포 전까지는 저장만 안 될 뿐 그래프는 정상.
+
+---
+
 ## 2026-05-25 (34회차) — 브랜드 상세 개별 상품 차트 단위 라벨 추가 (정합성 착시 해소)
 
 ### 1. 배경 / 요청

@@ -4,6 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
+import { loadDashboardDate, saveDashboardDate } from '@/lib/dashboardDateStorage';
+
+const CHART_ID = 'channel';
 
 interface ChannelSalesChartProps {
     filename: string | null;
@@ -169,8 +172,15 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
 
             // Initialize Date Range
             if (months.length > 0 && !startMonth && timeUnit === 'month') {
-                setStartMonth(months[0]);
-                setEndMonth(months[months.length - 1]);
+                // 월 모드: 저장된 기간이 유효하면 복원, 아니면 전체 범위
+                const saved = await loadDashboardDate(CHART_ID);
+                if (saved && months.includes(saved.start) && months.includes(saved.end) && saved.start <= saved.end) {
+                    setStartMonth(saved.start);
+                    setEndMonth(saved.end);
+                } else {
+                    setStartMonth(months[0]);
+                    setEndMonth(months[months.length - 1]);
+                }
             } else if (timeUnit === 'day' && !startMonth) {
                 const uniqueMonths = Array.from(new Set(months.map(d => d.substring(0, 7).replace('-', ''))));
                 if (uniqueMonths.length > 0) {
@@ -439,7 +449,7 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                         <div className="flex items-center gap-1 bg-white p-1 rounded border border-[#c4c4c4] w-full sm:w-auto justify-between">
                             <select
                                 value={startMonth}
-                                onChange={(e) => setStartMonth(e.target.value)}
+                                onChange={(e) => { setStartMonth(e.target.value); if (timeUnit === 'month') saveDashboardDate(CHART_ID, e.target.value, endMonth); }}
                                 className="bg-transparent text-xs font-bold text-slate-600 focus:outline-none p-1.5"
                             >
                                 {timeUnit === 'month'
@@ -460,7 +470,7 @@ const ChannelSalesChartNew: React.FC<ChannelSalesChartProps> = ({ filename }) =>
                             <span className="text-slate-300">~</span>
                             <select
                                 value={endMonth}
-                                onChange={(e) => setEndMonth(e.target.value)}
+                                onChange={(e) => { setEndMonth(e.target.value); if (timeUnit === 'month') saveDashboardDate(CHART_ID, startMonth, e.target.value); }}
                                 className="bg-transparent text-xs font-bold text-slate-600 focus:outline-none p-1.5"
                             >
                                 {timeUnit === 'month'

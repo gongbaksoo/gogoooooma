@@ -90,6 +90,7 @@ class ChatRequest(BaseModel):
 CONFIG_FILE = "security_config.json"
 ALIASES_FILE = "schema_aliases.json"
 AI_INSTRUCTIONS_FILE = "ai_instructions.json"
+DASHBOARD_DATES_FILE = "dashboard_dates.json"
 
 class AliasRequest(BaseModel):
     column: str
@@ -97,6 +98,11 @@ class AliasRequest(BaseModel):
 
 class InstructionsRequest(BaseModel):
     instructions: list[str]
+
+class DashboardDateRequest(BaseModel):
+    chart_id: str
+    start: str
+    end: str
 
 class SchemaAlias(BaseModel):
     column: str
@@ -142,6 +148,28 @@ def save_ai_instructions(instructions: list):
     except Exception as e:
         print(f"Error saving AI instructions: {e}")
         raise HTTPException(status_code=500, detail=f"AI 지침 저장 실패: {str(e)}")
+
+def load_dashboard_dates():
+    """대시보드 그래프별 날짜(기간) 설정 로드 → {chart_id: {"start": ..., "end": ...}}"""
+    if os.path.exists(DASHBOARD_DATES_FILE):
+        try:
+            import json
+            with open(DASHBOARD_DATES_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+    return {}
+
+def save_dashboard_dates(dates_data: dict):
+    """대시보드 그래프별 날짜(기간) 설정 저장"""
+    import json
+    try:
+        with open(DASHBOARD_DATES_FILE, "w", encoding="utf-8") as f:
+            json.dump(dates_data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"Error saving dashboard dates: {e}")
+        raise HTTPException(status_code=500, detail=f"대시보드 날짜 저장 실패: {str(e)}")
 
 def load_server_api_key():
     # First, try to load from environment variable (for Railway deployment)
@@ -462,6 +490,29 @@ def save_instructions(request: InstructionsRequest):
         return {"message": "지침이 저장되었습니다", "instructions": request.instructions}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"지침 저장 실패: {str(e)}")
+
+# ============================================
+# Dashboard Date Preferences Endpoints
+# ============================================
+
+@router.get("/custom/dashboard-dates/")
+def get_dashboard_dates():
+    """대시보드 그래프별 날짜(기간) 설정 전체 조회"""
+    try:
+        return load_dashboard_dates()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"대시보드 날짜 조회 실패: {str(e)}")
+
+@router.post("/custom/dashboard-dates/")
+def save_dashboard_date(request: DashboardDateRequest):
+    """특정 그래프의 날짜(기간) 설정 저장"""
+    try:
+        dates = load_dashboard_dates()
+        dates[request.chart_id] = {"start": request.start, "end": request.end}
+        save_dashboard_dates(dates)
+        return {"message": "날짜 설정이 저장되었습니다", "chart_id": request.chart_id, "start": request.start, "end": request.end}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"대시보드 날짜 저장 실패: {str(e)}")
 
 # ============================================
 # Dashboard Endpoints

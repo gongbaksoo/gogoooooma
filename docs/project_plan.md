@@ -220,6 +220,12 @@ sales-analysis-site/
   - **거래처 식별 — R열 기준 (영구 규약)**: 거래처 단위 매출 집계는 항상 **R열(`거래처명`, 0-indexed 17)** 사용. C열(`거래처`)이 아님. 이마트/롯데마트/다이소 매핑: `거래처명 == '이마트'` / `'롯데마트'` / `'다이소'` (R열에 이미 본부+점포가 통합된 정규화 값으로 들어옴)
 - **PDF 출력**: 클라이언트 사이드 (`html2canvas` + `jspdf`), A4 가로
 
+### 4.8 그래프 기간(날짜) 기기 간 유지 ⭐ NEW (35회차)
+- 매출 분석 대시보드의 그래프 6종(`sales`/`channel`/`product-group`/`detailed`/`product-search`/`brand`)이 마지막으로 설정한 `시작월~종료월`을 **그래프별로 독립 저장**.
+- **백엔드 저장**(`dashboard_dates.json`)이라 새로고침은 물론 **다른 기기/브라우저에서도 동일 복원**(선택 파일 유지의 `localStorage`와 달리 기기 공유).
+- 저장 범위는 **날짜만**. 복원은 현재 데이터 월 목록에 존재할 때만(없으면 기본값 폴백). 월/일 토글 차트는 월 모드에서만 적용. 월 리뷰는 대상 아님.
+- 상세 설계: `design_document.md §2.2`.
+
 ---
 
 ## 5. 핵심 비즈니스 로직
@@ -301,6 +307,8 @@ sales-analysis-site/
 | GET | `/api/monthly-review/summary` | 월 리뷰 종합 (chart 1~3 데이터) ⭐ NEW |
 | POST | `/api/monthly-review/targets` | 목표 파일 업로드 ⭐ NEW |
 | GET | `/api/monthly-review/targets` | 목표 파일 리스트 ⭐ NEW |
+| GET | `/custom/dashboard-dates/` | 대시보드 그래프별 기간(날짜) 설정 조회 ⭐ NEW (35회차) |
+| POST | `/custom/dashboard-dates/` | 대시보드 그래프별 기간(날짜) 설정 저장 ⭐ NEW (35회차) |
 
 ---
 

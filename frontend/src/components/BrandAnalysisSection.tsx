@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
 import DynamicAnalysisSection, { CategoryData } from './DynamicAnalysisSection';
+import { loadDashboardDate, saveDashboardDate } from '@/lib/dashboardDateStorage';
+
+const CHART_ID = 'brand';
 
 interface BrandAnalysisSectionProps {
     filename: string | null;
@@ -70,8 +73,15 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
 
                     setAvailableMonths(uniqueMonths);
                     if (uniqueMonths.length > 0) {
-                        setStartMonth(uniqueMonths[0]);
-                        setEndMonth(uniqueMonths[uniqueMonths.length - 1]);
+                        // 저장된 기간이 유효하면 복원, 아니면 전체 범위
+                        const saved = await loadDashboardDate(CHART_ID);
+                        if (saved && uniqueMonths.includes(saved.start) && uniqueMonths.includes(saved.end) && saved.start <= saved.end) {
+                            setStartMonth(saved.start);
+                            setEndMonth(saved.end);
+                        } else {
+                            setStartMonth(uniqueMonths[0]);
+                            setEndMonth(uniqueMonths[uniqueMonths.length - 1]);
+                        }
                     }
                 }
             } catch (err) {
@@ -185,7 +195,7 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                         <span className="text-xs font-bold text-black ml-1">기간:</span>
                         <select
                             value={startMonth}
-                            onChange={(e) => setStartMonth(e.target.value)}
+                            onChange={(e) => { setStartMonth(e.target.value); saveDashboardDate(CHART_ID, e.target.value, endMonth); }}
                             className="bg-transparent text-sm font-bold text-black focus:outline-none p-1.5 grow sm:grow-0"
                         >
                             {availableMonths.map(m => (
@@ -195,7 +205,7 @@ const BrandAnalysisSection: React.FC<BrandAnalysisSectionProps> = ({ filename })
                         <span className="text-[#c4c4c4] font-bold">~</span>
                         <select
                             value={endMonth}
-                            onChange={(e) => setEndMonth(e.target.value)}
+                            onChange={(e) => { setEndMonth(e.target.value); saveDashboardDate(CHART_ID, startMonth, e.target.value); }}
                             className="bg-transparent text-sm font-bold text-black focus:outline-none p-1.5 grow sm:grow-0"
                         >
                             {availableMonths.map(m => (

@@ -5,6 +5,9 @@ import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
 import { getMultiSeriesStyle, getDataTypeSeriesStyle } from '@/lib/chartPalette';
+import { loadDashboardDate, saveDashboardDate } from '@/lib/dashboardDateStorage';
+
+const CHART_ID = 'sales';
 
 interface SalesChartProps {
     filename: string | null;
@@ -80,10 +83,16 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                 setDaysList(days_list || []);
                 setDebugLogs(debug_logs || []);
 
-                // Initialize Date Range to full range
+                // Initialize Date Range: 저장된 기간이 유효하면 복원, 아니면 전체 범위
                 if (months && months.length > 0) {
-                    setStartMonth(months[0]);
-                    setEndMonth(months[months.length - 1]);
+                    const saved = await loadDashboardDate(CHART_ID);
+                    if (saved && months.includes(saved.start) && months.includes(saved.end) && saved.start <= saved.end) {
+                        setStartMonth(saved.start);
+                        setEndMonth(saved.end);
+                    } else {
+                        setStartMonth(months[0]);
+                        setEndMonth(months[months.length - 1]);
+                    }
                 }
             } catch (err) {
                 console.error('Failed to fetch sales data:', err);
@@ -312,7 +321,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                         <div className="flex items-center gap-1 bg-white p-1 rounded border border-[#c4c4c4] w-full sm:w-auto justify-between">
                             <select
                                 value={startMonth}
-                                onChange={(e) => setStartMonth(e.target.value)}
+                                onChange={(e) => { setStartMonth(e.target.value); saveDashboardDate(CHART_ID, e.target.value, endMonth); }}
                                 className="bg-transparent text-sm font-medium text-black focus:outline-none p-1"
                             >
                                 {data.months.map(m => (
@@ -322,7 +331,7 @@ const SalesChartNew: React.FC<SalesChartProps> = ({ filename }) => {
                             <span className="text-[#c4c4c4]">~</span>
                             <select
                                 value={endMonth}
-                                onChange={(e) => setEndMonth(e.target.value)}
+                                onChange={(e) => { setEndMonth(e.target.value); saveDashboardDate(CHART_ID, startMonth, e.target.value); }}
                                 className="bg-transparent text-sm font-medium text-black focus:outline-none p-1"
                             >
                                 {data.months.map(m => (

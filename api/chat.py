@@ -170,7 +170,13 @@ def process_chat_query(file_path: str, query: str, api_key: str, history: list =
             f.write(file_data)
         
         # Load data from temp file
-        df = pd.read_excel(temp_path) if temp_path.endswith('.xlsx') else pd.read_csv(temp_path)
+        if temp_path.endswith('.xlsx'):
+            df = pd.read_excel(temp_path)
+        else:
+            try:
+                df = pd.read_csv(temp_path)            # 향후 utf-8 파일 대비
+            except UnicodeDecodeError:
+                df = pd.read_csv(temp_path, encoding='cp949')  # 현재 EUC-KR(cp949) 파일
         
         # 상품 검색 전처리
         original_df = df.copy()
@@ -202,7 +208,6 @@ def process_chat_query(file_path: str, query: str, api_key: str, history: list =
         except Exception as direct_error:
             with open("chat_debug.log", "a", encoding="utf-8") as f:
                 f.write(f"Direct Gemini error: {str(direct_error)}\n")
-                import traceback
                 f.write(traceback.format_exc())
             raise ValueError(f"AI 분석 중 오류 발생: {str(direct_error)}")
         

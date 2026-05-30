@@ -59,8 +59,10 @@ async def startup_event():
 
 def ensure_file_on_disk(filename: str):
     """Ensure that the file exists on the local disk (fetching from DB if needed)"""
+    if not filename:
+        return False
     file_path = os.path.join(UPLOAD_DIR, filename)
-    if os.path.exists(file_path):
+    if os.path.isfile(file_path):
         return True
     
     # Try fetching from DB

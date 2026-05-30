@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-05-30 (37회차) — 서버 로그 관리 기능 (대시보드에서 조회·비우기, 관리자 비번 가드)
+
+### 1. 배경 / 요청
+- 사용자: "프론트엔드에서 로그를 지우면 맥미니 로그가 지워지게." → 매출 분석 대시보드에서 서버 로그를 비우는 버튼 요청.
+- 인증 방식 협의: 계정(아이디+비번) 체계가 아닌 **L1 단일 공용 비밀번호**로 결정(로그가 보호 대상이라 내부용 가드).
+
+### 2. 파악 (코드 변경 전)
+- 이미 `GET /logs/`(마지막 200줄 조회)와 대시보드 "시스템 로그" 모달이 존재 → **비우기 엔드포인트 + 버튼**만 추가하면 됨.
+- 비밀은 프론트 번들에 못 담음(공개) → 비번은 맥미니 `.env`에만 저장하고 클릭 시 입력받아 헤더로 전송하는 구조로 설계.
+
+### 3. 조치
+- **백엔드**(`api/index.py`): `POST /logs/clear`(로그 truncate) 신규 + `GET /logs/`에도 가드. `X-Admin-Password` 헤더 → `_check_admin_password`(`.env`의 `ADMIN_PASSWORD`, 호출마다 `os.getenv`, `hmac.compare_digest` **utf-8 bytes**). 미설정 503 / 불일치 401.
+- **프론트**(`lib/api.ts`·`custom-dashboard/page.tsx`): `getLogs(pw)`·`clearLogs(pw)` 헤더 전송, "로그 지우기" 버튼, 비번 1회 입력 후 세션 캐시(401 시 폐기), clear/refresh 에러 구분.
+
+### 4. 적대 검증 (배포 전, 3관점 병렬)
+- 보안/백엔드/프론트 독립 리뷰. **HIGH 1건 사전 포착**: `hmac.compare_digest` str 비교가 한글 비번에서 TypeError → self-DoS(매 요청 500). Python 3.14에서 실증 후 **utf-8 bytes 비교로 수정**. 곁들여 읽기 엔드포인트 가드·공백 비번 가드·clear/refresh 분리 반영. CORS `allow_headers=['*']`는 커스텀 헤더 통과 OK(가설 기각).
+
+### 5. 검증 / 배포
+- 로컬 `py_compile` + `tsc`(수정 파일) 통과. 한글 비번 TypeError·bytes 비교 정상은 직접 실증.
+- 커밋·푸시(`2ea1845`) → Vercel 프론트 자동. 맥미니 `git pull` + `.env`에 `ADMIN_PASSWORD` 설정 + `com.avk.backend` 재시작.
+- 백엔드 검증: 비번 없이 **401** / 정답 **200** / 비우기 **200** `{"cleared":["error.log","chat_debug.log"]}`. `.env` gitignore 확인(커밋 안 됨).
+
+### 6. 문서 / 배포
+- `project_plan §4.9`(로그 관리 기능)·`§6`(`/logs/`·`/logs/clear` 추가), `error.md §52`+마스터 권장 #38(compare_digest bytes·보안 경계 적대 검증), `history.md 37회차` 갱신. `design_document`은 UI/디자인 문서라 무관 → 미변경.
+- **백엔드 + 프론트 동시 변경** → 프론트 Vercel 자동 + 맥미니 수동 배포 완료.
+
+---
+
 ## 2026-05-30 (36회차) — AI 채팅 버그 수정 3건 (cp949 인코딩 / traceback 가림 / 파일 미선택 404)
 
 ### 1. 배경 / 발견

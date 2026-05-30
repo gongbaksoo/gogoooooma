@@ -227,6 +227,12 @@ sales-analysis-site/
 - 저장 범위는 **날짜만**. 복원은 현재 데이터 월 목록에 존재할 때만(없으면 기본값 폴백). 월/일 토글 차트는 월 모드에서만 적용. 월 리뷰는 대상 아님.
 - 상세 설계: `design_document.md §2.2`.
 
+### 4.9 서버 로그 관리 (조회·비우기, 관리자 비번) ⭐ NEW (37회차)
+- 매출 분석 대시보드(`/custom-dashboard`) "시스템 로그" 모달에서 백엔드 로그 2종(`chat_debug.log` AI 디버그 / `error.log` 시스템 에러)을 **조회**하고, 모달 하단 `로그 지우기`로 **내용 비우기(truncate)** 가능.
+- **인증(L1 — 단일 공용 비밀번호)**: 조회·비우기 모두 `X-Admin-Password` 헤더 필요. 백엔드는 맥미니 `.env`의 `ADMIN_PASSWORD`(gitignore, 커밋 안 됨)와 `hmac.compare_digest`(utf-8 bytes)로 대조. 미설정 시 503, 불일치 시 401. 프론트는 비번 1회 입력 후 세션 메모리 캐시(새로고침 시 소멸, 401 시 폐기).
+- 아이디/계정 체계 아님(로그인 없음). 로그가 보호 대상이라 위험 낮은 내부용 가드.
+- 함정 기록: `hmac.compare_digest`는 비ASCII(한글) 비밀번호에서 TypeError → 반드시 bytes로 비교. 상세: `docs/error.md §52`.
+
 ---
 
 ## 5. 핵심 비즈니스 로직
@@ -311,6 +317,8 @@ sales-analysis-site/
 | GET | `/custom/dashboard-dates/` | 대시보드 그래프별 기간(날짜) 설정 조회 ⭐ NEW (35회차) |
 | POST | `/custom/dashboard-dates/` | 대시보드 그래프별 기간(날짜) 설정 저장 ⭐ NEW (35회차) |
 | POST | `/api/chat/` | AI 자연어 데이터 질의 (Gemini, `chat.py`) — EUC-KR(cp949) CSV 폴백 (36회차) |
+| GET | `/logs/` | 서버 로그 2종 조회 (관리자 비번 `X-Admin-Password`) ⭐ NEW (37회차) |
+| POST | `/logs/clear` | 서버 로그 비우기(truncate) (관리자 비번) ⭐ NEW (37회차) |
 
 ---
 

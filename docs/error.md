@@ -1322,6 +1322,30 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 2. **CSV 리더는 인코딩 폴백 필수 + 신규 리더 추가 시 전수 점검** — 이 프로젝트 원본 CSV는 EUC-KR(cp949)다. 새 `read_csv` 추가 시 `['utf-8','utf-8-sig','cp949','euc-kr']` 폴백을 기존 리더와 동일하게 적용하고, `grep -rn read_csv`로 누락 지점이 없는지 점검.
 3. **경로 존재 확인은 의도에 맞는 술어로** — "파일"을 기대하는 곳은 `os.path.exists`(디렉토리도 True) 대신 `os.path.isfile`을 쓰고, 외부 입력(파일명)은 빈 값 가드를 먼저 둔다.
 
+## 52. 적대 검증이 잡은 self-DoS — `hmac.compare_digest`가 한글 비밀번호에서 TypeError
+
+작성일: 2026-05-30 (37회차)
+
+> 런타임 사고는 없었음. **로그 관리 기능(관리자 비번 가드) 구현 후 배포 전 다관점 적대 검증으로 사전 포착**한 함정.
+
+### 🚨 증상 (사전 포착)
+- 신규 `POST /logs/clear` + `GET /logs/` 가드에 `hmac.compare_digest(provided, ADMIN_PASSWORD)`를 **str끼리** 비교하도록 작성.
+- 검증 에이전트가 Python 3.14에서 실증: `hmac.compare_digest('비밀번호','비밀번호')` → `TypeError: comparing strings with non-ASCII characters is not supported`.
+- 한글 코드베이스라 **한글 비밀번호가 충분히 가능** → 저장된 비번이 비ASCII면 정답을 입력해도, 빈 값/오답을 넣어도 **매 요청이 TypeError → 500**. 전역 예외 핸들러도 없어 기능이 영구 미동작(self-DoS). 프론트는 401/503만 분기해 "실패"만 표시.
+
+### 🧭 원인
+- `hmac.compare_digest`는 str 인자일 때 **양쪽 모두 ASCII**여야 함. 한쪽이라도 비ASCII면 TypeError.
+- 저장 비번이 한 피연산자라, 비번 자체가 한글이면 입력값과 무관하게 항상 실패.
+
+### ✅ 해결
+- 양쪽을 **utf-8 bytes로 인코딩 후 비교**: `hmac.compare_digest(provided.encode('utf-8'), admin_password.encode('utf-8'))`. 임의 유니코드 비번에서 동작 + 상수시간 비교 유지. (실증: str 비교는 TypeError, bytes 비교는 한글/ASCII 모두 정상.)
+- 곁들여 반영: 읽기 엔드포인트 `GET /logs/`도 같은 가드로 잠금(로그에 사용자 프롬프트·데이터가 남으므로 보기/지우기 보안 일관화), 비번은 호출마다 `os.getenv`로 읽기, 트렁케이트는 `with open(...)`, 프론트는 clear/refresh 에러 구분 + 공백 비번 가드.
+
+### 💡 향후 권장
+1. **`hmac.compare_digest`는 bytes로 비교** — 비밀번호/토큰처럼 사용자 입력 비교는 양쪽을 `.encode('utf-8')` 후 넘긴다. str 비교는 비ASCII에서 TypeError → 비ASCII 비번이면 기능 전체가 500(self-DoS).
+2. **인증·권한 등 보안 경계 변경은 배포 전 적대 검증 필수** — 정상 경로(맞는 비번)만 테스트하면 비ASCII·미설정·헤더 누락 등 엣지에서 깨지는 걸 놓친다. 독립 관점(보안/백엔드/프론트)으로 사전 점검.
+3. **읽기·쓰기 보안 posture 일관화** — 파괴적 작업만 막고 조회는 열어두지 말 것. 로그·데이터를 노출하는 읽기 엔드포인트도 동일 가드 적용 여부를 함께 결정.
+
 ## 향후 권장 사항
 1. ~~**`api/metadata.db`를 `.gitignore`에 추가**~~ — ✅ **2026-05-23 29회차에 조치 완료**(`§44`). 미조치 기간 동안 배포 시 운영 업로드 파일이 유실되는 사고가 실제 발생함. 동적 DB 파일이 git에 추적되면 매 부팅·배포마다 변경분/유실 발생.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -1360,3 +1384,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 35. **한 화면 다단위 차트는 단위 라벨 전수 + 정합성 제보는 raw 검산 우선** — 백만/만원처럼 단위가 다른 차트가 한 화면에 있으면 전 차트에 단위 라벨 명시(라벨 누락 차트는 정합성 오인 유발). "데이터가 이상하다" 제보는 코드 수정 전 집계 구조·단위를 raw로 검산해 데이터 버그 vs 표시 문제를 먼저 구분 (§49 권장 1·2번 참조).
 36. **"다른 기기에서도 유지" = 서버 저장 + 백엔드 의존 기능은 폴백·배포순서 명시** — localStorage는 기기 한정이라 기기 간 공유는 백엔드 저장 필수. 분리 배포(프론트 자동/백엔드 수동) 환경에선 프론트에 graceful 폴백을 내장하고 배포 순서를 안내해 부분배포 미동작을 방지 (§50 권장 1·2번 참조).
 37. **함수 내 모듈 재-import 금지 + CSV 리더 인코딩 폴백 전수 + 경로 술어 정확히** — 모듈 상단에 import된 이름을 함수 안에서 다시 import하면 함수 전체 지역변수로 승격돼 미실행 분기에서 `UnboundLocalError`로 진짜 에러를 가림. 원본 CSV는 EUC-KR(cp949)이니 신규 `read_csv`는 4종 인코딩 폴백 필수(`grep`으로 누락 점검). 파일 기대 경로는 `os.path.isfile` + 빈 파일명 가드 (§51 권장 1·2·3번 참조).
+38. **`hmac.compare_digest`는 bytes 비교 + 보안 경계는 배포 전 적대 검증 + 읽기/쓰기 posture 일관화** — `compare_digest`를 str로 호출하면 비ASCII(한글) 비밀번호에서 TypeError로 기능이 500(self-DoS)나니 양쪽 `.encode('utf-8')`. 인증/권한 변경은 정상 경로만 보지 말고 독립 관점으로 사전 검증하고, 파괴적 작업만 막고 조회를 열어두지 말 것 (§52 권장 1·2·3번 참조).

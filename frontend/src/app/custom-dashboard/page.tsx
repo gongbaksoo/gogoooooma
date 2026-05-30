@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import FileUpload from "@/components/FileUpload";
-import { getLogs } from "@/lib/api";
+import { getLogs, clearLogs } from "@/lib/api";
 import ChatInterface from "@/components/ChatInterface";
 import FileSelector from "@/components/FileSelector";
 import ChatHistoryList from "@/components/ChatHistoryList";
@@ -25,6 +25,7 @@ import {
     FileText,
     Bot,
     AlertTriangle,
+    Trash2,
 } from "lucide-react";
 
 const MUTED = "rgba(93, 93, 93, 0.64)";
@@ -42,6 +43,7 @@ export default function CustomDashboard() {
     const [showLogs, setShowLogs] = useState(false);
     const [logs, setLogs] = useState<any>(null);
     const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+    const [adminPassword, setAdminPassword] = useState<string | null>(null);
     const [showAliasManager, setShowAliasManager] = useState(false);
     const [showInstructionsManager, setShowInstructionsManager] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -86,13 +88,63 @@ export default function CustomDashboard() {
     };
 
     const handleShowLogs = async () => {
+        const pw =
+            adminPassword ||
+            window.prompt("관리자 비밀번호를 입력하세요 (로그 조회/관리)");
+        if (!pw?.trim()) return;
         setShowLogs(true);
         setIsLoadingLogs(true);
         try {
-            const logData = await getLogs();
+            const logData = await getLogs(pw);
             setLogs(logData);
-        } catch (error) {
+            setAdminPassword(pw); // 세션 동안 기억 (새로고침 시 사라짐)
+        } catch (error: any) {
+            const status = error?.response?.status;
+            if (status === 401) {
+                setAdminPassword(null);
+                window.alert("관리자 비밀번호가 올바르지 않습니다.");
+                setShowLogs(false);
+            } else if (status === 503) {
+                window.alert("서버에 관리자 비밀번호가 설정되지 않았습니다.");
+                setShowLogs(false);
+            } else {
+                window.alert("로그를 불러오지 못했습니다.");
+            }
             console.error("Failed to load logs:", error);
+        } finally {
+            setIsLoadingLogs(false);
+        }
+    };
+
+    const handleClearLogs = async () => {
+        const pw =
+            adminPassword ||
+            window.prompt("관리자 비밀번호를 입력하세요 (서버 로그를 모두 비웁니다)");
+        if (!pw?.trim()) return;
+        setIsLoadingLogs(true);
+        // 1) 비우기 — 실패 시 사유별 알림 후 중단
+        try {
+            await clearLogs(pw);
+            setAdminPassword(pw);
+        } catch (error: any) {
+            const status = error?.response?.status;
+            if (status === 401) {
+                window.alert("관리자 비밀번호가 올바르지 않습니다.");
+            } else if (status === 503) {
+                window.alert("서버에 관리자 비밀번호가 설정되지 않았습니다.");
+            } else {
+                window.alert("로그 비우기에 실패했습니다.");
+            }
+            console.error("Failed to clear logs:", error);
+            setIsLoadingLogs(false);
+            return;
+        }
+        // 2) 비우기 성공 — 화면 갱신(갱신 실패는 비우기 실패와 구분, 조용히 로깅)
+        try {
+            const logData = await getLogs(pw);
+            setLogs(logData);
+        } catch (refreshError) {
+            console.error("Failed to refresh logs after clear:", refreshError);
         } finally {
             setIsLoadingLogs(false);
         }
@@ -276,9 +328,18 @@ export default function CustomDashboard() {
                                 )}
                             </div>
                             <div
-                                className="px-5 py-3 border-t bg-white flex justify-end"
+                                className="px-5 py-3 border-t bg-white flex justify-end gap-2"
                                 style={{ borderColor: OUTLINE }}
                             >
+                                <button
+                                    onClick={handleClearLogs}
+                                    disabled={isLoadingLogs}
+                                    className={ghostButtonClass}
+                                    style={{ ...ghostButtonStyle, color: "#dc2626" }}
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    로그 지우기
+                                </button>
                                 <button
                                     onClick={() => setShowLogs(false)}
                                     className={ghostButtonClass}

@@ -9,8 +9,17 @@ const api = axios.create({
     timeout: 30000, // Increased to 30 seconds to handle initial cold starts or heavy processing
 });
 
-export const getLogs = async () => {
-    const response = await api.get(`/logs/?t=${Date.now()}`);
+export const getLogs = async (password: string) => {
+    const response = await api.get(`/logs/?t=${Date.now()}`, {
+        headers: { "X-Admin-Password": password },
+    });
+    return response.data;
+};
+
+export const clearLogs = async (password: string) => {
+    const response = await api.post(`/logs/clear`, {}, {
+        headers: { "X-Admin-Password": password },
+    });
     return response.data;
 };
 

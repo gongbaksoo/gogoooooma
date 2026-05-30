@@ -2,13 +2,14 @@ import os
 import shutil
 import logging
 import uuid
+import hmac
 from dotenv import load_dotenv
 
 # Configure logging and environment FIRST
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter
+from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from database import (
@@ -624,7 +625,8 @@ def delete_column_aliases(column: str):
         raise HTTPException(status_code=500, detail=f"별칭 삭제 실패: {str(e)}")
 
 @router.get("/logs/")
-def get_logs():
+def get_logs(x_admin_password: str | None = Header(default=None)):
+    _check_admin_password(x_admin_password)
     logs = {}
     for log_file in ["error.log", "chat_debug.log"]:
         if os.path.exists(log_file):
@@ -637,6 +639,31 @@ def get_logs():
         else:
             logs[log_file] = "No log file found."
     return logs
+
+def _check_admin_password(provided: str | None):
+    """관리자 비밀번호 검증 (맥미니 .env의 ADMIN_PASSWORD, 단일 공용 암호, gitignore됨).
+    호출마다 os.getenv로 읽어 재기동만으로 변경 반영. compare_digest는 utf-8 bytes로 비교
+    — str 비교는 비ASCII(한글) 암호에서 TypeError를 내므로 인코딩 필수."""
+    admin_password = os.getenv("ADMIN_PASSWORD")
+    if not admin_password:
+        raise HTTPException(status_code=503, detail="서버에 관리자 비밀번호가 설정되지 않았습니다")
+    if not provided or not hmac.compare_digest(provided.encode("utf-8"), admin_password.encode("utf-8")):
+        raise HTTPException(status_code=401, detail="관리자 인증에 실패했습니다")
+
+@router.post("/logs/clear")
+def clear_logs(x_admin_password: str | None = Header(default=None)):
+    """로그 파일 내용을 비움(truncate). 파일은 유지. 관리자 비밀번호 필요."""
+    _check_admin_password(x_admin_password)
+    cleared = []
+    for log_file in ["error.log", "chat_debug.log"]:
+        if os.path.exists(log_file):
+            try:
+                with open(log_file, "w"):
+                    pass
+                cleared.append(log_file)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"로그 비우기 실패 ({log_file}): {str(e)}")
+    return {"message": "로그가 비워졌습니다", "cleared": cleared}
 
 class ChatHistoryItem(BaseModel):
     id: str

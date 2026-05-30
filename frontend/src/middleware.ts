@@ -26,6 +26,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    // 프론트 "화면"만 보호. /api/*(로그인·업로드 등), Next 내부/정적 자산, favicon, /login 은 제외.
-    matcher: ["/((?!api|_next|favicon.ico|login).*)"],
+    // 프론트 "화면"만 보호. /api/*(백엔드 rewrite·업로드), /site-auth(로그인 처리),
+    // Next 내부/정적 자산, favicon, /login 은 게이트에서 제외.
+    matcher: ["/((?!api|_next|favicon.ico|login|site-auth).*)"],
 };

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { SITE_AUTH_COOKIE, sha256Hex } from "@/lib/siteAuth";
 
 // 사이트 진입 비밀번호 검증 → 성공 시 HttpOnly 쿠키 발급.
+// 주의: 경로를 /api/ 밖에 둔다 — vercel.json 이 /api/(.*) 를 파이썬 백엔드로 rewrite 하므로
+// /api/ 아래에 두면 이 Next 라우트가 가려져 404 가 된다.
 export async function POST(request: Request) {
     const sitePassword = process.env.SITE_PASSWORD;
     if (!sitePassword) {

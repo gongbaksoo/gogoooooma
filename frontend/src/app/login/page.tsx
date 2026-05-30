@@ -16,7 +16,7 @@ export default function LoginPage() {
         setSubmitting(true);
         setError("");
         try {
-            const res = await fetch("/api/site-auth", {
+            const res = await fetch("/site-auth", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ password }),

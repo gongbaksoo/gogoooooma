@@ -18,6 +18,13 @@
 
 ## 2. 페이지 구조
 
+### 2.0 사이트 진입 인증 (`/login` — 전 페이지 게이트) ⭐ NEW (38회차)
+- 모든 페이지는 미들웨어(`frontend/src/middleware.ts`) 뒤에 있음 — 인증 쿠키(`site_auth`) 없으면 `/login`으로 리다이렉트(원경로 `?from=` 보존).
+- `/login`: 비번 입력 1필드 + 입장 버튼(29CM 미니멀 — 흰 배경, 검정 버튼, 라운드 4). 실패 시 빨강 안내, 성공 시 `from` 내부 경로로 복귀(오픈 리다이렉트 가드).
+- `POST /site-auth`(Next 라우트, **`/api/` 밖** — vercel.json의 `/api/(.*)` 백엔드 rewrite 회피) → 서버가 `SITE_PASSWORD`(Vercel 환경변수)와 대조 → `HttpOnly·Secure·SameSite=lax` 쿠키(값=비번 SHA-256, 30일) 발급.
+- **L1 단일 공용 비번**(아이디/계정 아님). `SITE_PASSWORD` 미설정이면 게이트 비활성(사이트 열림). 범위: 프론트 화면만(백엔드 API 제외).
+- 상세: `project_plan.md §4.10`, 함정: `docs/error.md §53`.
+
 ### 2.1 메인 페이지 (`/`)
 - 포털 카드 레이아웃 (각 기능 진입점)
 - 카드 1: **매출 분석 대시보드** → `/custom-dashboard`

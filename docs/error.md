@@ -1346,6 +1346,29 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 2. **인증·권한 등 보안 경계 변경은 배포 전 적대 검증 필수** — 정상 경로(맞는 비번)만 테스트하면 비ASCII·미설정·헤더 누락 등 엣지에서 깨지는 걸 놓친다. 독립 관점(보안/백엔드/프론트)으로 사전 점검.
 3. **읽기·쓰기 보안 posture 일관화** — 파괴적 작업만 막고 조회는 열어두지 말 것. 로그·데이터를 노출하는 읽기 엔드포인트도 동일 가드 적용 여부를 함께 결정.
 
+## 53. 로컬 빌드는 통과인데 라이브 404 — `vercel.json`의 `/api/(.*)` rewrite가 Next 라우트를 가림
+
+작성일: 2026-05-30 (38회차)
+
+> 사이트 진입 비밀번호 게이트 배포 직후 포착. 페이지 게이트는 라이브 정상인데 로그인 API만 404.
+
+### 🚨 증상
+- 로그인 엔드포인트를 `app/api/site-auth/route.ts`로 만들고 로컬 `next build` + `next start`로 검증 → 401/200 모두 정상.
+- 라이브(Vercel) 배포 후: 페이지 게이트(미인증 → 307 → `/login`)는 정상인데 `POST /api/site-auth`만 **404**. 정답 비번도 404라 로그인 불가.
+
+### 🧭 원인
+- 루트 `vercel.json`에 `{"source":"/api/(.*)","destination":"/api/index.py"}` rewrite가 있음 → **모든 `/api/*` 요청이 파이썬 백엔드(`index.py`)로 프록시**됨. `/api/site-auth`도 백엔드로 가는데 거긴 그런 라우트가 없어 404.
+- **로컬 `next start`는 `vercel.json` rewrite를 적용하지 않으므로** 같은 코드가 로컬에선 통과(거짓 음성). 로컬-라이브 동작 불일치의 전형.
+
+### ✅ 해결
+- 로그인 라우트를 `/api/` 밖으로 이동: `app/api/site-auth/route.ts` → `app/site-auth/route.ts`. `/site-auth`는 `/api/(.*)`에 안 걸려 Next 라우트로 정상 도달.
+- 로그인 fetch(`/api/site-auth`→`/site-auth`)·미들웨어 matcher(`site-auth` 제외) 동기화.
+- 검증을 **라이브에서** curl로 재확인: 미인증 307 / `/login` 200 / 틀린비번 401 / 정답 200+쿠키 / 쿠키 통과 200.
+
+### 💡 향후 권장
+1. **`vercel.json` rewrite가 있는 프로젝트의 신규 Next API 라우트는 rewrite 경로와 충돌 점검** — `/api/(.*)`가 백엔드로 프록시되면 `/api/` 아래 Next 라우트는 전부 가려진다. 신규 라우트는 rewrite 밖 경로에 두거나 rewrite에 명시 예외.
+2. **`next start`/`next build`는 `vercel.json`을 적용하지 않음 → 라우팅·rewrite 검증은 라이브(또는 `vercel dev`)에서** — 로컬 통과가 라이브 통과를 보장하지 않는 대표 사례(rewrites/redirects/headers).
+
 ## 향후 권장 사항
 1. ~~**`api/metadata.db`를 `.gitignore`에 추가**~~ — ✅ **2026-05-23 29회차에 조치 완료**(`§44`). 미조치 기간 동안 배포 시 운영 업로드 파일이 유실되는 사고가 실제 발생함. 동적 DB 파일이 git에 추적되면 매 부팅·배포마다 변경분/유실 발생.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -1385,3 +1408,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 36. **"다른 기기에서도 유지" = 서버 저장 + 백엔드 의존 기능은 폴백·배포순서 명시** — localStorage는 기기 한정이라 기기 간 공유는 백엔드 저장 필수. 분리 배포(프론트 자동/백엔드 수동) 환경에선 프론트에 graceful 폴백을 내장하고 배포 순서를 안내해 부분배포 미동작을 방지 (§50 권장 1·2번 참조).
 37. **함수 내 모듈 재-import 금지 + CSV 리더 인코딩 폴백 전수 + 경로 술어 정확히** — 모듈 상단에 import된 이름을 함수 안에서 다시 import하면 함수 전체 지역변수로 승격돼 미실행 분기에서 `UnboundLocalError`로 진짜 에러를 가림. 원본 CSV는 EUC-KR(cp949)이니 신규 `read_csv`는 4종 인코딩 폴백 필수(`grep`으로 누락 점검). 파일 기대 경로는 `os.path.isfile` + 빈 파일명 가드 (§51 권장 1·2·3번 참조).
 38. **`hmac.compare_digest`는 bytes 비교 + 보안 경계는 배포 전 적대 검증 + 읽기/쓰기 posture 일관화** — `compare_digest`를 str로 호출하면 비ASCII(한글) 비밀번호에서 TypeError로 기능이 500(self-DoS)나니 양쪽 `.encode('utf-8')`. 인증/권한 변경은 정상 경로만 보지 말고 독립 관점으로 사전 검증하고, 파괴적 작업만 막고 조회를 열어두지 말 것 (§52 권장 1·2·3번 참조).
+39. **`vercel.json` rewrite와 Next 라우트 충돌 점검 + 라우팅 검증은 라이브/`vercel dev`에서** — `/api/(.*)`를 백엔드로 보내는 rewrite가 있으면 `/api/` 아래 Next 라우트가 전부 404로 가려진다. 신규 라우트는 rewrite 밖에 두거나 예외 명시. `next start`/`next build`는 `vercel.json`을 적용 안 하니 rewrite·라우팅 검증은 라이브에서 (§53 권장 1·2번 참조).

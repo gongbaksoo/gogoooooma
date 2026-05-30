@@ -233,6 +233,15 @@ sales-analysis-site/
 - 아이디/계정 체계 아님(로그인 없음). 로그가 보호 대상이라 위험 낮은 내부용 가드.
 - 함정 기록: `hmac.compare_digest`는 비ASCII(한글) 비밀번호에서 TypeError → 반드시 bytes로 비교. 상세: `docs/error.md §52`.
 
+### 4.10 사이트 진입 비밀번호 (전 페이지 게이트) ⭐ NEW (38회차)
+- 사이트의 **모든 화면**을 단일 공용 비밀번호 뒤에 둠. 미인증 접속은 `/login`으로 리다이렉트(원경로 `?from=` 보존), 입장 후 `site_auth` 쿠키(HttpOnly·Secure·SameSite=lax, 값=비번 SHA-256, 30일)로 통과.
+- **구성**: `frontend/src/middleware.ts`(쿠키 검사·리다이렉트) + `app/login/page.tsx`(비번 입력 화면) + `app/site-auth/route.ts`(서버 검증·쿠키 발급) + `lib/siteAuth.ts`(공용 헬퍼). 비번은 **Vercel 환경변수 `SITE_PASSWORD`**(서버 전용, `NEXT_PUBLIC_` 아님 → 번들·git 미노출).
+- **L1 단일 공용 비번**(아이디/계정 아님). `SITE_PASSWORD` 미설정 시 게이트 비활성(사이트 열림 — 배포만으로 잠기는 사고 방지). 설정 후 재배포해야 활성화.
+- **범위**: 프론트 화면만. 백엔드 `api.gongbaksoo.com`·`/api/*`(파이썬)는 게이트 제외 — 추후 별도 결정.
+- ⚠️ **로그인 라우트는 `/api/` 밖(`/site-auth`)에 둠**: `vercel.json`의 `/api/(.*)` → 파이썬 백엔드 rewrite가 `/api/` 아래 Next 라우트를 가려 404가 되기 때문. 상세: `docs/error.md §53`.
+- Vercel 환경변수 설정: 대시보드 Settings→Environment Variables, 또는 `echo "<비번>" | vercel env add SITE_PASSWORD production` → 재배포(`vercel --prod`).
+- 상세 설계: `design_document.md §2.0`.
+
 ---
 
 ## 5. 핵심 비즈니스 로직

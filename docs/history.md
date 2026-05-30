@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-05-30 (38회차) — 사이트 진입 비밀번호 게이트 (프론트 전 화면)
+
+### 1. 배경 / 요청
+- 사용자: "사이트 들어올 때부터 비번 치고 들어오게." 기존 계획·코드엔 진입 인증이 없음을 실제 확인(추측 금지) 후 진행.
+- 결정: ① 추가 ② 방식 A(Next 미들웨어 + 비번 페이지) ③ 우선 프론트 화면만. 비번은 로그 기능과 동일한 값(독립 시스템이라 값만 동일).
+
+### 2. 조치 (프론트 신규 4파일)
+- `middleware.ts`: 전 페이지 인증 쿠키(`site_auth`) 검사 → 미인증 시 `/login` 리다이렉트(`?from=` 보존). `SITE_PASSWORD` 미설정이면 게이트 비활성(잠금 사고 방지).
+- `app/login/page.tsx`: 비번 입력 화면(29CM 미니멀, 오픈리다이렉트 가드).
+- `app/site-auth/route.ts`: 서버에서 `SITE_PASSWORD`(Vercel env) 대조 → `HttpOnly·Secure·SameSite` 쿠키(값=비번 SHA-256, 30일).
+- `lib/siteAuth.ts`: 쿠키명 + Web Crypto SHA-256 헬퍼(미들웨어/라우트 공유). 비번은 코드 미하드코딩.
+
+### 3. 라이브 404 함정 + 수정
+- 1차 배포 후 페이지 게이트는 정상인데 `POST /api/site-auth`만 404. 원인: `vercel.json`의 `/api/(.*)`→파이썬 백엔드 rewrite가 Next 라우트를 가림(로컬 `next start`는 rewrite 미적용이라 못 잡음). → 라우트를 `/api/` 밖(`/site-auth`)으로 이동해 해결. 상세 `error.md §53`.
+
+### 4. 검증 / 배포
+- 로컬 `next build` + 런타임 5종 통과. 커밋 `15dc0a4`(게이트) → `6ac6ceb`(경로 이동 수정).
+- Vercel: `SITE_PASSWORD`를 Production env에 설정(`vercel env add`, 암호화·코드/문서 미포함) → `vercel --prod` 재배포.
+- **라이브 7종 검증 통과**: 미인증 `/`·`/custom-dashboard` 307→`/login` / `/login` 200 / 틀린비번 401 / 정답 200+쿠키 / 쿠키 통과 200.
+
+### 5. 범위 / 문서
+- 프론트 화면만 보호(백엔드 `api.gongbaksoo.com`·`/api/*`는 제외, 추후 별도). 단일 공용 비번(계정 아님).
+- `project_plan §4.10`, `design_document §2.0`, `error.md §53`+마스터 권장 #39, `history.md 38회차` 갱신.
+
+---
+
 ## 2026-05-30 (37회차) — 서버 로그 관리 기능 (대시보드에서 조회·비우기, 관리자 비번 가드)
 
 ### 1. 배경 / 요청

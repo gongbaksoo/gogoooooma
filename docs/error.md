@@ -1294,6 +1294,34 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 1. **"다른 기기에서도 유지" 요구는 무조건 서버 저장으로 설계** — localStorage는 기기 한정임을 사용자에게 먼저 구분 안내.
 2. **백엔드 의존 기능은 프론트에 graceful 폴백 내장 + 배포 순서 명시** — 분리 배포(프론트 자동/백엔드 수동) 환경에서 부분배포로 인한 미동작·앱 깨짐을 방지.
 
+## 51. AI 채팅이 EUC-KR CSV에서 전부 실패 — read_csv UTF-8 기본값 + 함수 내 중복 import가 진짜 에러를 가림
+
+작성일: 2026-05-30 (36회차)
+
+> 맥미니 백엔드 `chat_debug.log`에서 포착. 두 질문("안녕", 파일 미선택 질문)이 서로 다른 에러로 실패하던 것을 사용자가 로그로 전달.
+
+### 🚨 증상
+- AI 채팅에 어떤 질문을 보내도 실패. 로그 표면 에러는 `UnboundLocalError: cannot access local variable 'traceback'`(chat.py:213)으로 떠서 **진짜 원인이 안 보임**.
+- 실제 원인 1: `'utf-8' codec can't decode byte 0xc0 in position 0`(chat.py:173, `pd.read_csv`).
+- 실제 원인 2: 파일 미선택 상태로 질문 시 `[Errno 21] Is a directory: '.../api/uploads/'`.
+
+### 🧭 원인
+- **(가림) 함수 내부 중복 import**: `chat.py`는 모듈 상단에 `import traceback`이 있는데 함수 안 `except direct_error` 블록에도 `import traceback`이 또 있었음. 파이썬은 함수 안 어디서든 이름이 대입/임포트되면 그 이름을 **함수 전체에서 지역변수로 취급** → 바깥 `except`가 그 줄을 거치지 않고 실행되면 `traceback`이 미바인딩 → `UnboundLocalError`. 이 엉뚱한 에러가 진짜 에러를 덮어씀.
+- **(인코딩) read_csv UTF-8 기본값**: 업로드 원본 CSV는 전부 EUC-KR(cp949)인데 `read_csv`를 인코딩 인자 없이 호출 → 첫 바이트 `0xC0`("일별"의 "일")에서 UTF-8 디코드 실패. (맥미니에서 `xxd` → `C0 CF BA B0` = EUC-KR "일별", `iconv -f euc-kr` 정상 디코드로 확정.)
+- **(디렉토리) 빈 파일명**: 파일 미선택 시 `filename`이 빈 문자열 → `os.path.join(UPLOAD_DIR, "")` = 디렉토리 자체. `ensure_file_on_disk`가 `os.path.exists`(디렉토리도 True)로 통과시켜 → `open(디렉토리,'rb')`가 IsADirectoryError.
+
+### ✅ 해결
+- `chat.py:205` 함수 내 중복 `import traceback` 제거 → 바깥 `except`의 `traceback.format_exc()` 정상 동작(진짜 에러가 로그에 남음).
+- `chat.py:173` `read_csv`에 `try: read_csv() except UnicodeDecodeError: read_csv(encoding='cp949')` 폴백 추가.
+- `index.py:60` `ensure_file_on_disk`에 빈 파일명 가드(`if not filename: return False`) + `os.path.exists`→`os.path.isfile` → 미선택 시 `[Errno 21]` 대신 깔끔한 404("파일을 찾을 수 없습니다").
+- **전수 감사**: `grep -rn read_csv`로 전 CSV 리더 점검 → 운영 리더(`index.py`/`dashboard.py`/`monthly_review.py`)는 이미 4종 인코딩 폴백 보유, `chat.py`만 누락이었음(수정 완료). `analysis.py`는 폴백 없으나 어디서도 import 안 되는 死코드라 위험 없음.
+- 맥미니 `git pull` + `com.avk.backend` 재시작 후 검증: "안녕" → 200 정상 응답(cp949 CSV 로드 OK), 파일 미선택 질문 → 404("파일을 찾을 수 없습니다", `[Errno 21]` 제거 확인).
+
+### 💡 향후 권장
+1. **함수 안에서 모듈 재-import 금지** — 모듈 상단에 이미 있는 이름(`traceback`/`os` 등)을 함수 내부에서 다시 `import`하면 그 이름이 함수 전체 지역변수로 승격돼, 미실행 분기에서 `UnboundLocalError`로 진짜 에러를 가린다. 특히 에러 핸들러에서 쓰는 이름일수록 치명적.
+2. **CSV 리더는 인코딩 폴백 필수 + 신규 리더 추가 시 전수 점검** — 이 프로젝트 원본 CSV는 EUC-KR(cp949)다. 새 `read_csv` 추가 시 `['utf-8','utf-8-sig','cp949','euc-kr']` 폴백을 기존 리더와 동일하게 적용하고, `grep -rn read_csv`로 누락 지점이 없는지 점검.
+3. **경로 존재 확인은 의도에 맞는 술어로** — "파일"을 기대하는 곳은 `os.path.exists`(디렉토리도 True) 대신 `os.path.isfile`을 쓰고, 외부 입력(파일명)은 빈 값 가드를 먼저 둔다.
+
 ## 향후 권장 사항
 1. ~~**`api/metadata.db`를 `.gitignore`에 추가**~~ — ✅ **2026-05-23 29회차에 조치 완료**(`§44`). 미조치 기간 동안 배포 시 운영 업로드 파일이 유실되는 사고가 실제 발생함. 동적 DB 파일이 git에 추적되면 매 부팅·배포마다 변경분/유실 발생.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -1331,3 +1359,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 34. **백엔드 검증 전 재기동 + N개 대상 전수 검증·보고** — `--reload` 없는 로컬 백엔드는 파일 수정이 즉시 반영 안 되니 curl 결과가 코드와 어긋나면 재기동부터; 같은 변경이 여러 항목에 걸리면 대표 1개가 아니라 전 항목 검증·보고 (§48 권장 1·2번 참조).
 35. **한 화면 다단위 차트는 단위 라벨 전수 + 정합성 제보는 raw 검산 우선** — 백만/만원처럼 단위가 다른 차트가 한 화면에 있으면 전 차트에 단위 라벨 명시(라벨 누락 차트는 정합성 오인 유발). "데이터가 이상하다" 제보는 코드 수정 전 집계 구조·단위를 raw로 검산해 데이터 버그 vs 표시 문제를 먼저 구분 (§49 권장 1·2번 참조).
 36. **"다른 기기에서도 유지" = 서버 저장 + 백엔드 의존 기능은 폴백·배포순서 명시** — localStorage는 기기 한정이라 기기 간 공유는 백엔드 저장 필수. 분리 배포(프론트 자동/백엔드 수동) 환경에선 프론트에 graceful 폴백을 내장하고 배포 순서를 안내해 부분배포 미동작을 방지 (§50 권장 1·2번 참조).
+37. **함수 내 모듈 재-import 금지 + CSV 리더 인코딩 폴백 전수 + 경로 술어 정확히** — 모듈 상단에 import된 이름을 함수 안에서 다시 import하면 함수 전체 지역변수로 승격돼 미실행 분기에서 `UnboundLocalError`로 진짜 에러를 가림. 원본 CSV는 EUC-KR(cp949)이니 신규 `read_csv`는 4종 인코딩 폴백 필수(`grep`으로 누락 점검). 파일 기대 경로는 `os.path.isfile` + 빈 파일명 가드 (§51 권장 1·2·3번 참조).

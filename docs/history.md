@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-05-30 (36회차) — AI 채팅 버그 수정 3건 (cp949 인코딩 / traceback 가림 / 파일 미선택 404)
+
+### 1. 배경 / 발견
+- 맥미니 백엔드 `chat_debug.log`에서 AI 채팅이 모든 질문에 실패. 표면 에러는 `UnboundLocalError: traceback`(chat.py:213)이라 진짜 원인이 안 보임.
+- 사용자가 로그를 전달 → 진단 요청.
+
+### 2. 원인 규명 (코드 변경 전)
+- **가림 버그**: 함수 안 중복 `import traceback`이 모듈 상단 import를 가려, 바깥 `except`에서 `traceback` 미바인딩 → 진짜 에러를 덮음.
+- **인코딩 버그**: 원본 CSV가 EUC-KR(cp949)인데 `read_csv`가 UTF-8 기본값 → `byte 0xc0` 디코드 실패. 맥미니에서 `xxd`(`C0 CF BA B0`=EUC-KR "일별")·`iconv -f euc-kr`로 확정.
+- **디렉토리 버그**: 파일 미선택 시 빈 파일명 → `uploads/` 디렉토리를 파일로 open → `[Errno 21]`.
+
+### 3. 조치 (`chat.py`, `index.py` — 백엔드)
+- `chat.py:205` 중복 `import traceback` 제거(가림 해소).
+- `chat.py:173` `read_csv`에 `UnicodeDecodeError`→`cp949` 폴백 추가.
+- `index.py:60` `ensure_file_on_disk` 빈 파일명 가드 + `os.path.exists`→`os.path.isfile`.
+
+### 4. 전수 감사
+- `grep -rn read_csv`로 전 CSV 리더 점검: 운영 리더(`index.py`/`dashboard.py`/`monthly_review.py`)는 이미 4종 인코딩 폴백 보유, `chat.py`만 누락이었음. `analysis.py`는 폴백 없으나 미사용 死코드(어디서도 import 안 됨)라 라이브 경로 추가 위험 0.
+
+### 5. 검증
+- 로컬 `python3 -m py_compile chat.py index.py` 통과.
+- 커밋·푸시(`437247c`, 36회차) → 맥미니 `git pull` + `com.avk.backend` 재시작.
+- 재검증: "안녕" → 200 정상 응답(cp949 CSV 로드 OK), 파일 미선택 질문 → 404 "파일을 찾을 수 없습니다"(`[Errno 21]` 제거 확인).
+
+### 6. 문서 / 배포
+- `error.md §51`+마스터 권장 #37, `project_plan §4.1`(소스 CSV 인코딩 규약)·§6(`/api/chat/` 추가) 갱신. `design_document`은 UI/디자인 문서라 백엔드 인코딩 버그와 무관 → 미변경.
+- **백엔드 전용 → 맥미니 수동 배포 완료**(프론트 무변경).
+
+---
+
 ## 2026-05-26 (35회차) — 매출 분석 대시보드 그래프 기간(날짜) 기기 간 유지
 
 ### 1. 배경 / 요청

@@ -4,6 +4,54 @@
 
 ---
 
+## 2026-06-15 (42회차) — AI 월리뷰 분석 프롬프트 6섹션 재설계 + 컨텍스트 2차 확장
+
+### 1. 배경 / 요청
+- AI 분석을 회의용 정형 보고로 고도화. 사용자가 프롬프트를 6섹션(총평 / 핵심실적 / 채널동향 / 채널별 분석 / 브랜드별 분석 / 다음달 액션)으로 수정 요청 — 채널별 분석(채널 실적+주요 브랜드·상품), 브랜드별 분석(마/누/쏭 실적+주요 채널), 브랜드별 상품 전월비 top3/worst3 포함.
+
+### 2. 분석 (grounding 감사 워크플로)
+- 핵심 원칙: **AI는 `_build_analysis_context` 출력만 본다** → 프롬프트 요구값이 컨텍스트에 있나 섹션별 적대 감사. 결과: "브랜드별 상품 전월비", "채널 최근3개월·전년동월"이 미출력(데이터는 `brand_products`·`channel_options`에 존재, surface만 필요). `대상 X` 혼입·top3 거래건수순 정렬 문제도 식별. 상세: `docs/error.md §56`.
+
+### 3. 조치 (`monthly_review.py`, `e255ea0`)
+- `_build_analysis_context`: 채널 라인에 최근3개월(`values[-3:]`)·전년동월(`channel_options.values13[0]` join) 추가, 거래처·브랜드·상품 **매출순 top3(0 제외)**, 채널 주요상품 `대상 X` 제외, **[브랜드별 상품 전월비]** 블록 신설(`brand_products` 전월비 ±1백만원 이상 top3/worst3).
+- 프롬프트(`analysis_prompts.json["all"]`) 6섹션 정리 — 제목 "세 줄 총평"→"총평", 섹션1↔3 중복 정리(채널 동향=끌어올린/끌어내린만, 전체 나열 금지), 섹션2 최근 흐름=전월 연쇄(MoM). API로 저장(이커/오프는 5섹션 유지).
+
+### 4. 검증
+- 실데이터(`uploads/260519.csv`)로 `_build_analysis_context` 직접 검증 + 라이브 `ai-analysis` end-to-end(2026-05 전체) — 6섹션·브랜드별 상품 전월비·채널 최근3개월/전년동월·MoM 흐름 정상.
+
+### 5. 문서
+- `design_document §2.3.3.26`, `project_plan §4.7`, `error.md §56`+마스터 권장 #42, `history.md` 본 42회차.
+
+### 6. 산출물
+- 코드: `api/monthly_review.py`
+- 프롬프트(런타임): `analysis_prompts.json["all"]` (API 저장, gitignore)
+- 문서: `docs/{design_document,project_plan,error,history}.md`
+- 커밋: `e255ea0` (42회차)
+
+---
+
+## 2026-06-15 (41회차) — AI 월리뷰 분석 컨텍스트 1차 확장 (브랜드 포커스 + 채널 주요상품)
+
+### 1. 배경 / 요청
+- AI 분석에 "채널별 분석(채널 실적+주요 브랜드·상품)"과 "브랜드별 분석(마이비/누비/쏭레브 실적+주요 채널)"을 추가하려면 컨텍스트에 해당 데이터가 없어 백엔드 보강 필요.
+
+### 2. 조치 (`monthly_review.py`, `22ca95a`)
+- `get_summary`: **`brand_focus`** 신설 — 마/누/쏭 각 대상월/직전월/전년동월/월평균/목표 + 채널별 대상월 매출(`df_part` groupby).
+- `_build_analysis_context`: 채널 대상월 매출순 정렬, 채널 **주요 상품** 줄 추가, **[브랜드 포커스]** 블록(part=all), 거래처·브랜드·상품을 거래건수 아닌 **매출순 top3(0 제외)**로 — `_won_to_man`이 함수명과 달리 '백만원'(÷1e6)임을 확인.
+
+### 3. 검증
+- 실데이터로 brand_focus(달성률 등)·products·정렬 검증, 라이브 ai-analysis 출력 확인.
+
+### 4. 문서
+- `design_document §2.3.3.26`, `error.md §56`, `history.md` 본 41회차.
+
+### 5. 산출물
+- 코드: `api/monthly_review.py`
+- 문서: `docs/{design_document,error,history}.md`
+- 커밋: `22ca95a` (41회차)
+
+---
+
 ## 2026-06-15 (40회차) — 일평균(꺾은선) 차트 좌측 절반 끊김 수정 (Recharts per-Line data 도메인 2배)
 
 ### 1. 배경 / 요청

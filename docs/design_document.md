@@ -712,6 +712,32 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 
 **배포**: 백엔드 변경(`values13`/`channel_months13`) 포함 → **Mac Mini 재배포 필요**.
 
+#### 2.3.3.26 AI 매출 분석 — 채널별·브랜드별 분석 + 컨텍스트 확장 (2026-06-15 41~42회차)
+
+§2.3.3.20의 AI 분석을 회의용 정형 보고로 고도화. **프롬프트(분석 지침)를 6섹션 구조로 재설계**하고, AI에 내려가는 데이터 컨텍스트(`_build_analysis_context`)를 확장. **백엔드 변경 포함 → Mac Mini 재배포 필요**(`docs/error.md §22`).
+
+**핵심 원칙 — grounding:** AI는 `_build_analysis_context`가 출력한 텍스트만 본다. `summary` dict에 데이터가 있어도 컨텍스트에 출력하지 않으면 AI는 못 본다. 프롬프트가 요구하는 모든 값은 컨텍스트에 surface돼야 한다(미surface 시 빈 결과/추측). 상세: `docs/error.md §56`.
+
+**컨텍스트 확장 (`_build_analysis_context`)**
+- **채널 라인**: 대상월 / 직전월 → **대상월 / 직전월 / 최근3개월(`channel_issue.values[-3:]`) / 전년동월(`channel_options.values13[0]`을 채널명 join)** 으로 확장. 채널은 대상월 매출 큰 순 정렬.
+- **주요 거래처·브랜드·상품 = 매출순 top3(0 이하 제외)**: 기존 `_series_by`는 거래 **건수**(value_counts) 순이라 매출 0원 항목이 "주요"로 노출되던 문제 → 렌더 단계에서 대상월 매출(`values[-1]`)순 재정렬·필터(프론트 차트는 무영향). 채널 주요 상품은 `'대상 X'`(품목 미분류 placeholder) 제외.
+- **[브랜드 포커스] 블록 (part=all 전용)**: `brand_focus`(`get_summary` 신설) — 마이비/누비/쏭레브 각각 대상월/직전월/전년동월/월평균/목표/달성률% + 채널별 대상월 매출(큰 순). "브랜드별 주요 채널"의 grounded 근거.
+- **[브랜드별 상품 전월비] 블록 (part=all 전용)**: `brand_products`(13개월 values) 기반 — 각 브랜드 상품의 전월비(`values[-1]-values[-2]`) 상승 top3 / 하락 worst3(±1백만원 이상). `brand_products`는 `'대상 X'`를 `get_summary`에서 이미 제외(line 567).
+
+**`get_summary` 신규 필드 `brand_focus`**
+- 요청 part의 `df_part`로 마/누/쏭 각각 `{name, current_month, prev_month, prev_year, monthly_avg, target, channels:[{name,value}]}` (raw 원 단위, 포맷은 컨텍스트에서). `target`은 `brand_targets`(part=all만).
+
+**프롬프트 6섹션 (전체 파트, `analysis_prompts.json["all"]`)**
+1. 총평: 실적 한 줄(달성률/전년비) + 채널 전월비 top3/worst3 + 브랜드별 상품 전월비 top3/worst3. (전체 채널 나열 금지)
+2. 핵심 실적: 대상월 실적 / 목표비 / 전년비 / 최근 흐름(최근 3개월 **전월 연쇄 MoM** 증감률·차액)
+3. 채널 동향: 끌어올린/끌어내린 채널만 직전월 대비 증감액·증감률 + 움직인 브랜드·상품
+4. 채널별 분석: **고정 4채널**(오픈마켓(사입)/오픈마켓(위탁)/자사몰/할인점) — 실적(대상월/직전월/최근3개월/전년동월대비) + 주요 브랜드(채널 내 비중%) + 주요 상품
+5. 브랜드별 분석: 마/누/쏭 — 실적(직전월·전년·월평균 대비, 달성률) + 주요 채널(비중%)
+6. 다음 달 액션: 1~5 수치 근거 실행항목 + 급변 모니터링
+- **이커머스/오프라인 파트**: 브랜드별 섹션 제외한 5섹션(채널별 분석 포함). `brand_focus`/`brand_products` 블록은 part=all에서만 출력되므로 비-all 파트엔 브랜드 섹션 미적용.
+
+**단위/정밀:** 모든 금액 백만원(`_won_to_man` = ÷1,000,000, 함수명과 달리 '백만원'). 비중%·증감률%는 AI가 백만원 값으로 계산(반올림 근사). 프롬프트는 `analysis_prompts.json`(gitignore, 런타임)이라 배포 후 `POST /monthly-review/analysis-prompt/`로 저장.
+
 #### 2.3.4 목표 파일 포맷
 
 ```csv

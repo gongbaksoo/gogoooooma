@@ -1412,6 +1412,31 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 1. **한 차트 내 모든 그래픽 요소는 부모의 단일 `data`만 사용** — 자식 `<Line>`/`<Bar>`에 `data` prop을 따로 주지 말 것. 모드별로 다른 값을 그릴 땐 부모 `chartData`를 미리 매핑. 불가피하게 자식 data를 써야 하면 `<XAxis allowDuplicatedCategory={false}>`로 명시(단 정렬·결측 처리 주의). 상세 규약: `design_document §8.15`.
 2. **차트 "이상" 제보는 표시 vs 데이터를 먼저 분리** — 라이브 API raw로 점 개수·값·끝점 라벨을 검산해 데이터 버그인지 렌더 버그인지 판정 후 수정.
 
+---
+
+## 56. AI 월리뷰 분석 컨텍스트 — grounding / 단위 / 정렬 다건 (2026-06-15 41~42회차)
+
+### 🚨 증상 / 함정
+월리뷰 "AI 분석"을 회의용 6섹션 보고로 고도화하며 발생한 데이터 컨텍스트 관련 함정 모음. 공통 뿌리: **AI는 `_build_analysis_context`가 출력한 텍스트만 본다** — `summary` dict에 값이 있어도 컨텍스트에 출력 안 하면 못 본다.
+
+1. **grounding 공백 (데이터 보유 ≠ 컨텍스트 출력)**: 프롬프트가 "브랜드별 상품 전월비", "채널 최근3개월·전년동월"을 요구했으나 컨텍스트에 미출력 → 그대로 두면 그 섹션이 비거나 추측이 된다. 데이터(`brand_products`, `channel_options.values13`)는 `summary`에 이미 있어 `_build_analysis_context`에 surface만 하면 해결. 적대 감사 워크플로(섹션별 grounding 감사)로 미출력 항목을 코드 근거로 식별.
+2. **`_won_to_man` 함수명-단위 불일치**: 함수명은 `man`(만원)인데 실제 `÷1,000,000` = **백만원** 출력(docstring엔 명시). 초기 브리프에서 "만원"으로 오인 → 프롬프트가 단위 환산을 유발할 뻔. 함수명 믿지 말고 정의·docstring 확인.
+3. **"주요" top3가 거래 건수순(매출 아님)**: `_series_by`/`_series_by_pair`가 `value_counts()`(거래 건수) 정렬이라 컨텍스트 top3에 매출 0원 항목(`위메프 0백만원`, `대상 X 0백만원`)이 "주요"로 노출 → 회의 자료 부적합. 컨텍스트 렌더 단계에서 대상월 매출(`values[-1]`)순 재정렬 + 0 이하 제외(프론트 차트는 무영향).
+4. **`대상 X` placeholder 혼입**: `brand_products`는 `'대상 X'`를 제외(`get_summary` line 567)하지만 `channel_issue.products`(`_series_by_pair`)는 미제외 → 채널 주요 상품에 `대상 X` 노출. 컨텍스트에서 별도 제외.
+5. **Cloudflare 403 (python-urllib)**: 프롬프트 저장/조회를 `urllib.request`로 `api.gongbaksoo.com` 호출 시 **403 Forbidden**(Cloudflare가 기본 `Python-urllib/x.y` User-Agent 차단). `User-Agent: curl/...` 헤더 추가로 통과(curl은 기본 통과).
+6. **전월비 "+0백만원" 노이즈**: 브랜드별 상품 전월비 top3에 백만원 미만 미세 변동이 `+0백만원`으로 표시 → 반올림 ±1백만원 이상만 필터.
+
+### ✅ 조치
+- `get_summary`에 `brand_focus`(마/누/쏭 × 채널) 신설, `_build_analysis_context`에 채널 최근3개월·전년동월 / [브랜드 포커스] / [브랜드별 상품 전월비] 블록 추가 + 매출순 top3 + `대상 X` 제외 (41회차 `22ca95a`, 42회차 `e255ea0`).
+- 프롬프트 저장 스크립트는 `User-Agent` 헤더 포함, 저장 전 기존값 백업.
+- 실데이터(`uploads/260519.csv`)로 `_build_analysis_context` 직접 호출 검증 + 라이브 `ai-analysis` end-to-end 검증.
+
+### 💡 향후 권장
+1. **프롬프트가 요구하는 모든 값은 컨텍스트 출력 여부로 검증** — `summary` 보유가 아니라 `_build_analysis_context` 출력이 grounding 기준. LLM 프롬프트 점검은 "데이터 어디 있나"가 아니라 "AI에게 실제로 내려가나"로.
+2. **유틸 함수는 이름이 아니라 정의로 단위·동작 확인** — `_won_to_man`처럼 이름과 실제(백만원)가 다를 수 있음.
+3. **외부(Cloudflare 등) 보호 엔드포인트는 `User-Agent` 헤더 명시** — 기본 라이브러리 UA가 차단될 수 있음.
+4. **"주요/top" 집계는 정렬 키 확인** — 건수순 vs 금액순. 회의·보고용은 금액순 + 0 제외.
+
 ## 향후 권장 사항
 1. ~~**`api/metadata.db`를 `.gitignore`에 추가**~~ — ✅ **2026-05-23 29회차에 조치 완료**(`§44`). 미조치 기간 동안 배포 시 운영 업로드 파일이 유실되는 사고가 실제 발생함. 동적 DB 파일이 git에 추적되면 매 부팅·배포마다 변경분/유실 발생.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -1454,3 +1479,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 39. **`vercel.json` rewrite와 Next 라우트 충돌 점검 + 라우팅 검증은 라이브/`vercel dev`에서** — `/api/(.*)`를 백엔드로 보내는 rewrite가 있으면 `/api/` 아래 Next 라우트가 전부 404로 가려진다. 신규 라우트는 rewrite 밖에 두거나 예외 명시. `next start`/`next build`는 `vercel.json`을 적용 안 하니 rewrite·라우팅 검증은 라이브에서 (§53 권장 1·2번 참조).
 40. **사용자 노출 시각은 `timeZone` 명시로 KST 고정** — `toLocaleString`/`Intl.DateTimeFormat`은 `timeZone` 옵션이 없으면 렌더 런타임의 로컬 타임존을 따라가, SSR/UTC 서버(Vercel)에서 렌더되면 한국시와 9시간(하루) 어긋난다. 사용자에게 보이는 모든 시각 포맷터는 `timeZone: "Asia/Seoul"` 명시 + 신규 추가 시 `grep -rn toLocaleString`으로 누락 점검 (§54 권장 1번 참조).
 41. **차트 자식 `<Line>`/`<Bar>`에 per-Line `data` prop 금지** — Recharts(`allowDuplicatedCategory` 기본 true)는 자식이 자체 data를 가지면 X축 category를 부모 data와 중복 concat해 도메인이 2배가 되고 데이터가 좌측 절반에만 그려진다. 모드별로 다른 값을 그릴 땐 부모 `chartData`를 미리 매핑하고 `<LabelList dataKey>`는 선의 `dataKey`와 통일. 차트 "이상" 제보는 라이브 raw로 표시/데이터 버그를 먼저 분리 (§55 권장 1·2번, `design_document §8.15` 참조).
+42. **AI 컨텍스트 grounding — 프롬프트 요구값은 컨텍스트 출력으로 검증 + 유틸은 정의로 단위 확인 + 보호 엔드포인트 UA 헤더 + top 집계 정렬 키 확인** — LLM 프롬프트가 요구하는 값은 `summary` 보유가 아니라 `_build_analysis_context` 실제 출력으로 grounding 확인; `_won_to_man`처럼 함수명≠단위(백만원) 주의; Cloudflare 등 보호 엔드포인트는 `User-Agent` 명시; "주요/top" 집계는 건수순 vs 금액순 정렬 키 확인(보고용은 금액순+0 제외) (§56 권장 1·2·3·4번 참조).

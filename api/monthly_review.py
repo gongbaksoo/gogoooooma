@@ -667,6 +667,29 @@ def get_summary(
     # 전사(전 파트) 목표라 part=all에서만 의미 → 그 외 파트는 빈 dict(목표비 "-").
     brand_targets = _load_brand_targets().get(month, {}) if part == "all" else {}
 
+    # ----- brand_focus: 마이비/누비/쏭레브 (대상월 실적 + 채널별 대상월 매출) — AI 분석 컨텍스트용 -----
+    # 요청 part 기준(df_part). 채널별 대상월 매출까지 집계해 "브랜드별 주요 채널"을 grounded하게 제공.
+    _FOCUS_BRANDS = ["마이비", "누비", "쏭레브"]
+    _prev_y, _prev_m = last12[-2]   # 직전월
+    _py_y, _py_m = last13[0]        # 전년 동월
+    brand_focus = []
+    for _b in _FOCUS_BRANDS:
+        _bf = df_part[df_part["품목그룹1"] == _b]
+        _ch = (
+            _bf[_bf["월구분"] == target_yymm]
+            .groupby("채널구분")["판매액"].sum()
+            .sort_values(ascending=False)
+        )
+        brand_focus.append({
+            "name": _b,
+            "current_month": float(_bf[_bf["월구분"] == target_yymm]["판매액"].sum()),
+            "prev_month": _month_total(_prev_y, _prev_m, _bf),
+            "prev_year": _month_total(_py_y, _py_m, _bf),
+            "monthly_avg": (sum(_month_total(_y, _m, _bf) for _y, _m in last12) / 12) if last12 else 0.0,
+            "target": float(brand_targets.get(_b)) if brand_targets.get(_b) else None,
+            "channels": [{"name": str(_n), "value": float(_v)} for _n, _v in _ch.items()],
+        })
+
     return {
         "month": month,
         "part": part,
@@ -688,6 +711,7 @@ def get_summary(
         "channel_months13": last13_labels,
         "channel_issue": channel_issue,
         "channel_issue_months": last12_labels,
+        "brand_focus": brand_focus,
     }
 
 
@@ -773,29 +797,67 @@ def _build_analysis_context(summary: dict, month: str, part: str) -> str:
             prev = _won_to_man(row.get("prev_year"))
             lines.append(f"- {m}: 당해 {cur} / 전년 {prev}")
 
-    # ----- 주요 채널 이슈 (대상월 기준) -----
+    # ----- 주요 채널 이슈 (대상월 기준, 대상월 매출 큰 순서) -----
     ci = (summary.get("channel_issue") or {}).get(part) or {}
     channels = ci.get("channels") or []
     if channels:
         lines.append("")
-        lines.append("[주요 채널 이슈 — 채널별 대상월 매출 / 상위 거래처·브랜드]")
-        for ch in channels:
+        lines.append("[주요 채널 이슈 — 채널별 대상월 매출 / 주요 거래처·브랜드·상품]")
+
+        def _top3_by_month(items):
+            # 대상월 매출(values[-1]) 상위 3개, 0 이하 제외 — 거래 건수가 아닌 '매출' 기준.
+            ranked = sorted(items or [], key=lambda x: (x.get("values") or [0])[-1], reverse=True)
+            return [it for it in ranked if (it.get("values") or [0])[-1] > 0][:3]
+
+        for ch in sorted(channels, key=lambda c: (c.get("values") or [0])[-1], reverse=True):
             vals = ch.get("values") or []
             cur_v = _won_to_man(vals[-1]) if vals else "-"
             prev_v = _won_to_man(vals[-2]) if len(vals) >= 2 else "-"
             lines.append(f"- {ch.get('name', '')}: 대상월 {cur_v} (직전월 {prev_v})")
-            vendors = (ch.get("vendors") or [])[:3]
+            vendors = _top3_by_month(ch.get("vendors"))
             if vendors:
                 vtxt = ", ".join(
                     f"{v.get('name')} {_won_to_man((v.get('values') or [0])[-1])}" for v in vendors
                 )
                 lines.append(f"    · 주요 거래처: {vtxt}")
-            brands = (ch.get("brands") or [])[:3]
+            brands = _top3_by_month(ch.get("brands"))
             if brands:
                 btxt = ", ".join(
                     f"{b.get('name')} {_won_to_man((b.get('values') or [0])[-1])}" for b in brands
                 )
                 lines.append(f"    · 주요 브랜드: {btxt}")
+            products = _top3_by_month(ch.get("products"))
+            if products:
+                ptxt = ", ".join(
+                    f"{p.get('name')}({p.get('brand')}) {_won_to_man((p.get('values') or [0])[-1])}"
+                    for p in products
+                )
+                lines.append(f"    · 주요 상품: {ptxt}")
+
+    # ----- 브랜드 포커스 (마이비/누비/쏭레브) — 전체 파트에서만 -----
+    brand_focus = summary.get("brand_focus") or []
+    if part == "all" and brand_focus:
+        lines.append("")
+        lines.append("[브랜드 포커스 — 마이비 / 누비 / 쏭레브: 실적 + 채널별 대상월 매출]")
+        for b in brand_focus:
+            cur = b.get("current_month")
+            head = (
+                f"- {b.get('name', '')}: 대상월 {_won_to_man(cur)} "
+                f"(직전월 {_won_to_man(b.get('prev_month'))}, 전년동월 {_won_to_man(b.get('prev_year'))}, "
+                f"월평균 {_won_to_man(b.get('monthly_avg'))}"
+            )
+            tgt = b.get("target")
+            if tgt:
+                rate_b = round(cur / tgt * 100, 1) if (cur is not None and tgt) else None
+                head += f", 목표 {_won_to_man(tgt)} / 달성률 {rate_b}%"
+            head += ")"
+            lines.append(head)
+            chans = b.get("channels") or []
+            if chans:
+                ctxt = ", ".join(
+                    f"{c.get('name')} {_won_to_man(c.get('value'))}" for c in chans[:6]
+                )
+                lines.append(f"    · 채널별 대상월: {ctxt}")
 
     return "\n".join(lines)
 

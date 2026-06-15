@@ -800,9 +800,11 @@ def _build_analysis_context(summary: dict, month: str, part: str) -> str:
     # ----- 주요 채널 이슈 (대상월 기준, 대상월 매출 큰 순서) -----
     ci = (summary.get("channel_issue") or {}).get(part) or {}
     channels = ci.get("channels") or []
+    # 채널 전년동월용: channel_options[part]의 values13(13개월, [0]=전년동월)을 채널명으로 매칭.
+    copts_map = {c.get("name"): c for c in ((summary.get("channel_options") or {}).get(part) or [])}
     if channels:
         lines.append("")
-        lines.append("[주요 채널 이슈 — 채널별 대상월 매출 / 주요 거래처·브랜드·상품]")
+        lines.append("[주요 채널 이슈 — 채널별 대상월/직전월/최근3개월/전년동월 + 주요 거래처·브랜드·상품]")
 
         def _top3_by_month(items):
             # 대상월 매출(values[-1]) 상위 3개, 0 이하 제외 — 거래 건수가 아닌 '매출' 기준.
@@ -813,7 +815,15 @@ def _build_analysis_context(summary: dict, month: str, part: str) -> str:
             vals = ch.get("values") or []
             cur_v = _won_to_man(vals[-1]) if vals else "-"
             prev_v = _won_to_man(vals[-2]) if len(vals) >= 2 else "-"
-            lines.append(f"- {ch.get('name', '')}: 대상월 {cur_v} (직전월 {prev_v})")
+            recent = vals[-3:] if len(vals) >= 3 else vals
+            recent_txt = "→".join(_won_to_man(x) for x in recent) if recent else "-"
+            co = copts_map.get(ch.get("name")) or {}
+            v13 = co.get("values13") or []
+            yoy_txt = _won_to_man(v13[0]) if v13 else "-"
+            lines.append(
+                f"- {ch.get('name', '')}: 대상월 {cur_v} "
+                f"(직전월 {prev_v}, 최근3개월 {recent_txt}, 전년동월 {yoy_txt})"
+            )
             vendors = _top3_by_month(ch.get("vendors"))
             if vendors:
                 vtxt = ", ".join(
@@ -826,7 +836,9 @@ def _build_analysis_context(summary: dict, month: str, part: str) -> str:
                     f"{b.get('name')} {_won_to_man((b.get('values') or [0])[-1])}" for b in brands
                 )
                 lines.append(f"    · 주요 브랜드: {btxt}")
-            products = _top3_by_month(ch.get("products"))
+            # 채널 주요 상품: '대상 X'(품목 미분류 placeholder) 제외 후 매출순 top3.
+            prod_items = [p for p in (ch.get("products") or []) if str(p.get("name")) != "대상 X"]
+            products = _top3_by_month(prod_items)
             if products:
                 ptxt = ", ".join(
                     f"{p.get('name')}({p.get('brand')}) {_won_to_man((p.get('values') or [0])[-1])}"
@@ -858,6 +870,35 @@ def _build_analysis_context(summary: dict, month: str, part: str) -> str:
                     f"{c.get('name')} {_won_to_man(c.get('value'))}" for c in chans[:6]
                 )
                 lines.append(f"    · 채널별 대상월: {ctxt}")
+
+    # ----- 브랜드별 상품 전월비 (마이비/누비/쏭레브) — 전체 파트에서만 -----
+    # brand_products[브랜드] = [{name, values(13개월: [-1]=대상월, [-2]=직전월)}]. '대상 X'는 get_summary에서 이미 제외.
+    brand_products = summary.get("brand_products") or {}
+    if part == "all" and brand_products:
+        lines.append("")
+        lines.append("[브랜드별 상품 전월비 — 마이비 / 누비 / 쏭레브 (대상월 vs 직전월)]")
+        for bname in ["마이비", "누비", "쏭레브"]:
+            scored = []
+            for it in (brand_products.get(bname) or []):
+                v = it.get("values") or []
+                cur = v[-1] if v else 0.0
+                prev = v[-2] if len(v) >= 2 else 0.0
+                scored.append((it.get("name", ""), cur, prev, cur - prev))
+            # 백만원 미만 미세 변동(±0백만원)은 노이즈라 제외 — 반올림 ±1백만원 이상만.
+            ups = [s for s in sorted(scored, key=lambda x: x[3], reverse=True) if round(s[3] / 1_000_000) >= 1][:3]
+            downs = [s for s in sorted(scored, key=lambda x: x[3]) if round(s[3] / 1_000_000) <= -1][:3]
+            if ups:
+                uptxt = ", ".join(
+                    f"{n} +{_won_to_man(d)}(대상월 {_won_to_man(c)}/직전월 {_won_to_man(p)})"
+                    for n, c, p, d in ups
+                )
+                lines.append(f"- {bname} 상승 top3: {uptxt}")
+            if downs:
+                dntxt = ", ".join(
+                    f"{n} {_won_to_man(d)}(대상월 {_won_to_man(c)}/직전월 {_won_to_man(p)})"
+                    for n, c, p, d in downs
+                )
+                lines.append(f"- {bname} 하락 worst3: {dntxt}")
 
     return "\n".join(lines)
 

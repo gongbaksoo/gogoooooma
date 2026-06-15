@@ -1369,6 +1369,25 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 1. **`vercel.json` rewrite가 있는 프로젝트의 신규 Next API 라우트는 rewrite 경로와 충돌 점검** — `/api/(.*)`가 백엔드로 프록시되면 `/api/` 아래 Next 라우트는 전부 가려진다. 신규 라우트는 rewrite 밖 경로에 두거나 rewrite에 명시 예외.
 2. **`next start`/`next build`는 `vercel.json`을 적용하지 않음 → 라우팅·rewrite 검증은 라이브(또는 `vercel dev`)에서** — 로컬 통과가 라이브 통과를 보장하지 않는 대표 사례(rewrites/redirects/headers).
 
+## 54. 업로드 시각이 한국시와 하루 어긋남 — `toLocaleString`에 `timeZone` 옵션 누락
+
+작성일: 2026-06-15 (39회차)
+
+> 사용자 제보: custom-dashboard "저장된 파일" 목록의 업로드 날짜·시각이 한국시와 다름.
+
+### 🚨 증상
+- `260615.csv`(6월 15일자 파일)의 업로드 시각이 `2026. 06. 14. 오후 11:44`로 표시 — 하루 전·약 9시간 어긋남.
+
+### 🧭 원인
+- `frontend/src/components/FileSelector.tsx`의 `formatDate()`가 `new Date(ts*1000).toLocaleString("ko-KR", { ... })`로 포맷하면서 **`timeZone` 옵션이 없음**.
+- `timeZone` 미지정 시 **렌더 환경의 로컬 타임존**을 따른다. Vercel 등 UTC 환경에서 렌더되면 UTC가 그대로 출력 → KST(UTC+9)와 정확히 9시간(하루) 차이. (KST 6/15 08:44 → UTC 6/14 23:44와 일치)
+
+### ✅ 해결
+- `toLocaleString` 옵션에 `timeZone: "Asia/Seoul"` 추가 → 렌더 위치와 무관하게 항상 KST로 고정.
+
+### 💡 향후 권장
+1. **사용자 노출 시각은 `timeZone` 명시로 고정** — `toLocaleString`/`Intl.DateTimeFormat`은 옵션 없으면 런타임 타임존을 따른다. SSR/엣지/UTC 서버에서 렌더될 수 있는 값은 `timeZone: "Asia/Seoul"`을 항상 명시. 신규 시각 포맷터 추가 시 `grep -rn toLocaleString`으로 누락 점검.
+
 ## 향후 권장 사항
 1. ~~**`api/metadata.db`를 `.gitignore`에 추가**~~ — ✅ **2026-05-23 29회차에 조치 완료**(`§44`). 미조치 기간 동안 배포 시 운영 업로드 파일이 유실되는 사고가 실제 발생함. 동적 DB 파일이 git에 추적되면 매 부팅·배포마다 변경분/유실 발생.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -1409,3 +1428,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 37. **함수 내 모듈 재-import 금지 + CSV 리더 인코딩 폴백 전수 + 경로 술어 정확히** — 모듈 상단에 import된 이름을 함수 안에서 다시 import하면 함수 전체 지역변수로 승격돼 미실행 분기에서 `UnboundLocalError`로 진짜 에러를 가림. 원본 CSV는 EUC-KR(cp949)이니 신규 `read_csv`는 4종 인코딩 폴백 필수(`grep`으로 누락 점검). 파일 기대 경로는 `os.path.isfile` + 빈 파일명 가드 (§51 권장 1·2·3번 참조).
 38. **`hmac.compare_digest`는 bytes 비교 + 보안 경계는 배포 전 적대 검증 + 읽기/쓰기 posture 일관화** — `compare_digest`를 str로 호출하면 비ASCII(한글) 비밀번호에서 TypeError로 기능이 500(self-DoS)나니 양쪽 `.encode('utf-8')`. 인증/권한 변경은 정상 경로만 보지 말고 독립 관점으로 사전 검증하고, 파괴적 작업만 막고 조회를 열어두지 말 것 (§52 권장 1·2·3번 참조).
 39. **`vercel.json` rewrite와 Next 라우트 충돌 점검 + 라우팅 검증은 라이브/`vercel dev`에서** — `/api/(.*)`를 백엔드로 보내는 rewrite가 있으면 `/api/` 아래 Next 라우트가 전부 404로 가려진다. 신규 라우트는 rewrite 밖에 두거나 예외 명시. `next start`/`next build`는 `vercel.json`을 적용 안 하니 rewrite·라우팅 검증은 라이브에서 (§53 권장 1·2번 참조).
+40. **사용자 노출 시각은 `timeZone` 명시로 KST 고정** — `toLocaleString`/`Intl.DateTimeFormat`은 `timeZone` 옵션이 없으면 렌더 런타임의 로컬 타임존을 따라가, SSR/UTC 서버(Vercel)에서 렌더되면 한국시와 9시간(하루) 어긋난다. 사용자에게 보이는 모든 시각 포맷터는 `timeZone: "Asia/Seoul"` 명시 + 신규 추가 시 `grep -rn toLocaleString`으로 누락 점검 (§54 권장 1번 참조).

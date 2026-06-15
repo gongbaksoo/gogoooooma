@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-06-15 (39회차) — 업로드 시각 표시 한국시(KST) 고정
+
+### 1. 배경 / 요청
+- 사용자 제보: custom-dashboard "저장된 파일" 목록의 업로드 날짜·시각이 한국시와 다름.
+- 확인(추측 금지): `260615.csv`(6/15자)가 `2026. 06. 14. 오후 11:44`로 표시 → 정확히 9시간(하루) 어긋남 = UTC가 그대로 출력되는 증상.
+
+### 2. 원인
+- `frontend/src/components/FileSelector.tsx`의 `formatDate()`가 `toLocaleString("ko-KR", { ... })`에서 **`timeZone` 옵션 누락**.
+- 옵션 미지정 시 렌더 환경의 로컬 타임존을 따라 Vercel(UTC) 렌더 시 UTC 출력 → KST(UTC+9)와 9시간 차이.
+
+### 3. 조치
+- `formatDate()`의 `toLocaleString` 옵션에 `timeZone: "Asia/Seoul"` 추가 → 렌더 위치 무관 KST 고정.
+
+### 4. 문서
+- `project_plan §4.1`(업로드 시각 KST 규약), `design_document`(상태 영속성 하단 KST 표시 규약), `error.md §54`+마스터 권장 #40, `history.md` 본 39회차.
+
+### 5. 산출물
+- 코드: `frontend/src/components/FileSelector.tsx` (1줄 추가)
+- 문서: `docs/{project_plan,design_document,error,history}.md`
+
+---
+
 ## 2026-05-30 (38회차) — 사이트 진입 비밀번호 게이트 (프론트 전 화면)
 
 ### 1. 배경 / 요청

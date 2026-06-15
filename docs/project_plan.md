@@ -71,6 +71,7 @@ sales-analysis-site/
 - CSV/XLSX 파일 업로드 (`/api/upload`)
 - 업로드된 파일 목록 조회
 - 파일 선택 시 대시보드 자동 로드
+- ⚠️ **업로드 시각 표시는 한국시(KST) 고정 (2026-06-15 39회차)**: `FileSelector`의 "저장된 파일" 목록 시각은 `toLocaleString("ko-KR", { timeZone: "Asia/Seoul", ... })`로 렌더 환경과 무관하게 KST로 고정한다. `timeZone` 옵션 누락 시 Vercel(UTC) 등에서 렌더되면 UTC가 그대로 출력돼 한국시와 9시간(하루) 어긋난다(실제 발생, `docs/error.md §54`).
 - **저장 구조**: 업로드 파일은 SQLite `api/metadata.db`의 `uploaded_files` 테이블에 **BLOB으로 저장**(DB 불가 시 `api/uploads/` 디스크 fallback). 목록은 `list_files_in_db()`(최신순), 최대 5건 유지(`cleanup_old_files_in_db`).
 - ⚠️ **운영 데이터 git 추적 금지 (2026-05-23 29회차)**: `metadata.db`·`api/uploads/` 데이터 파일은 **소스가 아니라 운영 런타임 데이터**다. git에 추적되면 배포(`git pull`) 때 저장소의 빈/구버전 DB로 **덮어써져 업로드가 전부 유실**된다(실제 발생, `docs/error.md §44`). `.gitignore`에 등록되어 있어야 하며, `.gitkeep`만 추적한다.
 - ⚠️ **소스 CSV 인코딩 규약 — EUC-KR(cp949) (2026-05-30 36회차)**: 업로드되는 매출 원본 CSV는 **EUC-KR(cp949)** 인코딩이다(UTF-8 아님, 첫 바이트 `0xC0`). 모든 운영 CSV 리더는 인코딩 폴백을 갖춰야 한다 — `index.py`(업로드)·`dashboard.py`·`monthly_review.py`는 `['utf-8','utf-8-sig','cp949','euc-kr']` 순차 시도, `chat.py`(AI 채팅)는 `UnicodeDecodeError` 시 cp949 폴백. 폴백 누락 시 `'utf-8' codec can't decode byte 0xc0` 에러로 기능 전체가 죽는다. 신규 `read_csv` 추가 시 동일 폴백 적용 + `grep -rn read_csv`로 누락 점검. 상세: `docs/error.md §51`.

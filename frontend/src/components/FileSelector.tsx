@@ -75,6 +75,7 @@ export default function FileSelector({ selectedFile, onFileSelect }: FileSelecto
 
     const formatDate = (timestamp: number) => {
         return new Date(timestamp * 1000).toLocaleString("ko-KR", {
+            timeZone: "Asia/Seoul",
             year: "numeric",
             month: "2-digit",
             day: "2-digit",

@@ -1415,5 +1415,19 @@ export function getDataTypeSeriesStyle(i: number, key: 'profitRate' | 'growth'):
 - §8.5 차트 팔레트 v4 (데이터 종류 기반, 이익률/증감률 의미색 정의)
 - 목업 비교 자료: `docs/mockups/chart-palette-*.html` (9개 안)
 
+### 8.15 차트 데이터 바인딩 규약 — per-`<Line>` data prop 금지 (2026-06-15 40회차)
+
+> 증상: `custom-dashboard/details`의 "일평균(꺾은선)" 토글에서 검정선이 차트 좌측 ~절반에서 끊기고 우측이 비며, 선이 과도하게 진동(`docs/error.md §55`).
+
+**규약**: 한 `<ComposedChart>`/`<LineChart>` 안의 모든 `<Line>`/`<Bar>`는 **부모 차트의 단일 `data`(차트 레벨)만** 사용한다. 특정 모드에서 다른 값을 그려야 하면, **자식 그래픽 요소에 `data` prop을 따로 주지 말고** 부모에 넘기는 `chartData`를 그 모드에 맞게 미리 매핑한다.
+
+- **이유**: Recharts(3.8.1, `allowDuplicatedCategory` 기본 `true`)는 자식 요소가 자체 `data`를 가지면 category 축 값을 **부모 data + 자식 data로 중복 concat**한다. 같은 카테고리라도 dedupe하지 않아 X축 슬롯이 2배가 되고, 데이터는 앞 절반에만 그려진다.
+- **적용 예 (39회차 수정)**: `avg`(일평균) 모드에서 `판매액`을 `일평균매출`로 바꿔 그릴 때, `<Line data={...}>` 대신 `chartData = monthly.map(d => ({ ...d, 판매액: d.일평균매출 }))`로 차트 레벨에서 변환. 같은 차트의 `이익률` 선은 부모 data를 쓰므로 두 선이 동일 데이터셋·동일 카테고리축을 공유한다.
+- **`<LabelList>`/끝점 라벨의 `dataKey`는 선의 `dataKey`와 일치**시킨다(여기선 `"판매액"`). 모드별로 존재하지 않는 필드(`일평균매출`을 daily에서 참조 등)를 가리키지 않게 한다.
+- **적용 2곳**: `app/custom-dashboard/details/page.tsx`(상세 리포트 동적 차트), `components/DynamicAnalysisSection.tsx`(메인 대시보드 브랜드 섹션, `BrandAnalysisSection` 경유). 단일 뷰(`avg_only` 등)의 `mergedChartData` 경로는 별개라 무관.
+
+#### 관련 항목
+- `docs/error.md §55` (근본원인·재현·수정 상세)
+
 
 

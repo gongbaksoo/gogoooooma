@@ -1388,6 +1388,30 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 ### 💡 향후 권장
 1. **사용자 노출 시각은 `timeZone` 명시로 고정** — `toLocaleString`/`Intl.DateTimeFormat`은 옵션 없으면 런타임 타임존을 따른다. SSR/엣지/UTC 서버에서 렌더될 수 있는 값은 `timeZone: "Asia/Seoul"`을 항상 명시. 신규 시각 포맷터 추가 시 `grep -rn toLocaleString`으로 누락 점검.
 
+## 55. 일평균 차트가 좌측 절반에서 끊김 — 자식 `<Line>`에 per-Line `data` prop을 줘 Recharts X축 도메인 2배
+
+작성일: 2026-06-15 (40회차)
+
+> 사용자 제보: `custom-dashboard/details?...&type=ecommerce`의 "일평균(꺾은선)" 토글에서 검정선이 차트 좌측 ~55%에서 끝나고 우측 ~45%가 비며, 선이 일 단위처럼 촘촘히 진동. 'total'(월매출)·'daily'(일매출) 토글은 정상.
+
+### 🚨 증상
+- 라이브 API 실측: `ecommerce.monthly`는 66개월(2021-01~2026-06)·`일평균매출` 정상값(1,061만~2,306만)인데, 차트가 66점을 좌측 절반에만 그림. 마지막 점(2026-06, 1482만)이 ~55% 위치에서 끝남 → X축 칸이 데이터의 약 2배.
+- 'avg' 모드만 깨짐(다른 토글 정상).
+
+### 🧭 원인
+- `details/page.tsx`·공유 `components/DynamicAnalysisSection.tsx`의 검정 `판매액 <Line>`이 **`avg` 모드에서만 자체 `data` prop**을 가짐: `data={mode==='avg' ? chartData.map(d=>({...d, 판매액:일평균매출})) : undefined}`. 같은 차트의 `이익률 <Line>`은 부모 data를 씀 → **두 선의 data 소스 비대칭**.
+- Recharts(3.8.1, `allowDuplicatedCategory` 기본 `true`)는 자식이 자체 data를 가지면 category 축 값을 **부모 data(66) + 자식 data(66) = 132로 중복 concat**(dedupe 안 함). 검정선은 앞 66칸(좌측 50%)에만 찍혀 ~55%에서 끝남. "촘촘한 진동"은 별도 버그가 아니라 66개월 정상 데이터가 절반 폭에 압축된 것 → 도메인 정상화로 함께 해소. **데이터가 아니라 표시(렌더) 버그.**
+
+### ✅ 해결
+- per-Line `data` prop을 **제거**하고, `avg` 변환을 **차트 레벨 `chartData`로 이동**: `chartData = monthly.map(d => ({ ...d, 판매액: d.일평균매출 }))`. 두 선이 동일 데이터셋·동일 카테고리축 공유 → concat 조건 소멸 → 도메인 66 복구.
+- `<LabelList dataKey>`를 선의 `dataKey`(`"판매액"`)와 통일.
+- 적용 2곳(둘 다 `avg` 모드만 해당, total/daily 무영향): `app/custom-dashboard/details/page.tsx`(상세), `components/DynamicAnalysisSection.tsx`(메인 대시보드 브랜드 섹션 — `BrandAnalysisSection`→`custom-dashboard/page.tsx` 경유, "일평균+이익률" 버튼으로 도달). 검증: `tsc` 신규 에러 0, `next build` 성공.
+- ⚠️ `data` prop만 단독 제거하면 `avg`에서 검정선이 월매출(판매액)을 그려 지표가 틀려진다 — 반드시 `chartData` 레벨 변환과 **함께** 한다.
+
+### 💡 향후 권장
+1. **한 차트 내 모든 그래픽 요소는 부모의 단일 `data`만 사용** — 자식 `<Line>`/`<Bar>`에 `data` prop을 따로 주지 말 것. 모드별로 다른 값을 그릴 땐 부모 `chartData`를 미리 매핑. 불가피하게 자식 data를 써야 하면 `<XAxis allowDuplicatedCategory={false}>`로 명시(단 정렬·결측 처리 주의). 상세 규약: `design_document §8.15`.
+2. **차트 "이상" 제보는 표시 vs 데이터를 먼저 분리** — 라이브 API raw로 점 개수·값·끝점 라벨을 검산해 데이터 버그인지 렌더 버그인지 판정 후 수정.
+
 ## 향후 권장 사항
 1. ~~**`api/metadata.db`를 `.gitignore`에 추가**~~ — ✅ **2026-05-23 29회차에 조치 완료**(`§44`). 미조치 기간 동안 배포 시 운영 업로드 파일이 유실되는 사고가 실제 발생함. 동적 DB 파일이 git에 추적되면 매 부팅·배포마다 변경분/유실 발생.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -1429,3 +1453,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 38. **`hmac.compare_digest`는 bytes 비교 + 보안 경계는 배포 전 적대 검증 + 읽기/쓰기 posture 일관화** — `compare_digest`를 str로 호출하면 비ASCII(한글) 비밀번호에서 TypeError로 기능이 500(self-DoS)나니 양쪽 `.encode('utf-8')`. 인증/권한 변경은 정상 경로만 보지 말고 독립 관점으로 사전 검증하고, 파괴적 작업만 막고 조회를 열어두지 말 것 (§52 권장 1·2·3번 참조).
 39. **`vercel.json` rewrite와 Next 라우트 충돌 점검 + 라우팅 검증은 라이브/`vercel dev`에서** — `/api/(.*)`를 백엔드로 보내는 rewrite가 있으면 `/api/` 아래 Next 라우트가 전부 404로 가려진다. 신규 라우트는 rewrite 밖에 두거나 예외 명시. `next start`/`next build`는 `vercel.json`을 적용 안 하니 rewrite·라우팅 검증은 라이브에서 (§53 권장 1·2번 참조).
 40. **사용자 노출 시각은 `timeZone` 명시로 KST 고정** — `toLocaleString`/`Intl.DateTimeFormat`은 `timeZone` 옵션이 없으면 렌더 런타임의 로컬 타임존을 따라가, SSR/UTC 서버(Vercel)에서 렌더되면 한국시와 9시간(하루) 어긋난다. 사용자에게 보이는 모든 시각 포맷터는 `timeZone: "Asia/Seoul"` 명시 + 신규 추가 시 `grep -rn toLocaleString`으로 누락 점검 (§54 권장 1번 참조).
+41. **차트 자식 `<Line>`/`<Bar>`에 per-Line `data` prop 금지** — Recharts(`allowDuplicatedCategory` 기본 true)는 자식이 자체 data를 가지면 X축 category를 부모 data와 중복 concat해 도메인이 2배가 되고 데이터가 좌측 절반에만 그려진다. 모드별로 다른 값을 그릴 땐 부모 `chartData`를 미리 매핑하고 `<LabelList dataKey>`는 선의 `dataKey`와 통일. 차트 "이상" 제보는 라이브 raw로 표시/데이터 버그를 먼저 분리 (§55 권장 1·2번, `design_document §8.15` 참조).

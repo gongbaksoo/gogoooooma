@@ -134,9 +134,11 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
     // If NO range is set (initial state?), maybe keep existing logic.
     // If startMonth/endMonth provided, use them.
 
+    // avg(일평균+이익률) 모드: 일평균을 '판매액' 키로 매핑해 chartData(차트 레벨)에서 처리.
+    // per-<Line> data prop으로 넘기면 Recharts가 X축 카테고리를 중복 concat해 도메인이 2배가 된다. (error.md §55)
     const chartData = isDaily
         ? ((startMonth || endMonth) ? filteredDaily : safeData.daily.slice(-180))
-        : filteredMonthly;
+        : (mode === 'avg' ? filteredMonthly.map(d => ({ ...d, "판매액": (d as any).일평균매출 })) : filteredMonthly);
 
     // --- Multi-Channel Data Merging for Single View Modes ---
     let mergedChartData: any[] = [];
@@ -342,7 +344,6 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                         type="monotone"
                                         dataKey="판매액"
                                         name={mode === 'total' || mode === 'sales_only' ? "월매출액" : (mode === 'daily' ? "일매출액" : "일평균 매출")}
-                                        data={isDaily ? undefined : ((mode === 'avg' || mode === 'avg_only') ? chartData.map(d => ({ ...d, "판매액": (d as any).일평균매출 })) : undefined)}
                                         stroke="#000000"
                                         strokeWidth={2}
                                         dot={isDaily ? false : { fill: "#000000", r: 1.5 }}
@@ -350,7 +351,7 @@ const DynamicAnalysisSection: React.FC<DynamicAnalysisSectionProps> = ({
                                         animationDuration={1500}
                                         animationEasing="ease-out"
                                     >
-                                        <LabelList dataKey={mode === 'total' || mode === 'sales_only' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} lastIndex={chartData.length - 1} />} />
+                                        <LabelList dataKey="판매액" position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} lastIndex={chartData.length - 1} />} />
                                     </Line>
                                 )}
 

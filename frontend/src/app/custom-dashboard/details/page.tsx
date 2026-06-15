@@ -104,8 +104,15 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
     const safeData = data || { monthly: [], daily: [] };
 
     const isDaily = mode === 'daily';
-    // Use last 180 days for daily mode
-    const chartData = isDaily ? safeData.daily.slice(-180) : safeData.monthly;
+    // Use last 180 days for daily mode.
+    // avg 모드: 일평균을 '판매액' 키로 매핑해 chartData(차트 레벨)에서 처리한다.
+    // per-<Line> data prop으로 넘기면 Recharts(allowDuplicatedCategory 기본 true)가
+    // X축 카테고리를 중복 concat해 도메인이 2배로 늘어 선이 좌측 절반에만 그려진다. (error.md §55)
+    const chartData: any[] = isDaily
+        ? safeData.daily.slice(-180)
+        : (mode === 'avg'
+            ? safeData.monthly.map(d => ({ ...d, "판매액": (d as any).일평균매출 }))
+            : safeData.monthly);
 
     return (
         <div className="bg-white p-4 md:p-8 border border-[#c4c4c4] mt-8">
@@ -172,7 +179,6 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             type="monotone"
                             dataKey="판매액"
                             name={mode === 'total' ? "월매출액" : (mode === 'daily' ? "일매출액" : "일평균 매출")}
-                            data={isDaily ? undefined : (mode === 'avg' ? chartData.map(d => ({ ...d, "판매액": (d as any).일평균매출 })) : undefined)}
                             stroke="#000000"
                             strokeWidth={2}
                             dot={isDaily ? false : { fill: "#000000", r: 1.5 }}
@@ -180,7 +186,7 @@ const DynamicAnalysisSection = ({ title, data, emoji, defaultMode = 'total' }: {
                             animationDuration={1500}
                             animationEasing="ease-out"
                         >
-                            <LabelList dataKey={mode === 'total' ? "판매액" : "일평균매출"} position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} lastIndex={chartData.length - 1} />} />
+                            <LabelList dataKey="판매액" position="top" content={<CustomLabel fill="#000000" formatter={formatMillions} lastIndex={chartData.length - 1} />} />
                         </Line>
 
                         <Line

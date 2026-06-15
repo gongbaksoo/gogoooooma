@@ -4,6 +4,35 @@
 
 ---
 
+## 2026-06-15 (40회차) — 일평균(꺾은선) 차트 좌측 절반 끊김 수정 (Recharts per-Line data 도메인 2배)
+
+### 1. 배경 / 요청
+- 사용자 제보: `custom-dashboard/details?...&type=ecommerce`의 "일평균(꺾은선)" 토글에서 검정선이 좌측 ~55%에서 끊기고 우측 공백, 선이 일 단위처럼 촘촘히 진동. "아래 그래프들까지 싹다 꼼꼼하게 체크해서 원인 분석" 요청.
+
+### 2. 분석 (Ultracode 워크플로 + 라이브 ground truth)
+- 라이브 API(`/api/dashboard/ecommerce-details?filename=260615.csv`) 실측: `ecommerce.monthly` 66개월(2021-01~2026-06), `일평균매출` 정상값(1,061만~2,306만). 마지막 점(2026-06, 1482만)이 ~55%에서 끝남 → X축 칸이 데이터의 약 2배.
+- 5개 렌즈 병렬 감사 + 적대 검증(에이전트 19개, 확정 4/반박 9): **데이터 정상, 표시(렌더) 버그**로 확정.
+- 근본원인: `avg` 모드에서만 검정 `판매액 <Line>`에 per-Line `data` prop을 줌 → 이익률 선과 data 소스 비대칭 → Recharts(3.8.1, `allowDuplicatedCategory` 기본 true)가 X축 category를 부모(66)+자식(66)=132로 중복 concat → 좌측 절반에만 렌더. 'total'/'daily'는 `data=undefined`라 정상.
+
+### 3. 조치 (2파일, 각 3곳)
+- `app/custom-dashboard/details/page.tsx`(상세 리포트) + `components/DynamicAnalysisSection.tsx`(메인 대시보드 브랜드 섹션, `BrandAnalysisSection`→`custom-dashboard/page.tsx` 경유) 양쪽 동일 수정.
+- ① `chartData`에서 `avg`일 때 `판매액=일평균매출` 매핑 ② `<Line>`의 per-Line `data` prop 제거 ③ `<LabelList dataKey>`를 `"판매액"`으로 통일.
+- 단일 뷰(`avg_only` 등)의 `mergedChartData` 경로는 별개라 무관.
+
+### 4. 검증
+- `tsc --noEmit`: 수정 2파일 신규 에러 0 (기존 `monthly-review/*` 에러는 무관, `next.config.js` `ignoreBuildErrors:true`).
+- `next build` 성공 — `/custom-dashboard`, `/custom-dashboard/details` 정상 생성.
+- 시각적 최종 확인은 배포 후 라이브에서.
+
+### 5. 문서
+- `design_document §8.15`(차트 데이터 바인딩 규약 — per-Line data 금지), `error.md §55`+마스터 권장 #41, `history.md` 본 40회차.
+
+### 6. 산출물
+- 코드: `frontend/src/app/custom-dashboard/details/page.tsx`, `frontend/src/components/DynamicAnalysisSection.tsx`
+- 문서: `docs/{design_document,error,history}.md`
+
+---
+
 ## 2026-06-15 (39회차) — 업로드 시각 표시 한국시(KST) 고정
 
 ### 1. 배경 / 요청

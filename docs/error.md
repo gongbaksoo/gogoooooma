@@ -1414,7 +1414,7 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 
 ---
 
-## 56. AI 월리뷰 분석 컨텍스트 — grounding / 단위 / 정렬 다건 (2026-06-15 41~42회차)
+## 56. AI 월리뷰 분석 컨텍스트 — grounding / 단위 / 정렬 다건 (2026-06-15 41~42회차, 2026-06-16 43회차 보강)
 
 ### 🚨 증상 / 함정
 월리뷰 "AI 분석"을 회의용 6섹션 보고로 고도화하며 발생한 데이터 컨텍스트 관련 함정 모음. 공통 뿌리: **AI는 `_build_analysis_context`가 출력한 텍스트만 본다** — `summary` dict에 값이 있어도 컨텍스트에 출력 안 하면 못 본다.
@@ -1425,9 +1425,11 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 4. **`대상 X` placeholder 혼입**: `brand_products`는 `'대상 X'`를 제외(`get_summary` line 567)하지만 `channel_issue.products`(`_series_by_pair`)는 미제외 → 채널 주요 상품에 `대상 X` 노출. 컨텍스트에서 별도 제외.
 5. **Cloudflare 403 (python-urllib)**: 프롬프트 저장/조회를 `urllib.request`로 `api.gongbaksoo.com` 호출 시 **403 Forbidden**(Cloudflare가 기본 `Python-urllib/x.y` User-Agent 차단). `User-Agent: curl/...` 헤더 추가로 통과(curl은 기본 통과).
 6. **전월비 "+0백만원" 노이즈**: 브랜드별 상품 전월비 top3에 백만원 미만 미세 변동이 `+0백만원`으로 표시 → 반올림 ±1백만원 이상만 필터.
+7. **전월비 movers ≠ 매출 상위 상품 (2026-06-16 43회차)**: 브랜드 주요 상품을 [브랜드별 상품 전월비](상승/하락 movers)로만 컨텍스트에 surface하면 '많이 움직인 상품'만 보여, 변동이 작은 꾸준한 주력 상품(예: 마이비 순한라인·삶기세제)이 누락된다. "주요 상품 매출"은 movers가 아니라 **대상월 매출순 top-N**을 별도 블록으로 surface해야 함. → [브랜드별 주요 상품 — 대상월 매출 상위 top5] 블록 신설(§56 #3의 '금액순' 원칙을 movers와 구분해 확장).
 
 ### ✅ 조치
 - `get_summary`에 `brand_focus`(마/누/쏭 × 채널) 신설, `_build_analysis_context`에 채널 최근3개월·전년동월 / [브랜드 포커스] / [브랜드별 상품 전월비] 블록 추가 + 매출순 top3 + `대상 X` 제외 (41회차 `22ca95a`, 42회차 `e255ea0`).
+- (43회차 보강) 브랜드 '주요 상품 매출'용 **[브랜드별 주요 상품 — 대상월 매출 상위 top5]** 블록 신설(`summary["brand_products"]`의 `values[-1]` 내림차순, 0원 제외, 직전월 동반 — `get_summary` 무수정). movers 블록과 병존, 프롬프트 섹션5에 `주요 상품` 불릿 추가.
 - 프롬프트 저장 스크립트는 `User-Agent` 헤더 포함, 저장 전 기존값 백업.
 - 실데이터(`uploads/260519.csv`)로 `_build_analysis_context` 직접 호출 검증 + 라이브 `ai-analysis` end-to-end 검증.
 
@@ -1436,6 +1438,7 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 2. **유틸 함수는 이름이 아니라 정의로 단위·동작 확인** — `_won_to_man`처럼 이름과 실제(백만원)가 다를 수 있음.
 3. **외부(Cloudflare 등) 보호 엔드포인트는 `User-Agent` 헤더 명시** — 기본 라이브러리 UA가 차단될 수 있음.
 4. **"주요/top" 집계는 정렬 키 확인** — 건수순 vs 금액순. 회의·보고용은 금액순 + 0 제외.
+5. **"주요"는 movers와 sales-rank를 구분해 surface** — '많이 움직인 것'(전월비 movers)과 '많이 팔리는 것'(매출순)은 다른 질문이다. 보고가 "주요 상품 매출"을 요구하면 매출순 top-N 블록을 별도로 내려보내야 movers가 가린 steady 주력이 드러난다.
 
 ## 향후 권장 사항
 1. ~~**`api/metadata.db`를 `.gitignore`에 추가**~~ — ✅ **2026-05-23 29회차에 조치 완료**(`§44`). 미조치 기간 동안 배포 시 운영 업로드 파일이 유실되는 사고가 실제 발생함. 동적 DB 파일이 git에 추적되면 매 부팅·배포마다 변경분/유실 발생.
@@ -1479,4 +1482,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 39. **`vercel.json` rewrite와 Next 라우트 충돌 점검 + 라우팅 검증은 라이브/`vercel dev`에서** — `/api/(.*)`를 백엔드로 보내는 rewrite가 있으면 `/api/` 아래 Next 라우트가 전부 404로 가려진다. 신규 라우트는 rewrite 밖에 두거나 예외 명시. `next start`/`next build`는 `vercel.json`을 적용 안 하니 rewrite·라우팅 검증은 라이브에서 (§53 권장 1·2번 참조).
 40. **사용자 노출 시각은 `timeZone` 명시로 KST 고정** — `toLocaleString`/`Intl.DateTimeFormat`은 `timeZone` 옵션이 없으면 렌더 런타임의 로컬 타임존을 따라가, SSR/UTC 서버(Vercel)에서 렌더되면 한국시와 9시간(하루) 어긋난다. 사용자에게 보이는 모든 시각 포맷터는 `timeZone: "Asia/Seoul"` 명시 + 신규 추가 시 `grep -rn toLocaleString`으로 누락 점검 (§54 권장 1번 참조).
 41. **차트 자식 `<Line>`/`<Bar>`에 per-Line `data` prop 금지** — Recharts(`allowDuplicatedCategory` 기본 true)는 자식이 자체 data를 가지면 X축 category를 부모 data와 중복 concat해 도메인이 2배가 되고 데이터가 좌측 절반에만 그려진다. 모드별로 다른 값을 그릴 땐 부모 `chartData`를 미리 매핑하고 `<LabelList dataKey>`는 선의 `dataKey`와 통일. 차트 "이상" 제보는 라이브 raw로 표시/데이터 버그를 먼저 분리 (§55 권장 1·2번, `design_document §8.15` 참조).
-42. **AI 컨텍스트 grounding — 프롬프트 요구값은 컨텍스트 출력으로 검증 + 유틸은 정의로 단위 확인 + 보호 엔드포인트 UA 헤더 + top 집계 정렬 키 확인** — LLM 프롬프트가 요구하는 값은 `summary` 보유가 아니라 `_build_analysis_context` 실제 출력으로 grounding 확인; `_won_to_man`처럼 함수명≠단위(백만원) 주의; Cloudflare 등 보호 엔드포인트는 `User-Agent` 명시; "주요/top" 집계는 건수순 vs 금액순 정렬 키 확인(보고용은 금액순+0 제외) (§56 권장 1·2·3·4번 참조).
+42. **AI 컨텍스트 grounding — 프롬프트 요구값은 컨텍스트 출력으로 검증 + 유틸은 정의로 단위 확인 + 보호 엔드포인트 UA 헤더 + top 집계 정렬 키 확인** — LLM 프롬프트가 요구하는 값은 `summary` 보유가 아니라 `_build_analysis_context` 실제 출력으로 grounding 확인; `_won_to_man`처럼 함수명≠단위(백만원) 주의; Cloudflare 등 보호 엔드포인트는 `User-Agent` 명시; "주요/top" 집계는 건수순 vs 금액순 + 전월비 movers vs 매출순 구분(보고용 '주요 상품 매출'은 매출순 top-N 별도 surface) (§56 권장 1·2·3·4·5번 참조).

@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-06-16 (43회차) — AI 월리뷰 브랜드별 분석에 '주요 상품 매출'(대상월 매출 상위) 추가
+
+### 1. 배경 / 요청
+- 브랜드별 분석(섹션5)에 해당 브랜드의 **주요 상품 매출**도 보이게 프롬프트 수정 요청. 단, 컨텍스트엔 [브랜드별 상품 전월비](전월비 movers)만 있어 '매출 상위 상품'이 없음 — movers는 변동 작은 꾸준한 주력 상품을 누락(예: 마이비 순한라인·삶기세제).
+
+### 2. 결정 (사용자 선택)
+- 옵션 비교 제시 → **"매출 상위 + 전월비"** 선택: 컨텍스트에 매출순 블록 1개 추가(백엔드, Mac Mini 재배포) + 섹션5 보강. (대안: 프롬프트만 movers 인용 = 배포 불필요하나 매출 상위 누락.)
+
+### 3. 조치 (`monthly_review.py`)
+- `_build_analysis_context`에 **[브랜드별 주요 상품 — 대상월 매출 상위]** 블록 신설: `summary["brand_products"]`의 브랜드별 `values[-1]` 내림차순 top5(0원 제외) + `직전월`. 데이터는 이미 summary에 있어 `get_summary` 무수정. 기존 movers 블록 유지(매출순 + 전월비 병존).
+- 프롬프트(`analysis_prompts.json["all"]`): 헤더 허용 블록 + 데이터 규칙 + 섹션5 `주요 상품` 불릿(`/tmp/all_prompt_v3.txt`, 1977→2213자). **배포 후 API 저장 예정**. 이커/오프는 브랜드 섹션 없어 무영향.
+
+### 4. 검증
+- 실데이터(`uploads/260519.csv`, 2026-05)로 `_build_analysis_context` 직접 호출 → 매출순 top5 정렬·직전월·0원 제외 정상, movers와 별개로 순한라인/삶기세제 등 steady 주력 노출 확인.
+
+### 5. 문서
+- `design_document §2.3.3.27`, `project_plan §4.7`+API표, `error.md §56`(함정7·권장5 보강), `history.md` 본 43회차.
+
+### 6. 산출물
+- 코드: `api/monthly_review.py`
+- 프롬프트(런타임): `analysis_prompts.json["all"]` (배포 후 API 저장 예정, gitignore)
+- 문서: `docs/{design_document,project_plan,error,history}.md`
+- 커밋: 본 커밋(43회차)
+
+---
+
 ## 2026-06-15 (42회차) — AI 월리뷰 분석 프롬프트 6섹션 재설계 + 컨텍스트 2차 확장
 
 ### 1. 배경 / 요청

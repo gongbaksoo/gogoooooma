@@ -871,9 +871,31 @@ def _build_analysis_context(summary: dict, month: str, part: str) -> str:
                 )
                 lines.append(f"    · 채널별 대상월: {ctxt}")
 
-    # ----- 브랜드별 상품 전월비 (마이비/누비/쏭레브) — 전체 파트에서만 -----
+    # ----- 브랜드별 상품: 매출순 + 전월비 (마이비/누비/쏭레브) — 전체 파트에서만 -----
     # brand_products[브랜드] = [{name, values(13개월: [-1]=대상월, [-2]=직전월)}]. '대상 X'는 get_summary에서 이미 제외.
     brand_products = summary.get("brand_products") or {}
+
+    # 대상월 매출 상위 — '주요 상품 매출' 파악용(전월비 movers와 별개로, 꾸준한 주력 상품 포함).
+    if part == "all" and brand_products:
+        lines.append("")
+        lines.append("[브랜드별 주요 상품 — 마이비 / 누비 / 쏭레브 (대상월 매출 상위)]")
+        for bname in ["마이비", "누비", "쏭레브"]:
+            ranked = []
+            for it in (brand_products.get(bname) or []):
+                v = it.get("values") or []
+                cur = v[-1] if v else 0.0
+                prev = v[-2] if len(v) >= 2 else 0.0
+                if cur > 0:
+                    ranked.append((it.get("name", ""), cur, prev))
+            ranked.sort(key=lambda x: x[1], reverse=True)
+            top = ranked[:5]
+            if top:
+                txt = ", ".join(
+                    f"{n} {_won_to_man(c)}(직전월 {_won_to_man(p)})" for n, c, p in top
+                )
+                lines.append(f"- {bname}: {txt}")
+
+    # 전월비 movers — 직전월 대비 급변 상품(상승/하락).
     if part == "all" and brand_products:
         lines.append("")
         lines.append("[브랜드별 상품 전월비 — 마이비 / 누비 / 쏭레브 (대상월 vs 직전월)]")

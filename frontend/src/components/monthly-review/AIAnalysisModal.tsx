@@ -37,12 +37,14 @@ export default function AIAnalysisModal({
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // 모달 열림 / 파트 변경 시 해당 파트 프롬프트 로드 + 결과 초기화
   useEffect(() => {
     if (!open) return;
     setError(null);
     setResult("");
+    setCopied(false);
     axios
       .get(`${API_BASE_URL}/api/monthly-review/analysis-prompt/`, { params: { part } })
       .then((res) => {
@@ -76,10 +78,34 @@ export default function AIAnalysisModal({
     }
   };
 
+  const copyResult = async () => {
+    if (!result) return;
+    try {
+      await navigator.clipboard.writeText(result);
+    } catch {
+      // clipboard API 불가(비보안 컨텍스트 등) 시 폴백
+      const ta = document.createElement("textarea");
+      ta.value = result;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy");
+      } catch {
+        /* noop */
+      }
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  };
+
   const runAnalysis = async () => {
     setAnalyzing(true);
     setError(null);
     setResult("");
+    setCopied(false);
     try {
       const res = await axios.post(`${API_BASE_URL}/api/monthly-review/ai-analysis/`, {
         month,
@@ -182,6 +208,15 @@ export default function AIAnalysisModal({
 
           {result && (
             <div className="border border-[#e5e5e5] rounded p-3 bg-[#fafafa]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-[#555]">분석 결과</span>
+                <button
+                  onClick={copyResult}
+                  className="text-[11px] border border-[#c4c4c4] px-3 py-0.5 rounded hover:border-black"
+                >
+                  {copied ? "복사됨" : "복사"}
+                </button>
+              </div>
               <p className="text-[13px] text-black whitespace-pre-wrap leading-relaxed">
                 {result}
               </p>

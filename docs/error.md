@@ -1440,6 +1440,20 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 4. **"주요/top" 집계는 정렬 키 확인** — 건수순 vs 금액순. 회의·보고용은 금액순 + 0 제외.
 5. **"주요"는 movers와 sales-rank를 구분해 surface** — '많이 움직인 것'(전월비 movers)과 '많이 팔리는 것'(매출순)은 다른 질문이다. 보고가 "주요 상품 매출"을 요구하면 매출순 top-N 블록을 별도로 내려보내야 movers가 가린 steady 주력이 드러난다.
 
+## 57. 복사 버튼 — `navigator.clipboard`는 보안 컨텍스트(HTTPS) 전용, 폴백 필수 (2026-06-16 44회차)
+
+### 🚨 증상 / 함정
+AI 분석 결과 '복사' 버튼 구현 시 `navigator.clipboard.writeText`만 쓰면 **비보안 컨텍스트(HTTP·`file:`·일부 사설망/임베드)**에서 `undefined`이거나 거부되어 복사가 조용히 실패한다. clipboard API는 secure context(HTTPS 또는 localhost)에서만 노출된다.
+- 부수: 복사상태(`setCopied`) 등을 `useEffect` 본문에서 동기 setState하면 ESLint `react-hooks/set-state-in-effect`가 경고하나, 기존 effect(`setError`/`setResult`)와 동일 패턴이라 신규 위반 아님(규칙은 effect당 1회 보고). `next.config`의 `ignoreBuildErrors`는 TS만 덮으므로 ESLint 빌드 차단 여부는 별도 확인 대상.
+
+### ✅ 조치
+- `navigator.clipboard.writeText` 우선 + 실패 시 `textarea` + `document.execCommand("copy")` 폴백으로 이중화. 프로덕션(Vercel, HTTPS)에선 주 경로가 동작, 그 외 환경은 폴백이 커버.
+- 변경 파일만 tsc·ESLint로 검증(신규 타입에러·신규 위반 0 확인) 후 커밋.
+
+### 💡 향후 권장
+1. **클립보드/공유 등 브라우저 권한 API는 secure-context 가정 + 폴백 필수** — `navigator.clipboard`·`share` 등은 HTTPS 전용이라 `execCommand` 등 폴백을 같이 둔다.
+2. **프론트 변경은 Vercel 자동 배포 경로** — 백엔드(Mac Mini 수동 pull)와 배포 경로가 다르므로, 프론트 기능은 GitHub push만으로 라이브 반영됨을 명시.
+
 ## 향후 권장 사항
 1. ~~**`api/metadata.db`를 `.gitignore`에 추가**~~ — ✅ **2026-05-23 29회차에 조치 완료**(`§44`). 미조치 기간 동안 배포 시 운영 업로드 파일이 유실되는 사고가 실제 발생함. 동적 DB 파일이 git에 추적되면 매 부팅·배포마다 변경분/유실 발생.
 2. **루트 `package-lock.json` 정리** — npm workspaces가 활성이라 root와 frontend에 lockfile이 둘 다 생김. 어느 쪽을 권위로 할지 컨벤션 정리 필요.
@@ -1483,3 +1497,4 @@ curl "http://127.0.0.1:8000/api/monthly-review/months/?filename=260210_2.csv"
 40. **사용자 노출 시각은 `timeZone` 명시로 KST 고정** — `toLocaleString`/`Intl.DateTimeFormat`은 `timeZone` 옵션이 없으면 렌더 런타임의 로컬 타임존을 따라가, SSR/UTC 서버(Vercel)에서 렌더되면 한국시와 9시간(하루) 어긋난다. 사용자에게 보이는 모든 시각 포맷터는 `timeZone: "Asia/Seoul"` 명시 + 신규 추가 시 `grep -rn toLocaleString`으로 누락 점검 (§54 권장 1번 참조).
 41. **차트 자식 `<Line>`/`<Bar>`에 per-Line `data` prop 금지** — Recharts(`allowDuplicatedCategory` 기본 true)는 자식이 자체 data를 가지면 X축 category를 부모 data와 중복 concat해 도메인이 2배가 되고 데이터가 좌측 절반에만 그려진다. 모드별로 다른 값을 그릴 땐 부모 `chartData`를 미리 매핑하고 `<LabelList dataKey>`는 선의 `dataKey`와 통일. 차트 "이상" 제보는 라이브 raw로 표시/데이터 버그를 먼저 분리 (§55 권장 1·2번, `design_document §8.15` 참조).
 42. **AI 컨텍스트 grounding — 프롬프트 요구값은 컨텍스트 출력으로 검증 + 유틸은 정의로 단위 확인 + 보호 엔드포인트 UA 헤더 + top 집계 정렬 키 확인** — LLM 프롬프트가 요구하는 값은 `summary` 보유가 아니라 `_build_analysis_context` 실제 출력으로 grounding 확인; `_won_to_man`처럼 함수명≠단위(백만원) 주의; Cloudflare 등 보호 엔드포인트는 `User-Agent` 명시; "주요/top" 집계는 건수순 vs 금액순 + 전월비 movers vs 매출순 구분(보고용 '주요 상품 매출'은 매출순 top-N 별도 surface) (§56 권장 1·2·3·4·5번 참조).
+43. **클립보드 등 브라우저 권한 API는 secure-context 가정 + 폴백 필수** — `navigator.clipboard`는 HTTPS에서만 동작하니 `execCommand` 폴백을 동반한다. 프론트 변경은 Vercel 자동 배포(백엔드 Mac Mini 수동과 경로 구분) (§57 권장 1·2번 참조).

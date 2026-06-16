@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-06-16 (44회차) — AI 분석 결과 복사 버튼 추가
+
+### 1. 배경 / 요청
+- AI 매출 분석 모달에서 분석 결과를 한 번에 복사할 수 있는 버튼 요청(회의 자료 이동 편의).
+
+### 2. 조치 (`AIAnalysisModal.tsx`, 프론트 단독)
+- 결과 박스 우상단에 "분석 결과" 라벨 + **복사** 버튼. 클릭 시 분석 텍스트 전체 클립보드 복사, "복사됨" 1.5초 피드백(`copied` state).
+- `navigator.clipboard.writeText` 우선 + `textarea`/`execCommand` 폴백(비보안 컨텍스트 대비). 새 분석·재오픈 시 상태 초기화. 기존 '프롬프트 저장' 버튼 스타일 재사용, 이모지 미사용.
+
+### 3. 검증
+- 변경 파일 tsc(신규 타입에러 0; 기존 차트 Recharts 타입 이슈는 무관)·ESLint(신규 위반 0, `set-state-in-effect`는 기존 effect 패턴) 확인. `next.config` `ignoreBuildErrors`로 빌드 안전.
+
+### 4. 문서
+- `design_document §2.3.3.28`, `project_plan §4.7`, `error.md §57`+마스터 권장 #43, `history.md` 본 44회차.
+
+### 5. 산출물
+- 코드: `frontend/src/components/monthly-review/AIAnalysisModal.tsx`
+- 문서: `docs/{design_document,project_plan,error,history}.md`
+- 커밋: 본 커밋(44회차) → Vercel 자동 배포
+
+---
+
 ## 2026-06-16 (43회차) — AI 월리뷰 브랜드별 분석에 '주요 상품 매출'(대상월 매출 상위) 추가
 
 ### 1. 배경 / 요청

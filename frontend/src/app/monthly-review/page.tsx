@@ -52,6 +52,12 @@ import {
   getOverviewNote,
   saveOverviewNote,
 } from "@/components/monthly-review/overviewNotesStorage";
+import {
+  RichTextEditor,
+  sanitizeNoteHtml,
+  legacyTextToHtml,
+  NOTE_HTML_CLASS,
+} from "@/components/monthly-review/RichTextEditor";
 import AIAnalysisModal from "@/components/monthly-review/AIAnalysisModal";
 
 type Part = "all" | "ecommerce" | "offline";
@@ -243,22 +249,21 @@ function OverviewNote({
 
   if (!editMode) {
     if (!note.trim()) return null;
-    return <p className="text-[13px] text-black whitespace-pre-wrap mb-3">{note}</p>;
+    return (
+      <div
+        className={`text-[13px] text-black mb-3 ${NOTE_HTML_CLASS}`}
+        dangerouslySetInnerHTML={{ __html: sanitizeNoteHtml(legacyTextToHtml(note)) }}
+      />
+    );
   }
 
   const dirty = draft !== note;
   return (
     <div className="mb-3">
-      <textarea
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        placeholder="종합 코멘트를 입력하세요 (대상 월·파트별 저장)"
-        rows={3}
-        className="w-full border border-[#c4c4c4] rounded px-2 py-1.5 text-[13px] focus:outline-none focus:border-black resize-y"
-      />
+      <RichTextEditor valueHtml={note} resetKey={`${month}|${part}`} onChange={setDraft} />
       <div className="flex justify-end mt-1">
         <button
-          onClick={() => onSave(draft)}
+          onClick={() => onSave(sanitizeNoteHtml(draft))}
           disabled={!dirty}
           className="text-[11px] border border-[#c4c4c4] px-3 py-0.5 rounded hover:border-black disabled:opacity-40 disabled:hover:border-[#c4c4c4]"
         >

@@ -80,3 +80,5 @@ wheels/
 .installed.cfg
 *.egg
 .npm-cache/
+.vercel
+.env*

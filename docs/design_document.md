@@ -760,6 +760,15 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 - 복사 구현: `navigator.clipboard.writeText` 우선, 실패 시 `textarea` + `document.execCommand("copy")` 폴백. `navigator.clipboard`는 보안 컨텍스트(HTTPS)에서만 동작하므로 폴백 필수(`docs/error.md §57`). 프로덕션은 Vercel(HTTPS)이라 주 경로 동작.
 - 새 분석 실행·모달 재오픈 시 `copied` 자동 초기화. 버튼 스타일은 기존 '프롬프트 저장' 버튼(`text-[11px] border …`) 재사용, 이모지 미사용(디자인 규약).
 
+#### 2.3.3.29 월 리뷰 종합 코멘트 — 리치 텍스트 에디터 (2026-06-21 45회차)
+
+편집모드의 '종합 코멘트' 텍스트박스가 너무 작고 서식이 없어, **더 넓은 contentEditable 리치 에디터**로 교체. **프론트 단독(Vercel 자동 배포)**.
+
+- 신규 `frontend/src/components/monthly-review/RichTextEditor.tsx` — 툴바: **굵게/기울임/밑줄/취소선, 글자색·형광(color input), 목록(순서/비순서), 정렬, 글자크기**. 본문은 `min-h` 확대 contentEditable.
+- 구현 메모: `document.execCommand("styleWithCSS", true)` 후 명령 적용. 색·크기 적용 위해 selection 저장/복원(`savedRange`). **붙여넣기는 평문화**(서식 오염 방지), 저장·표시 전 `sanitizeNoteHtml`로 화이트리스트 정제.
+- `page.tsx`의 `OverviewNote`: 보기모드는 `sanitizeNoteHtml(legacyTextToHtml(note))`로 렌더(기존 평문 메모 하위호환), 편집모드는 `<RichTextEditor>` 사용, 저장 시 sanitize.
+- 의존성 0(외부 에디터 라이브러리 없이 contentEditable + execCommand). 이모지 미사용.
+
 #### 2.3.4 목표 파일 포맷
 
 ```csv

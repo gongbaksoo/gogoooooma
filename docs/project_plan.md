@@ -246,6 +246,15 @@ sales-analysis-site/
 - Vercel 환경변수 설정: 대시보드 Settings→Environment Variables, 또는 `echo "<비번>" | vercel env add SITE_PASSWORD production` → 재배포(`vercel --prod`).
 - 상세 설계: `design_document.md §2.0`.
 
+### 4.11 월 리뷰 인사이트 — 활동 리뷰(노션) + 리치 에디터 + 스킬 ⭐ NEW (45회차)
+- **활동 리뷰(행사·바이럴)**: 노션 `AVK Schedule` DB(행사/바이럴/문자/광고/공구 등 일정)를 `query_database_view`로 취합 → 월 활동 리뷰를 `reviews/`에 생성. 매출 리뷰와 결합한 **종합 리뷰** 포함. 산출물 3종:
+  - `2026-05_전체_리뷰`(매출 §1~9 + 활동 §10), `2026-05_활동리뷰_Btype`(활동 의사결정형), `2026-05_종합리뷰_Ctype`(매출×활동 종합·브리지). 각각 독립 실행 HTML + MD.
+  - 활동 지표: 수량(담당별), 효율(행사=매출·건당·목표달성 / 바이럴=조회수·목표달성 + 동일 상품·채널·기간 행사 매출 추정 연결), 채널·상품 단위.
+  - **단위 주의**: 활동 카드 기재매출(백만원)은 채널 총매출과 **다른 값**(상시 제외·중복노출 시 중복). 합산·동일시 금지(`error.md §59`).
+- **리치 텍스트 에디터**: 월 리뷰 종합 코멘트 편집 UI를 contentEditable 리치 에디터로(서식·색·목록·정렬·크기). 상세 `design_document.md §2.3.3.29`.
+- **인사이트 스킬**: `.claude/skills/monthly-review-insight`(데이터 자동취합 + 사용자 문답 → 인사이트 리뷰). 고정 컨텍스트 `company-context.md`(일부 `[확인 요망]` 잔존).
+- 데이터 취합 제약: 노션 데이터소스 SQL/뷰 쿼리는 Enterprise 전용 → `query_database_view`로 우회(`error.md §58`). 담당 user 실명은 API 식별 불가 → `담당1~6` 코드+발자국.
+
 ---
 
 ## 5. 핵심 비즈니스 로직

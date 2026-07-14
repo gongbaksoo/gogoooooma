@@ -72,6 +72,33 @@ export default function Home() {
           </span>
         </Link>
 
+        <Link
+          href="/daily-review"
+          className="block bg-white border-0 group mt-12"
+        >
+          <h2 className="text-[22px] leading-[29.92px] font-bold text-black">
+            일 리뷰
+          </h2>
+          <p className="mt-2 text-[15px] leading-[22.5px] font-normal text-black">
+            직전 코어 계상일 점검표 — 업로드 도착 확인, 같은 요일 8주 범위를 벗어난 채널·거래처 감지, 월 목표 페이스
+          </p>
+
+          <span
+            className="mt-6 inline-flex items-center justify-between gap-3 bg-white text-black text-[14px] font-bold rounded-[4px] border border-solid"
+            style={{
+              borderColor: "#c4c4c4",
+              padding: "16px 16px 16px 20px",
+              minWidth: "180px",
+              height: "52px",
+            }}
+          >
+            <span>더보기</span>
+            <span aria-hidden="true" className="text-[14px] leading-none">
+              &gt;
+            </span>
+          </span>
+        </Link>
+
         <div className="mt-20 md:mt-24 flex flex-col gap-3">
           <button
             type="button"

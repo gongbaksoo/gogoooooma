@@ -947,10 +947,13 @@ def clear_cache_endpoint(filename: str = None):
         raise HTTPException(status_code=500, detail=f"Cache clear failed: {str(e)}")
 
 from monthly_review import router as monthly_review_router
+from daily_review import router as daily_review_router
 
 # Mount the router both at root and at /api to ensure Vercel routing works
 app.include_router(router)
 app.include_router(router, prefix="/api")
 app.include_router(monthly_review_router)
 app.include_router(monthly_review_router, prefix="/api")
+app.include_router(daily_review_router)
+app.include_router(daily_review_router, prefix="/api")
 

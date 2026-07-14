@@ -58,6 +58,14 @@
 - 신규: `api/daily_review.py`, `api/tests/test_daily_review.py`, `frontend/src/app/daily-review/page.tsx`, `frontend/src/components/daily-review/{types.ts,DataGuard,AnomalyCards,AccrualSnapshot,PaceSection,BGroupEvents,SilenceLog}.tsx`, `frontend/src/lib/manwon.ts`
 - 수정: `api/index.py`(라우터 등록), `api/requirements.txt`(**`pyarrow` 추가** — 미설치로 parquet 캐시가 조용히 실패 중이었음, `error.md §68`), `frontend/src/app/page.tsx`(진입 카드)
 - 문서: `docs/{project_plan(§4.12·§6), design_document(§2.1·§2.4), error(§62~§68 + 권장 44~49), history}.md`
+- 커밋: `0818470`(일 리뷰 신규) → Vercel 자동 배포(프론트).
+
+### 7-1. 배포 (2026-07-14, Mac Mini 백엔드)
+- `/Users/j_mac_mini/Projects/AVK_Sales` fast-forward → venv에 `pyarrow 24.0.0` 설치 → `com.avk.backend` 재시작(running).
+- **배포 중 추가 문제 발견**: `pyarrow`를 설치했는데도 parquet 캐시가 **여전히 실패**. 원인은 `거래처코드` 컬럼의 **혼합 타입**이었다. 즉 §68의 원인은 **하나가 아니라 둘**이었고, `to_parquet`의 `try/except`가 둘 다 삼키고 있었다.
+- 조치: `api/dashboard.py`에 `normalize_parquet_object_columns()` 추가(커밋 **`230fc0f`**) — 저장 직전 `infer_dtype`이 `mixed`인 object 컬럼만 문자열 정규화.
+- **prod 검증**: `/api/daily-review/summary/` → `status: ok`, 8블록 전부 존재, A군 6채널(자사몰·오픈마켓(위탁)·할인점·종합몰·버티컬커머스·폐쇄몰), `coverage_pct **43.5%**`. parquet 캐시 생성 확인. 첫 호출 2.93s → 두 번째 **1.53s**. 회귀 테스트 **27 passed**.
+- 교훈: **"원인을 하나 찾았다"에서 멈추면 안 된다.** 조치 후 산출물(`uploads/cache/`)이 실제로 생겼는지 확인해야 두 번째 원인이 보인다.
 
 ### 8. 남은 한계 (숨기지 않고 화면에 노출)
 - **감시 범위는 전사 순매출의 약 40%뿐.** B군 60%는 어떤 설계로도 일 단위 이상 감지가 불가능 — 데이터의 한계이지 구현의 한계가 아님.

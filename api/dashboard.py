@@ -106,6 +106,7 @@ def get_dataframe(filename: str):
         df.rename(columns={'거래쳐명': '거래처명'}, inplace=True)
 
     df = clean_numeric_columns(df)
+    df = normalize_parquet_object_columns(df)
 
     # Save to parquet for next time
     try:
@@ -115,6 +116,19 @@ def get_dataframe(filename: str):
         logging.error(f"Failed to save parquet {parquet_path}: {e}")
 
     df_cache[cache_key] = df
+    return df
+
+
+def normalize_parquet_object_columns(df):
+    """Normalize mixed object columns so pyarrow can persist them as parquet."""
+    converted = []
+    for col in df.select_dtypes(include=["object"]).columns:
+        inferred = pd.api.types.infer_dtype(df[col], skipna=True)
+        if inferred.startswith("mixed"):
+            df.loc[:, col] = df[col].where(df[col].notna(), "").astype(str)
+            converted.append(col)
+    if converted:
+        logging.info(f"Normalized mixed object columns for parquet: {converted}")
     return df
 
 
@@ -1764,4 +1778,3 @@ def get_daily_product_search_sales(
         "matched_products": matched_products,
         "label": current_label
     }
-

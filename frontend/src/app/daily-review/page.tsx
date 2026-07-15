@@ -6,6 +6,7 @@ import axios from "axios";
 import { API_BASE_URL } from "@/config/api";
 import DataGuard from "@/components/daily-review/DataGuard";
 import AccrualSnapshot from "@/components/daily-review/AccrualSnapshot";
+import VendorWatch from "@/components/daily-review/VendorWatch";
 import AnomalyCards from "@/components/daily-review/AnomalyCards";
 import PaceSection from "@/components/daily-review/PaceSection";
 import BGroupEvents from "@/components/daily-review/BGroupEvents";
@@ -158,6 +159,7 @@ export default function DailyReviewPage() {
             <DataGuard data={data} />
             <AnomalyCards data={data} />
             <AccrualSnapshot data={data} />
+            <VendorWatch data={data} />
             <PaceSection data={data} />
             <BGroupEvents data={data} />
             <SilenceLog data={data} />

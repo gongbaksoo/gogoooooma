@@ -65,10 +65,15 @@ export default function AnomalyCards({ data }: { data: DailyReview }) {
                 <span className="text-[15px] font-bold" style={{ color: "#b45309" }}>
                   {surge ? "급증" : "급감"}
                 </span>
-                <span className="text-[15px] font-bold text-black">{f.entity}</span>
+                <span className="text-[15px] font-bold text-black">{f.entity_display}</span>
                 <span className="text-[12px]" style={{ color: MUTED }}>
                   {f.level === "channel" ? "채널" : "거래처"}
                 </span>
+                {f.entity_display !== f.entity && (
+                  <span className="text-[11px]" style={{ color: MUTED }}>
+                    (ERP: {f.entity.split(" · ").pop()})
+                  </span>
+                )}
               </div>
 
               <p className="mt-2 text-[14px] leading-[1.7] text-black">

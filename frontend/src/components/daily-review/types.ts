@@ -33,10 +33,24 @@ export interface AChannelRow {
   high_variance: boolean;
 }
 
+export interface TopVendor {
+  account: string;          // 원본 R열 (참조용)
+  account_display: string;  // 표시명(별칭 적용)
+  channel: string | null;
+  net: number;
+  net_60d: number;
+  ref_min: number;
+  ref_max: number;
+  ref_median: number;
+  ref_n: number;
+  position: string;         // 범위 내 / 범위 상단 초과 / 범위 하단 미만 / 표본 부족
+}
+
 export interface Anomaly {
   level: "channel" | "account";
   kind: "surge" | "drop";
   entity: string;
+  entity_display: string;
   value: number;
   ref_min: number;
   ref_max: number;
@@ -110,6 +124,7 @@ export interface DailyReview {
     b_group: Split;
     total: Split;
     a_channels: AChannelRow[];
+    top_vendors: TopVendor[];
     ref_dates: string[];
     footnote: string;
   };

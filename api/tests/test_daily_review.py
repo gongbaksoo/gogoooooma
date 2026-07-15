@@ -10,7 +10,13 @@ ERP 스냅샷은 과거일을 소급 정정한다(260707 vs 260713에서 2026-06
 import numpy as np
 import pytest
 
-from daily_review import get_daily_review_summary, _bevent_gap_status, BEVENT_DORMANT_DAYS
+from daily_review import (
+    get_daily_review_summary,
+    _bevent_gap_status,
+    _alias,
+    BEVENT_DORMANT_DAYS,
+    ACCOUNT_ALIAS,
+)
 
 FIXTURE = "260615.csv"
 
@@ -270,6 +276,65 @@ def test_every_bevent_has_dormant_key(d0612):
     """프론트가 dormant 필드를 읽으므로 항상 존재해야 한다."""
     for e in d0612["bgroup_events"]:
         assert "dormant" in e and isinstance(e["dormant"], bool)
+
+
+# ---------------------------------------------------------------- 거래처 별칭 + 주요 거래처 감시 (신 1순위)
+
+def test_alias_is_display_only():
+    """별칭은 매핑에 있는 것만 치환, 없으면 원본 그대로. 매칭이 아니라 표시 전용이다."""
+    assert _alias("11st") == "11번가"
+    assert _alias("이베이") == "지마켓"
+    assert _alias("스팜(제제지크)") == "제제스스"
+    assert _alias("듣도보도못한거래처") == "듣도보도못한거래처"
+
+
+def test_anomaly_keeps_raw_entity_and_adds_display(d0612):
+    """entity는 원본(참조·매칭용), entity_display는 별칭 적용. 2026-06-12 계좌 예외 = 11st."""
+    acc = next(f for f in d0612["anomalies"]["flags"] if f["level"] == "account")
+    assert "11st" in acc["entity"]                       # 원본 보존(기존 골든 테스트 계약)
+    assert "11번가" in acc["entity_display"]              # 표시명 별칭
+    assert acc["entity"] != acc["entity_display"]
+
+
+def test_top_vendors_are_a_group_and_aliased(d0612):
+    """주요 거래처 감시 = A군 채널 거래처만, 별칭 적용, 순매출 상위."""
+    tv = d0612["accrual_snapshot"]["top_vendors"]
+    assert 1 <= len(tv) <= 8
+    a_channels = {c["name"] for c in d0612["channel_classification"]["channels"] if c["group"] == "A"}
+    names = {v["account"] for v in tv}
+    displays = {v["account_display"] for v in tv}
+    # 월 리뷰 심층 거래처가 사람이 아는 이름으로 들어온다
+    assert "11번가" in displays and "제제스스" in displays
+    # 배치 채널 거래처는 없다(쿠팡 로켓 사입, 다이소)
+    assert "쿠팡(로켓)" not in names and "다이소" not in names
+    for v in tv:
+        assert v["channel"] in a_channels                 # 전부 A군 채널 소속
+    # 60일 순매출 내림차순
+    net60 = [v["net_60d"] for v in tv]
+    assert net60 == sorted(net60, reverse=True)
+
+
+def test_top_vendors_position_matches_anomaly(d0612):
+    """예외 카드로 오른 거래처(11st)는 주요 거래처 감시에서도 '범위 상단 초과'여야 한다(같은 데이터)."""
+    tv = {v["account"]: v for v in d0612["accrual_snapshot"]["top_vendors"]}
+    assert tv["11st"]["position"] == "범위 상단 초과"
+
+
+def test_top_vendor_insufficient_sample_labeled():
+    """같은 요일 유효관측이 6 미만이면 위치를 단정하지 않고 '표본 부족'으로 둔다."""
+    r = get_daily_review_summary(filename=FIXTURE, target_date="2026-06-12")
+    for v in r["accrual_snapshot"]["top_vendors"]:
+        if v["ref_n"] < 6:
+            assert v["position"] == "표본 부족"
+        else:
+            assert v["position"] in ("범위 내", "범위 상단 초과", "범위 하단 미만")
+
+
+def test_alias_never_touches_matching_key():
+    """별칭 dict의 키는 실제 ERP 거래처명이어야 한다(오타로 매칭 깨지지 않게)."""
+    # 최소한 핵심 5개가 별칭 맵에 있다
+    for raw in ("11st", "이베이", "스팜(제제지크)", "스팜(쏭레브)", "쿠팡"):
+        assert raw in ACCOUNT_ALIAS
 
 
 def test_non_core_day_is_rejected_with_suggestion():

@@ -73,6 +73,25 @@ NEEDED_COLS = ["일별", "채널구분", "거래처명", "품목코드", "품목
 WEEKDAY_KO = ["월", "화", "수", "목", "금", "토", "일"]
 UNCLASSIFIED = "미분류"    # 채널구분이 비었거나 '0'인 행. 매출에는 남기되 채널로 세지 않는다.
 BEVENT_GAP_MONTHS = 12     # B군 계상 지연 판정에 쓸 간격 표본 기간
+TOP_VENDORS = 8            # 주요 거래처 감시 패널에 상시 표시할 A군 거래처 수(60일 순매출 상위)
+
+# 거래처명(R열) → 사람이 아는 표시명. **표시 전용이다.** 집계·매칭은 항상 원본 R열 exact.
+# ERP 거래처명이 사람이 부르는 이름과 다른 것만 매핑한다(CJ·롯데마트·이마트·다이소는 그대로라 불필요).
+# 근거(260615, 최근60정상코어일): 11st=오픈마켓(위탁)·밀도77% / 이베이=오픈마켓(위탁)·78% /
+# 스팜(제제지크)=자사몰·78% / 스팜(쏭레브)=자사몰·78% / 쿠팡=오픈마켓(위탁)·72%(사입 '쿠팡(로켓)'과 구분).
+ACCOUNT_ALIAS = {
+    "11st": "11번가",
+    "이베이": "지마켓",
+    "스팜(제제지크)": "제제스스",
+    "스팜(쏭레브)": "쏭스스",
+    "쿠팡": "쿠팡(위탁)",
+    "베이비빌리(주식회사 빌리지베이비)": "베이비빌리",
+}
+
+
+def _alias(name: str) -> str:
+    """거래처 표시명. 별칭이 없으면 원본 그대로. 매칭 로직에는 절대 쓰지 말 것(표시 전용)."""
+    return ACCOUNT_ALIAS.get(name, name)
 
 
 # ---------------------------------------------------------------- 로딩·전처리
@@ -306,8 +325,16 @@ def _detect(piv: pd.DataFrame, target: pd.Timestamp, refs: pd.DatetimeIndex,
             kind = "drop"
         else:
             continue
+        if isinstance(ent, str):
+            entity = entity_display = ent          # 채널 레벨: 별칭 없음
+        else:
+            entity = " · ".join(map(str, ent))     # 원본(참조·매칭용)
+            parts = list(map(str, ent))
+            parts[-1] = _alias(parts[-1])          # 마지막 = 거래처명(R열) → 표시명만 치환
+            entity_display = " · ".join(parts)
         out.append({
-            "entity": ent if isinstance(ent, str) else " · ".join(map(str, ent)),
+            "entity": entity,
+            "entity_display": entity_display,
             "kind": kind,
             "value": x,
             "ref_min": lo,
@@ -442,6 +469,43 @@ def get_daily_review_summary(
     snap["a_channels"] = sorted(a_rows, key=lambda r: -r["net"])
     snap["ref_dates"] = [str(d.date()) for d in refs]
     snap["footnote"] = "일별은 ERP 매출계상일입니다. 실제 주문일·출고일이 아닙니다."
+
+    # ---- 주요 거래처 감시 (A군 채널 소속 거래처 top-N, 상시). 월리뷰가 상시 파는 거래처 축을 일 단위로.
+    # 채널 표와 같은 '같은 요일 8주 범위 위치' 규약. 별칭은 표시 전용, 매칭은 R열 exact.
+    a_only = df[df["채널구분"].isin(a_channels)]
+    win60 = normal_upto[-AB_WINDOW:] if len(normal_upto) >= AB_WINDOW else normal_upto
+    a_win = a_only[a_only["일별"].isin(win60)]
+    net_by_vendor = a_win.groupby("거래처명")["판매액"].sum().sort_values(ascending=False)
+    # 거래처 → 대표 채널(창 안 최빈)
+    ven_channel = (a_win.groupby("거래처명")["채널구분"]
+                   .agg(lambda s: s.value_counts().index[0]) if not a_win.empty else {})
+    top_names = [n for n in net_by_vendor.head(TOP_VENDORS).index if net_by_vendor[n] > 0]
+    ven_piv_ref = _entity_series(a_only, ref_days, ["거래처명"])
+    vendor_rows = []
+    for name in top_names:
+        if name not in ven_piv_ref.columns:
+            continue
+        v = ven_piv_ref[name].reindex(refs, fill_value=0.0).to_numpy(dtype=float)
+        x = float(ven_piv_ref.loc[tgt, name])
+        ref_n = int((v != 0).sum())
+        if ref_n < REF_MIN_VALID:
+            pos = "표본 부족"           # 같은 요일 유효관측이 6 미만이면 위치를 단정하지 않는다
+        elif x > v.max():
+            pos = "범위 상단 초과"
+        elif x < v.min():
+            pos = "범위 하단 미만"
+        else:
+            pos = "범위 내"
+        vendor_rows.append({
+            "account": name,
+            "account_display": _alias(name),
+            "channel": str(ven_channel[name]) if name in ven_channel else None,
+            "net": x,
+            "net_60d": float(net_by_vendor[name]),
+            "ref_min": float(v.min()), "ref_max": float(v.max()), "ref_median": float(np.median(v)),
+            "ref_n": ref_n, "position": pos,
+        })
+    snap["top_vendors"] = vendor_rows
 
     # ---- 반품 배치일 / 월말 마감 플래그
     tot = snap["total"]

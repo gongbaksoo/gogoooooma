@@ -827,7 +827,7 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 2. **확인 필요 (예외 카드)** — 0건이면 한 줄로 끝난다. **판정일의 58.7%가 이 모습이다.**
 3. **직전 코어 계상일 계상 현황** — A군/B군/전사 3분해 + A군 채널의 8주 범위 내 위치.
 4. **월 페이스** — MTD vs 기대 밴드.
-5. **B군 계상 이벤트** — 금액 추이 없음. 직전 계상일·경과일·지연 여부만.
+5. **B군 계상 이벤트** — 금액 추이 없음. 직전 계상일·경과일·지연 여부만. 지연은 `확인`(새 지연) / `휴면`(장기 미계상, 알림 없음) 2단계로 구분해 **중단된 채널이 매일 확인을 띄우지 않게** 한다(47회차, `error.md §69`).
 6. **침묵 로그 / 채널 판정 근거** — 커버리지는 항상 노출, 판정 근거 표는 접힘.
 
 #### 2.4.2 차트 규약 — Recharts를 쓰지 않는다
@@ -851,7 +851,7 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 | `components/daily-review/AnomalyCards.tsx` | 88 | 예외 카드 / 0건 상태(게이트 미만 항목 설명 포함) |
 | `components/daily-review/AccrualSnapshot.tsx` | 164 | 3분해 표 + A군 범위 막대 |
 | `components/daily-review/PaceSection.tsx` | 104 | MTD 밴드 + base rate |
-| `components/daily-review/BGroupEvents.tsx` | 62 | 계상 이벤트 표(금액 추이 없음) |
+| `components/daily-review/BGroupEvents.tsx` | 65 | 계상 이벤트 표(금액 추이 없음). `확인`은 호박색 배지, `휴면`은 옅게+"중단·휴면 추정" |
 | `components/daily-review/SilenceLog.tsx` | 83 | 커버리지(항상 노출) + 채널 판정 근거(접힘) |
 
 #### 2.4.5 상태 분기

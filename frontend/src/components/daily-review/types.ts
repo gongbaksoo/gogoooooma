@@ -48,6 +48,7 @@ export interface Anomaly {
 export interface BEvent {
   channel: string;
   kind: "info" | "check";
+  dormant: boolean;
   today_net: number;
   last_accrual_date: string;
   last_accrual_net: number;

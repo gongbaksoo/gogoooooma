@@ -43,15 +43,20 @@ export default function BGroupEvents({ data }: { data: DailyReview }) {
                     확인
                   </span>
                 )}
+                {e.dormant && (
+                  <span className="ml-2 text-[11px]" style={{ color: MUTED }}>
+                    휴면
+                  </span>
+                )}
               </td>
-              <td className="py-2.5 text-right tabular-nums">
+              <td className="py-2.5 text-right tabular-nums" style={{ opacity: e.dormant ? 0.55 : 1 }}>
                 {e.today_net === 0 ? <span style={{ color: MUTED }}>계상 없음</span> : fmtManwonBare(e.today_net)}
               </td>
-              <td className="py-2.5 pl-4 tabular-nums" style={{ color: MUTED }}>
+              <td className="py-2.5 pl-4 tabular-nums" style={{ color: MUTED, opacity: e.dormant ? 0.55 : 1 }}>
                 {e.last_accrual_date} · {fmtManwonBare(e.last_accrual_net)} ({e.days_since}일 전)
               </td>
               <td className="py-2.5 pl-4 text-[13px]" style={{ color: e.kind === "check" ? "#b45309" : MUTED }}>
-                {e.kind === "check" ? e.message : ""}
+                {e.kind === "check" ? e.message : e.dormant ? "중단·휴면 추정" : ""}
               </td>
             </tr>
           ))}

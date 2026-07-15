@@ -7,9 +7,10 @@ ERP 스냅샷은 과거일을 소급 정정한다(260707 vs 260713에서 2026-06
 기대값 출처: 3중 독립구현 백테스트(2026-07-13)로 확정.
 실행: PYTHONPATH=api pytest api/tests/test_daily_review.py
 """
+import numpy as np
 import pytest
 
-from daily_review import get_daily_review_summary
+from daily_review import get_daily_review_summary, _bevent_gap_status, BEVENT_DORMANT_DAYS
 
 FIXTURE = "260615.csv"
 
@@ -209,6 +210,66 @@ def test_bgroup_has_no_daily_series(d0612):
         assert e["kind"] in ("info", "check")
         assert "series" not in e and "dates" not in e
         assert "severity" not in e          # B군에서 '나쁨' 판정을 내리지 않는다
+
+
+# ---------------------------------------------------------------- B군 계상 지연 → 휴면
+# 중단된 채널(예: 발주를 접은 쿠팡 사입)이 매일 '확인'을 영원히 띄우는 버그의 회귀 방지.
+
+FREQUENT_GAPS = [1, 1, 2, 1, 3, 1, 2, 1, 2, 1]   # 자주 계상되던 채널(쿠팡 사입 성격). thr는 작다.
+
+
+def test_normal_rhythm_is_info():
+    """통상 리듬 안이면 확인을 띄우지 않는다."""
+    s = _bevent_gap_status(1, FREQUENT_GAPS)
+    assert s["kind"] == "info" and s["dormant"] is False
+
+
+def test_fresh_delay_raises_check():
+    """지연이 새로우면(통상 간격의 2배 초과 ~ 상한 이내) 확인을 띄운다."""
+    s = _bevent_gap_status(12, FREQUENT_GAPS)
+    assert s["kind"] == "check" and s["dormant"] is False
+    assert "계상 지연" in s["message"]
+
+
+def test_long_dormancy_goes_quiet_not_check():
+    """★ 상한(30일)을 크게 넘으면 중단·휴면으로 보고 매일 확인을 띄우지 않는다.
+
+    이것이 이번 수정의 핵심: 발주를 접은 채널이 경과일만 늘며 영원히 '확인'을 띄우던 버그.
+    """
+    s = _bevent_gap_status(90, FREQUENT_GAPS)
+    assert s["kind"] == "info"          # check 가 아니다
+    assert s["dormant"] is True
+    assert "중단" in s["message"] or "휴면" in s["message"]
+
+
+def test_dormancy_ceiling_is_around_30_days():
+    """자주 계상되던 채널은 상한(BEVENT_DORMANT_DAYS) 근처에서 확인 → 휴면으로 전환된다."""
+    below = _bevent_gap_status(BEVENT_DORMANT_DAYS, FREQUENT_GAPS)
+    above = _bevent_gap_status(BEVENT_DORMANT_DAYS * 3, FREQUENT_GAPS)
+    assert below["kind"] == "check"
+    assert above["dormant"] is True
+
+
+def test_sparse_channel_not_falsely_dormant():
+    """통상 주기가 긴 희소 채널은 정상 간격을 휴면으로 오탐하지 않는다.
+
+    상한 = max(30, thr×2)이라, 40일마다 계상되는 채널의 45일 경과는 '지연'이지 '휴면'이 아니다.
+    """
+    sparse = [38, 42, 40, 39, 41]        # 통상 ~40일 주기
+    s = _bevent_gap_status(45, sparse)
+    assert s["dormant"] is False          # 30일을 넘었지만 이 채널엔 정상 범위에 가깝다
+
+
+def test_insufficient_sample_stays_info():
+    """간격 표본이 3개 미만이면 판정하지 않는다."""
+    s = _bevent_gap_status(120, [5, 5])
+    assert s["kind"] == "info" and s["dormant"] is False
+
+
+def test_every_bevent_has_dormant_key(d0612):
+    """프론트가 dormant 필드를 읽으므로 항상 존재해야 한다."""
+    for e in d0612["bgroup_events"]:
+        assert "dormant" in e and isinstance(e["dormant"], bool)
 
 
 def test_non_core_day_is_rejected_with_suggestion():

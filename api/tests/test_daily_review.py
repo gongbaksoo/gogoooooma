@@ -337,6 +337,48 @@ def test_alias_never_touches_matching_key():
         assert raw in ACCOUNT_ALIAS
 
 
+# ---------------------------------------------------------------- 심화 감시: 브랜드 + 상품 (48회차 다음단계)
+
+def test_brand_watch_is_three_brands_a_scoped(d0612):
+    """브랜드 감시 = 마이비/누비/쏭레브 3개, 고정 순서, A군 스코프."""
+    brands = [b["brand"] for b in d0612["accrual_snapshot"]["top_brands"]]
+    assert brands == ["마이비", "누비", "쏭레브"]     # 매출순이 아니라 브랜드 정체성 축(고정)
+
+
+def test_brand_a_scope_is_clean_songrev_flagged_variance(d0612):
+    """A군 스코프 시 마이비·누비는 CV 낮고(안정), 쏭레브는 변동 큼(48회차 실측)."""
+    bymap = {b["brand"]: b for b in d0612["accrual_snapshot"]["top_brands"]}
+    assert bymap["마이비"]["cv"] is not None and bymap["마이비"]["cv"] < 1.0
+    assert bymap["누비"]["cv"] < 1.0
+    assert bymap["쏭레브"]["high_variance"] is True     # 톤업크림 스파이크로 A군에서도 노이즈
+
+
+def test_product_watch_a_scoped_named_and_capped(d0612):
+    """상품 감시 = A군 상품 top-N(코드+품목명), 60일 순매출 내림차순."""
+    prods = d0612["accrual_snapshot"]["top_products"]
+    assert 1 <= len(prods) <= 8
+    for p in prods:
+        assert p["code"] and p["name"]
+        assert p["net_60d"] >= 0
+    net60 = [p["net_60d"] for p in prods]
+    assert net60 == sorted(net60, reverse=True)
+
+
+def test_products_not_promoted_to_anomaly_cards(d0612):
+    """상품은 예외 카드로 올리지 않는다(연 101건 → 조용한 날 45%로 원칙 위반). 감시 패널 전용."""
+    for f in d0612["anomalies"]["flags"]:
+        assert f["level"] in ("channel", "account")     # product 레벨 예외 카드는 없다
+
+
+def test_watch_axes_all_a_group_only(d0612):
+    """거래처·브랜드·상품 감시 전부 A군 스코프 — 배치 채널(쿠팡 로켓 사입) 상품/거래처가 섞이면 오염."""
+    s = d0612["accrual_snapshot"]
+    # 쿠팡 로켓(사입) 상품인 구형 얼룩제거제(1006032 등)가 상품 감시 상위에 오지 않는다(A군 스코프라 신형만)
+    codes = {p["code"] for p in s["top_products"]}
+    # 신형 플러스(A군 지배)가 있고, 구형(쿠팡 지배)은 A군 net이 작아 밀린다
+    assert any("플러스" in p["name"] for p in s["top_products"])
+
+
 def test_non_core_day_is_rejected_with_suggestion():
     """13,680원짜리 토요일이 '특이사항 없음'을 띄우면 안 된다."""
     r = get_daily_review_summary(filename=FIXTURE, target_date="2026-06-06")

@@ -33,10 +33,8 @@ export interface AChannelRow {
   high_variance: boolean;
 }
 
-export interface TopVendor {
-  account: string;          // 원본 R열 (참조용)
-  account_display: string;  // 표시명(별칭 적용)
-  channel: string | null;
+/** 심화 감시 공통 — 같은 요일 8주 범위 위치 */
+interface WatchBase {
   net: number;
   net_60d: number;
   ref_min: number;
@@ -44,6 +42,23 @@ export interface TopVendor {
   ref_median: number;
   ref_n: number;
   position: string;         // 범위 내 / 범위 상단 초과 / 범위 하단 미만 / 표본 부족
+}
+
+export interface TopVendor extends WatchBase {
+  account: string;          // 원본 R열 (참조용)
+  account_display: string;  // 표시명(별칭 적용)
+  channel: string | null;
+}
+
+export interface TopBrand extends WatchBase {
+  brand: string;
+  cv: number | null;
+  high_variance: boolean;
+}
+
+export interface TopProduct extends WatchBase {
+  code: string;
+  name: string;             // 품목명[규격]
 }
 
 export interface Anomaly {
@@ -125,6 +140,8 @@ export interface DailyReview {
     total: Split;
     a_channels: AChannelRow[];
     top_vendors: TopVendor[];
+    top_brands: TopBrand[];
+    top_products: TopProduct[];
     ref_dates: string[];
     footnote: string;
   };

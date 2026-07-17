@@ -14,8 +14,15 @@ from daily_review import (
     get_daily_review_summary,
     _bevent_gap_status,
     _alias,
+    _build_daily_context,
+    _needs_llm,
+    _daily_guide,
+    run_daily_ai_analysis,
+    DailyAIRequest,
     BEVENT_DORMANT_DAYS,
     ACCOUNT_ALIAS,
+    HARD_RULES,
+    DEFAULT_GUIDE,
 )
 
 FIXTURE = "260615.csv"
@@ -368,6 +375,69 @@ def test_products_not_promoted_to_anomaly_cards(d0612):
     """상품은 예외 카드로 올리지 않는다(연 101건 → 조용한 날 45%로 원칙 위반). 감시 패널 전용."""
     for f in d0612["anomalies"]["flags"]:
         assert f["level"] in ("channel", "account")     # product 레벨 예외 카드는 없다
+
+
+# ---------------------------------------------------------------- AI 분석 (50회차)
+
+def test_context_has_no_raw_daily_series(d0612):
+    """AI에 일별 원시 시계열을 주지 않는다. 컨텍스트는 MTD·플래그·예외·심화감시 요약뿐."""
+    ctx = _build_daily_context(d0612)
+    # 날짜가 여러 개 나열된 시계열 흔적이 없어야 한다(참조일 목록은 컨텍스트에 넣지 않음)
+    assert ctx.count("2026-") <= 3          # 기준일·최종계상일·월 정도만
+    assert "[기준일]" in ctx and "[계상 현황]" in ctx and "[월 페이스]" in ctx
+
+
+def test_context_carries_the_things_cards_cannot_say(d0612):
+    """규칙 12의 근거 — 카드에 없는 심화 감시(게이트 미만) 항목이 컨텍스트에 들어가야 한다.
+
+    2026-06-12: 11번가 급증과 함께 삶기세탁세제 리필이 192만(중앙값 10만)으로 튀었는데
+    게이트 미만이라 예외 카드에는 없다. 이게 AI가 더할 수 있는 유일한 값어치다.
+    """
+    ctx = _build_daily_context(d0612)
+    assert "[심화 감시 — 범위 밖]" in ctx
+    assert "삶기세탁세제" in ctx
+
+
+def test_context_states_coverage_limit(d0612):
+    """감시 범위를 넘어 전사를 단정하지 못하게 컨텍스트가 한계를 명시한다(규칙 6)."""
+    ctx = _build_daily_context(d0612)
+    assert "[감시 범위]" in ctx and "%" in ctx
+
+
+def test_hard_rules_cover_the_design_invariants():
+    """하드룰은 코드 상수 — 사용자가 못 고친다. 이 설계의 금지 항목이 전부 들어 있어야 한다."""
+    for must in ("전일비", "전년 동일자", "착지", "계상", "배치"):
+        assert must in HARD_RULES
+    # 재탕 금지(12)·범위내 나열 금지(13)·건수 표기(11)·자기모순 금지(10)
+    assert "카드 건수를 먼저 밝히고" in HARD_RULES
+    assert "'범위 내'인 항목을 금액과 함께 나열하지 마라" in HARD_RULES
+
+
+def test_default_guide_ships_with_code():
+    """월 리뷰는 프롬프트가 비면 400인데, 일 리뷰는 매일 쓰는 화면이라 기본값으로 바로 동작해야 한다."""
+    assert _daily_guide().strip() == DEFAULT_GUIDE.strip()
+
+
+def test_needs_llm_true_when_any_signal(d0612):
+    """예외·플래그·B군확인·심화감시 범위밖 중 하나라도 있으면 LLM을 부른다."""
+    assert _needs_llm(d0612) is True
+
+
+def test_quiet_day_skips_llm_entirely():
+    """신호가 하나도 없는 날은 LLM 미호출 — 비용도 환각도 0. (2026-05-21 실측 조용한 날)"""
+    r = get_daily_review_summary(filename=FIXTURE, target_date="2026-05-21")
+    assert _needs_llm(r) is False
+    res = run_daily_ai_analysis(DailyAIRequest(summary=r))
+    assert res["llm_called"] is False
+    assert "특이사항 없음" in res["analysis"]
+
+
+def test_ai_rejects_non_core_day():
+    """계상일이 아닌 날은 분석 대상이 아니다."""
+    r = get_daily_review_summary(filename=FIXTURE, target_date="2026-06-06")   # 토요일
+    assert r["status"] == "non_core_day"
+    with pytest.raises(Exception):
+        run_daily_ai_analysis(DailyAIRequest(summary=r))
 
 
 def test_watch_axes_all_a_group_only(d0612):

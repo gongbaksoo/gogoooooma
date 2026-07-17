@@ -11,6 +11,7 @@ import AnomalyCards from "@/components/daily-review/AnomalyCards";
 import PaceSection from "@/components/daily-review/PaceSection";
 import BGroupEvents from "@/components/daily-review/BGroupEvents";
 import SilenceLog from "@/components/daily-review/SilenceLog";
+import AIAnalysisModal from "@/components/daily-review/AIAnalysisModal";
 import { DailyReview } from "@/components/daily-review/types";
 
 const MUTED = "rgba(93, 93, 93, 0.64)";
@@ -26,6 +27,7 @@ export default function DailyReviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [targetDate, setTargetDate] = useState<string>("");
+  const [aiOpen, setAiOpen] = useState(false);
 
   const load = useCallback(async (date?: string) => {
     setLoading(true);
@@ -146,14 +148,24 @@ export default function DailyReviewPage() {
 
         {!loading && data?.status === "ok" && (
           <main className="mt-8 flex flex-col gap-10">
-            <div>
-              <h2 className="text-[22px] font-bold text-black">
-                {data.meta.target_date}({data.meta.weekday}) 계상 기준
-              </h2>
-              <p className="mt-1 text-[13px]" style={{ color: MUTED }}>
-                {data.meta.target_date_source === "auto_latest" ? "자동 선택된 최신 코어 계상일" : "사용자 지정일"}
-                {" · "}파일 {data.meta.filename}
-              </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-[22px] font-bold text-black">
+                  {data.meta.target_date}({data.meta.weekday}) 계상 기준
+                </h2>
+                <p className="mt-1 text-[13px]" style={{ color: MUTED }}>
+                  {data.meta.target_date_source === "auto_latest" ? "자동 선택된 최신 코어 계상일" : "사용자 지정일"}
+                  {" · "}파일 {data.meta.filename}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAiOpen(true)}
+                className="border border-solid rounded-[4px] px-4 py-2 text-[14px] font-bold text-black"
+                style={{ borderColor: "#c4c4c4" }}
+              >
+                AI 분석
+              </button>
             </div>
 
             <DataGuard data={data} />
@@ -163,6 +175,7 @@ export default function DailyReviewPage() {
             <PaceSection data={data} />
             <BGroupEvents data={data} />
             <SilenceLog data={data} />
+            <AIAnalysisModal open={aiOpen} onClose={() => setAiOpen(false)} data={data} />
           </main>
         )}
       </div>

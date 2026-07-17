@@ -746,3 +746,244 @@ def get_daily_review_summary(
         "bgroup_events": b_events,
         "silence_log": silence,
     }
+
+
+# ================================================================ AI 분석
+# 월 리뷰와 같은 구조(사용자 편집 지침 + Gemini)이나, **하드룰을 코드에 박는다**.
+# 이 페이지의 설계 전체가 "일 매출을 성과로 읽지 마라"인데, LLM은 두면 반드시 그걸 한다.
+# 지침은 사용자가 고치되 하드룰은 못 고친다.
+
+DAILY_PROMPTS_FILE = os.path.join(BASE_DIR, "daily_prompts.json")   # 런타임 파일(gitignore). 사용자 override 전용.
+
+# 기본 분석 지침은 **코드에 동봉**한다. 월 리뷰는 런타임 파일이 비면 400을 내는데(작성 강요),
+# 일 리뷰는 매일 쓰는 화면이라 기본값으로 바로 동작해야 한다. 사용자가 저장하면 그 값이 우선.
+DEFAULT_GUIDE = """- 오늘 확인이 필요한 것부터 쓴다.
+- 예외가 있으면 심화 감시(거래처·브랜드·상품)에서 함께 움직인 것이 있으면 연결해 준다.
+- 마지막에 월 페이스를 한 줄로 덧붙인다."""
+
+# ★ AI에 일별 원시 시계열을 주지 않는다. 컨텍스트는 MTD·프로파일·플래그·예외카드·심화감시 요약뿐.
+HARD_RULES = """[반드시 지킬 규칙 — 지침보다 우선]
+1. 전일비(어제 대비)·전년 동일자 비교를 언급하지 마라. 이 데이터에 없고, 요일 효과가 259배라 의미가 없다.
+2. B군(배치 계상) 채널의 일 변동을 성과로 해석하지 마라. 계상 타이밍일 뿐이다. 쿠팡 사입·다이소가 그렇다.
+3. 행사·바이럴 등 활동을 매출의 원인으로 서술하지 마라. 활동 데이터가 없다.
+4. 플래그(월말 마감·연휴 직후·반품 배치)가 있는 날의 증감은 회계 아티팩트로 다뤄라. 영업 성과로 읽지 마라.
+5. 착지 예상 금액을 만들지 마라. 월초 예측 오차가 31%다.
+6. 감시 범위(A군 비중)를 넘어 전사를 단정하지 마라. 나머지는 배치라 일 단위로 볼 수 없다.
+7. [데이터]에 있는 수치만 써라. 계산해서 새 숫자를 만들거나 추측하지 마라.
+8. 길이는 **예외 건수가 아니라 플래그와 심화 감시 신호**로 정한다.
+   - 예외 0건 + 플래그 없음 + 심화 감시 범위 밖 없음 → "특이사항 없음" + 근거 한 줄로 끝낸다. 월 페이스는 한 줄만.
+   - 예외 0건 + 플래그 없음 + 심화 감시에 범위 밖 있음 → **두 문장 이내(초과 금지)**. 범위 밖 항목만 다뤄라: 무엇이 범위 밖인지 · 다른 축에 동행이 있는지 · 무시해도 되는지.
+   - 예외 0건 + 플래그 있음(월말 마감·연휴 직후·반품 배치) → **오독 방지가 목적이므로 길이 제한 없음.** 단 '무엇이 아티팩트인지'에만 쓰고, 범위 밖 항목을 전부 나열하지 말고 축별로 묶어 요약한다.
+9. '일별'은 ERP 매출계상일이다. '어제 팔린 금액'이라고 쓰지 마라. '계상'이라고 써라.
+10. [A군 채널 위치]와 [심화 감시]의 판정을 뒤집거나 뭉뚱그리지 마라. "전부 범위 내"라고 쓰려면 나열된 채널이 **모두** '범위 내'여야 한다. 하나라도 상단 초과/하단 미만이면 "전부"라는 단어를 쓰지 마라.
+11. [확인 필요 예외]가 여러 건이고 같은 사건의 다른 축(채널과 그 채널의 거래처 등)이라고 판단되면 병합해 서술해도 된다. 단 "예외 2건(카드 기준) — 실질 1개 사건"처럼 **카드 건수를 먼저 밝히고** 병합 근거를 대라. 카드 건수와 다른 숫자를 단독으로 제시하지 마라.
+12. 예외 카드는 "무엇이 얼마나 범위를 벗어났는지"를 이미 정확히 말한다. **그것을 다시 쓰지 마라.** 네가 쓸 것은 카드가 못 하는 세 가지뿐이다:
+   ① 여러 축(채널·거래처·브랜드·상품)이 같은 사건인지 연결
+   ② 게이트 미만이라 카드에 안 오른 심화 감시 항목 중 카드와 같은 방향인 것
+   ③ 플래그일에 어떤 숫자를 무시해야 하는지
+   이 셋 중 아무것도 없으면 쓰지 마라.
+13. **'범위 내'인 항목을 금액과 함께 나열하지 마라.** 화면이 이미 표로 보여준다. 굳이 언급해야 하면 "나머지 채널은 범위 내" 한 마디로 끝내라. 정상인 것을 다시 쓰는 건 규칙 12 위반이다.
+14. **마크다운 서식을 쓰지 마라.** 화면은 평문으로 그대로 보여주므로 `**`·`#`·표는 별표와 기호가 그대로 노출된다. 문단 나눔과 줄바꿈만 써라. 항목을 나눠야 하면 "- "로 시작하는 줄로 충분하다."""
+
+
+def _load_daily_prompts() -> dict:
+    if os.path.exists(DAILY_PROMPTS_FILE):
+        try:
+            with open(DAILY_PROMPTS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_daily_prompts(prompts: dict) -> None:
+    with open(DAILY_PROMPTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(prompts, f, ensure_ascii=False, indent=2)
+
+
+def _man(v) -> str:
+    """원 → '1,063만' 문자열. 일 리뷰는 만원 고정(백만원은 일 값을 0~수십으로 뭉갠다)."""
+    try:
+        return f"{round(float(v) / 10_000):,}만"
+    except Exception:
+        return "-"
+
+
+def _build_daily_context(s: dict) -> str:
+    """일 리뷰 응답(summary) → 한국어 데이터 컨텍스트. 원시 시계열은 넣지 않는다."""
+    m, fr, snap = s.get("meta", {}), s.get("data_freshness", {}), s.get("accrual_snapshot", {})
+    pace, anom = s.get("mtd_pace", {}), s.get("anomalies", {})
+    L: list[str] = []
+
+    flags = m.get("day_flags") or []
+    flag_txt = " · ".join(FLAG_LABEL_KO.get(f, f) for f in flags) if flags else "없음"
+    L.append(f"[기준일] {m.get('target_date')}({m.get('weekday')}) · DOM {m.get('dom')}/{m.get('days_in_month')} · 플래그: {flag_txt}")
+    L.append(f"[데이터] 최종 계상일 {fr.get('latest_core_date')} · 파일 {m.get('filename')}"
+             + (" · 데이터 미도착(stale)" if fr.get("stale") else "")
+             + (" · 잠정(최근 45일은 ERP 소급 정정 대상)" if fr.get("provisional") else ""))
+
+    a, b, t = snap.get("a_group", {}), snap.get("b_group", {}), snap.get("total", {})
+    L.append("[계상 현황] " + f"A군(일 단위 해석 가능) 순매출 {_man(a.get('net'))} / B군(배치) {_man(b.get('net'))} / 전사 {_man(t.get('net'))}"
+             + f" (전사 총매출 {_man(t.get('gross'))}, 반품 {_man(t.get('returns'))})")
+
+    ach = snap.get("a_channels") or []
+    if ach:
+        L.append(f"[A군 채널 위치] 같은 {m.get('weekday')}요일 8주 범위 기준")
+        for c in ach:
+            L.append(f"  - {c.get('channel')}: 당일 {_man(c.get('net'))} (범위 {_man(c.get('ref_min'))}~{_man(c.get('ref_max'))}, 중앙값 {_man(c.get('ref_median'))}) → {c.get('position')}")
+
+    flags_list = anom.get("flags") or []
+    if flags_list:
+        L.append(f"[확인 필요 예외] {len(flags_list)}건")
+        for i, f in enumerate(flags_list, 1):
+            over = (f.get("value", 0) - f.get("ref_max", 0)) if f.get("kind") == "surge" else (f.get("ref_min", 0) - f.get("value", 0))
+            L.append(f"  {i}. {'급증' if f.get('kind') == 'surge' else '급감'} · "
+                     f"{'채널' if f.get('level') == 'channel' else '거래처'} {f.get('entity_display')}: "
+                     f"당일 {_man(f.get('value'))}, 8주 범위 {_man(f.get('ref_min'))}~{_man(f.get('ref_max'))}"
+                     f"(중앙값 {_man(f.get('ref_median'))}), {'최대치' if f.get('kind') == 'surge' else '최소치'} {_man(abs(over))} "
+                     f"{'초과' if f.get('kind') == 'surge' else '미달'}, 유효관측 {f.get('ref_valid')}/8")
+    else:
+        L.append("[확인 필요 예외] 0건" + (f" — {anom.get('suppressed_reason')}" if anom.get("suppressed_reason") else ""))
+
+    # 월 페이스 — 착지 금액은 없다(스키마에 필드 자체가 없음)
+    if pace:
+        line = f"[월 페이스] {pace.get('month')} · MTD 순매출 {_man(pace.get('mtd', {}).get('net'))}"
+        if pace.get("target"):
+            line += f" / 월 목표 {_man(pace.get('target'))}"
+        line += f" · 진행률 {pace.get('dom')}/{pace.get('days_in_month')}"
+        L.append(line)
+        band, es = pace.get("expected_mtd_band"), pace.get("expected_share")
+        if band and es:
+            L.append(f"  기대 누계 {_man(band.get('low'))}~{_man(band.get('high'))} (실측 진척률 중앙값 {es.get('med')}%) → {pace.get('band_position')}")
+        elif pace.get("suppressed_reason"):
+            L.append(f"  {pace.get('suppressed_reason')}")
+        if pace.get("achievement_pct") is not None and pace.get("is_month_final"):
+            L.append(f"  월 최종 달성률 {pace.get('achievement_pct')}%")
+        br = pace.get("base_rate")
+        if br:
+            L.append(f"  참고 base rate: 최근 {br.get('n_months')}개월 평균 목표 달성률 {br.get('mean_achievement')}%, 100% 달성 {br.get('hit_100_count')}회 "
+                     f"(밴드 하회는 흔하므로 경보로 읽지 말 것)")
+
+    checks = [e for e in (s.get("bgroup_events") or []) if e.get("kind") == "check"]
+    if checks:
+        L.append("[B군 계상 이벤트 — 확인]")
+        for e in checks:
+            L.append(f"  - {e.get('channel')}: {e.get('message')}")
+
+    # 심화 감시는 '범위 밖'만 (컨텍스트를 짧게)
+    out_lines = []
+    for label, key, namer in (("거래처", "top_vendors", lambda x: x.get("account_display")),
+                              ("브랜드", "top_brands", lambda x: x.get("brand")),
+                              ("상품", "top_products", lambda x: x.get("name"))):
+        rows = [r for r in (snap.get(key) or []) if r.get("position") not in ("범위 내", "표본 부족")]
+        for r in rows:
+            out_lines.append(f"  - {label} {namer(r)}: 당일 {_man(r.get('net'))} (중앙값 {_man(r.get('ref_median'))}) → {r.get('position')}")
+    if out_lines:
+        L.append("[심화 감시 — 범위 밖] (게이트 미만이면 예외 카드로는 올리지 않은 것)")
+        L.extend(out_lines)
+
+    sl = s.get("silence_log") or {}
+    if sl.get("coverage_pct") is not None:
+        L.append(f"[감시 범위] A군 채널 = 전사 순매출의 {sl.get('coverage_pct')}%. "
+                 f"나머지는 배치 계상(쿠팡 사입·다이소 등)이라 일 단위 이상 감지가 불가능하다.")
+    return "\n".join(L)
+
+
+FLAG_LABEL_KO = {
+    "month_end_batch": "월말 마감 계상일",
+    "post_gap": "연휴·결측 직후",
+    "return_batch": "반품 배치일",
+}
+
+
+def _daily_guide() -> str:
+    """사용자 저장 지침 우선, 없으면 코드 동봉 기본값."""
+    return (_load_daily_prompts().get("default") or "").strip() or DEFAULT_GUIDE
+
+
+def _needs_llm(s: dict) -> bool:
+    """LLM을 부를 가치가 있는 날인가.
+
+    규칙 12의 '카드가 못 하는 3가지'가 하나라도 있어야 부른다:
+    ① 예외 카드 ② 심화 감시 범위 밖 ③ 플래그(월말·연휴직후·반품배치) / B군 확인.
+    셋 다 없으면 LLM 없이 고정 문구 — 비용도 환각도 0.
+    """
+    if s.get("anomalies", {}).get("flags"):
+        return True
+    if s.get("meta", {}).get("day_flags"):
+        return True
+    if any(e.get("kind") == "check" for e in (s.get("bgroup_events") or [])):
+        return True
+    snap = s.get("accrual_snapshot", {})
+    for key in ("top_vendors", "top_brands", "top_products"):
+        if any(r.get("position") not in ("범위 내", "표본 부족") for r in (snap.get(key) or [])):
+            return True
+    return False
+
+
+class DailyPromptRequest(BaseModel):
+    prompt: str
+
+
+class DailyAIRequest(BaseModel):
+    summary: dict
+    api_key: Optional[str] = None
+
+
+@router.get("/analysis-prompt/")
+def get_daily_prompt():
+    saved = (_load_daily_prompts().get("default") or "").strip()
+    return {"prompt": saved or DEFAULT_GUIDE, "is_default": not saved}
+
+
+@router.post("/analysis-prompt/")
+def set_daily_prompt(req: DailyPromptRequest):
+    prompts = _load_daily_prompts()
+    prompts["default"] = req.prompt
+    try:
+        _save_daily_prompts(prompts)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"프롬프트 저장 실패: {e}")
+    return {"prompt": req.prompt, "is_default": False}
+
+
+@router.post("/ai-analysis/")
+def run_daily_ai_analysis(req: DailyAIRequest):
+    s = req.summary or {}
+    if s.get("status") != "ok":
+        raise HTTPException(status_code=400, detail="분석할 수 있는 계상일 데이터가 아닙니다.")
+
+    # 예외·플래그·범위밖이 하나도 없으면 LLM을 부르지 않는다(비용·환각 0).
+    if not _needs_llm(s):
+        pace = s.get("mtd_pace", {})
+        line = ""
+        if pace.get("band_position"):
+            line = f" 월 페이스는 {pace['band_position']}입니다(밴드 하회는 흔하므로 경보로 읽지 마세요)."
+        return {
+            "analysis": f"특이사항 없음. A군 채널·거래처·브랜드·상품이 모두 같은 요일 8주 범위 안이고 플래그도 없습니다.{line}",
+            "llm_called": False,
+        }
+
+    api_key = _resolve_api_key(req.api_key)
+    if not api_key:
+        raise HTTPException(status_code=400, detail="API Key가 설정되지 않았습니다. 관리자에게 문의하세요.")
+
+    context = _build_daily_context(s)
+    m = s.get("meta", {})
+    full_prompt = (
+        "당신은 매출 데이터 분석 전문가입니다.\n"
+        f"아래 [데이터]는 {m.get('target_date')}({m.get('weekday')}) 계상 기준의 일 리뷰 집계입니다.\n"
+        "[반드시 지킬 규칙]은 [분석 지침]보다 우선합니다. 한국어로 작성하세요.\n\n"
+        f"{HARD_RULES}\n\n"
+        f"[분석 지침]\n{_daily_guide()}\n\n"
+        f"[데이터]\n{context}\n"
+    )
+
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-3.5-flash")
+        resp = model.generate_content(full_prompt)
+        return {"analysis": resp.text, "llm_called": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI 분석 실패: {e}")

@@ -5,7 +5,23 @@
 //   - 저장값은 HTML 문자열. 보기 모드 렌더는 sanitizeNoteHtml로 안전화(자체 localStorage 콘텐츠지만 방어).
 //   - 붙여넣기는 평문으로 강제 → 외부 서식·이미지·스크립트 혼입 차단.
 //   - 색상/크기는 input·select로 포커스가 이동하므로 선택영역(Range)을 저장·복원해 적용.
-import { useEffect, useRef } from "react";
+//   - 색상 피커는 브라우저 기본 UI라 그 안에 저장 기능을 못 넣음 → 툴바에 자체 스와치 줄(고정 ★ / 최근)을 둠.
+import { useEffect, useRef, useState } from "react";
+import {
+  ColorSwatches,
+  DEFAULT_COLOR_SWATCHES,
+  SwatchKind,
+  loadColorSwatches,
+  pinColor,
+  pushRecent,
+  saveColorSwatches,
+  unpinColor,
+} from "./colorSwatchStorage";
+
+const COLOR_META: Record<SwatchKind, { cmd: string; label: string; initial: string }> = {
+  fore: { cmd: "foreColor", label: "글자색", initial: "#000000" },
+  hilite: { cmd: "hiliteColor", label: "형광", initial: "#ffff00" },
+};
 
 const FONT_SIZES: { label: string; value: string }[] = [
   { label: "작게", value: "2" },
@@ -54,6 +70,18 @@ export function RichTextEditor({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const savedRange = useRef<Range | null>(null);
+  const [colors, setColors] = useState<Record<SwatchKind, string>>({
+    fore: COLOR_META.fore.initial,
+    hilite: COLOR_META.hilite.initial,
+  });
+  // 스와치는 SSR에서 localStorage를 못 읽으므로 마운트 후 복원 (다른 섹션 저장소와 동일 패턴)
+  const [swatches, setSwatches] = useState<ColorSwatches>(DEFAULT_COLOR_SWATCHES);
+  // 피커에서 실제로 색을 바꿨을 때만 blur 시점에 '최근'으로 기록하기 위한 표시
+  const pickerDirty = useRef<Record<SwatchKind, boolean>>({ fore: false, hilite: false });
+
+  useEffect(() => {
+    setSwatches(loadColorSwatches());
+  }, []);
 
   // resetKey(월·파트) 변경 시 에디터 내용을 해당 조합 저장값으로 시드
   useEffect(() => {
@@ -99,6 +127,14 @@ export function RichTextEditor({
     emit();
   };
 
+  // 색 적용. 피커 드래그 중엔 change가 연속 발생하므로 '최근'에는 쌓지 않고(recordRecent=false),
+  // 피커를 닫아 blur될 때·스와치를 눌렀을 때만 최종값 1건을 기록한다.
+  const applyColor = (kind: SwatchKind, color: string, recordRecent: boolean) => {
+    setColors((prev) => ({ ...prev, [kind]: color }));
+    runWithRestore(COLOR_META[kind].cmd, color);
+    if (recordRecent) setSwatches((prev) => saveColorSwatches(pushRecent(prev, kind, color)));
+  };
+
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
@@ -122,6 +158,85 @@ export function RichTextEditor({
 
   const Sep = () => <span className="w-px h-4 bg-[#dddddd] mx-0.5" aria-hidden />;
 
+  // 색 피커 (label로 감싼 input[type=color]) — 드래그 중 실시간 적용, 닫힐 때 '최근'에 1건 기록
+  const colorPicker = (kind: SwatchKind, faceLabel: string) => (
+    <label
+      title={COLOR_META[kind].label}
+      className="flex items-center gap-0.5 h-[24px] px-1 border border-[#d5d5d5] rounded bg-white cursor-pointer hover:border-black"
+      onMouseDown={saveSelection}
+    >
+      <span className="text-[12px] leading-none">{faceLabel}</span>
+      <input
+        type="color"
+        value={colors[kind]}
+        onChange={(e) => {
+          pickerDirty.current[kind] = true;
+          applyColor(kind, e.target.value, false);
+        }}
+        onBlur={() => {
+          if (!pickerDirty.current[kind]) return;
+          pickerDirty.current[kind] = false;
+          setSwatches((prev) => saveColorSwatches(pushRecent(prev, kind, colors[kind])));
+        }}
+        className="w-[16px] h-[16px] p-0 border-0 bg-transparent cursor-pointer"
+      />
+    </label>
+  );
+
+  // 저장 색 스와치 줄: ★(고정) + 최근. 컴포넌트가 아니라 함수 호출로 렌더 → 리렌더 시 input 상태 유지.
+  const swatchDot = (kind: SwatchKind, color: string, title: string, onAlt: () => void) => (
+    <button
+      key={`${kind}-${color}`}
+      type="button"
+      title={title}
+      aria-label={title}
+      onMouseDown={(e) => e.preventDefault()} // 에디터 선택영역 유지
+      onClick={() => applyColor(kind, color, true)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onAlt();
+      }}
+      style={{ backgroundColor: color }}
+      className="w-[16px] h-[16px] rounded-sm border border-[#c4c4c4] hover:border-black"
+    />
+  );
+
+  const swatchStrip = (kind: SwatchKind) => {
+    const { pinned, recent } = swatches[kind];
+    const name = COLOR_META[kind].label;
+    return (
+      <div className="flex items-center gap-1">
+        <span className="text-[11px] leading-none text-[#666666]">{name}</span>
+        <button
+          type="button"
+          title={`현재 ${name}(${colors[kind]})을 고정색으로 저장`}
+          aria-label={`현재 ${name} 고정색으로 저장`}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setSwatches((prev) => saveColorSwatches(pinColor(prev, kind, colors[kind])))}
+          className="flex items-center h-[18px] px-1 border border-[#d5d5d5] rounded text-[11px] leading-none bg-white hover:border-black"
+        >
+          ★+
+        </button>
+        {pinned.map((c) =>
+          swatchDot(kind, c, `${name} ${c} 적용 (우클릭: 고정 해제)`, () =>
+            setSwatches((prev) => saveColorSwatches(unpinColor(prev, kind, c)))
+          )
+        )}
+        {recent.length > 0 && (
+          <>
+            <Sep />
+            <span className="text-[11px] leading-none text-[#999999]">최근</span>
+            {recent.map((c) =>
+              swatchDot(kind, c, `${name} ${c} 적용 (우클릭: 고정)`, () =>
+                setSwatches((prev) => saveColorSwatches(pinColor(prev, kind, c)))
+              )
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="border border-[#c4c4c4] rounded">
       {/* 툴바 */}
@@ -131,32 +246,8 @@ export function RichTextEditor({
         <Btn cmd="underline" label="U" title="밑줄" />
         <Btn cmd="strikeThrough" label="S" title="취소선" />
         <Sep />
-        <label
-          title="글자색"
-          className="flex items-center gap-0.5 h-[24px] px-1 border border-[#d5d5d5] rounded bg-white cursor-pointer hover:border-black"
-          onMouseDown={saveSelection}
-        >
-          <span className="text-[12px] leading-none">가</span>
-          <input
-            type="color"
-            defaultValue="#000000"
-            onChange={(e) => runWithRestore("foreColor", e.target.value)}
-            className="w-[16px] h-[16px] p-0 border-0 bg-transparent cursor-pointer"
-          />
-        </label>
-        <label
-          title="형광펜"
-          className="flex items-center gap-0.5 h-[24px] px-1 border border-[#d5d5d5] rounded bg-white cursor-pointer hover:border-black"
-          onMouseDown={saveSelection}
-        >
-          <span className="text-[12px] leading-none">형광</span>
-          <input
-            type="color"
-            defaultValue="#ffff00"
-            onChange={(e) => runWithRestore("hiliteColor", e.target.value)}
-            className="w-[16px] h-[16px] p-0 border-0 bg-transparent cursor-pointer"
-          />
-        </label>
+        {colorPicker("fore", "가")}
+        {colorPicker("hilite", "형광")}
         <Sep />
         <Btn cmd="insertUnorderedList" label="• 목록" title="글머리 목록" />
         <Btn cmd="insertOrderedList" label="1. 목록" title="번호 목록" />
@@ -183,6 +274,12 @@ export function RichTextEditor({
             </option>
           ))}
         </select>
+      </div>
+
+      {/* 저장한 색: 클릭하면 적용, 우클릭으로 고정/해제 */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1.5 py-1 border-b border-[#e5e5e5] bg-[#fcfcfc]">
+        {swatchStrip("fore")}
+        {swatchStrip("hilite")}
       </div>
 
       {/* 편집 영역 */}

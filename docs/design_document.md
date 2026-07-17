@@ -770,6 +770,24 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 - `page.tsx`의 `OverviewNote`: 보기모드는 `sanitizeNoteHtml(legacyTextToHtml(note))`로 렌더(기존 평문 메모 하위호환), 편집모드는 `<RichTextEditor>` 사용, 저장 시 sanitize.
 - 의존성 0(외부 에디터 라이브러리 없이 contentEditable + execCommand). 이모지 미사용.
 
+#### 2.3.3.30 리치 에디터 — 색상 스와치(고정 ★ / 최근) 저장 (2026-07-17 51회차)
+
+리치 에디터에서 **매번 같은 색을 피커로 다시 찾아 지정해야 하는** 불편 해소. **프론트 단독(Vercel 자동 배포)**.
+
+- **전제**: `<input type="color">`가 여는 색 선택창은 **브라우저·OS 기본 UI라 내부에 저장 슬롯을 넣을 수 없다.** 따라서 저장은 **툴바에 자체 스와치 줄**로 구현한다(피커 자체는 손대지 않음).
+- 신규 `frontend/src/components/monthly-review/colorSwatchStorage.ts` — 키 `avk_monthly_review_color_swatches`. 형태 `{ fore: {pinned[], recent[]}, hilite: {pinned[], recent[]} }`.
+  - **글자색(fore)·형광(hilite) 목록 분리** — 용도가 달라(진한 색 vs 밝은 색) 섞이면 못 쓴다.
+  - `pinned`: ★+로 수동 저장, 최대 8. 가득 차면 **가장 오래된 것부터 밀어냄**(방금 고정한 색은 항상 보이게).
+  - `recent`: 적용할 때마다 자동 누적, 최신 우선, 최대 8, 중복 제거.
+  - 기본 고정색: fore `#000000·#c00000·#0070c0` / hilite `#ffff00·#ffd966·#c6efce` (저장값이 생기면 그쪽 우선).
+  - `#rrggbb`만 허용하고 소문자로 정규화 — localStorage 오염 방어 + 중복 판정 일관성.
+- 툴바 2번째 줄 UI: `글자색 [★+] ■■■ │ 최근 ■■■` + `형광 [★+] ■■■ │ 최근 ■■■`. 스와치 **클릭=적용 / 우클릭=고정 해제(pinned)·고정 승격(recent)**, 안내는 `title`로.
+- 구현 메모:
+  - 색 상태(`colors`)를 컴포넌트가 보유해야 ★+가 **현재 피커 색**을 저장할 수 있다 → `defaultValue` → `value` 제어 컴포넌트로 전환.
+  - **피커 드래그 중 `change`가 연속 발생**하므로 적용은 실시간으로 하되 `recent` 기록은 하지 않고, `pickerDirty` ref로 실제 변경 여부를 표시해 **blur(피커 닫힘) 시점에 최종색 1건만** 기록. 스와치 클릭은 즉시 기록.
+  - 스와치 버튼은 `onMouseDown` preventDefault로 에디터 선택영역 유지.
+  - 스와치 복원은 **마운트 후 `useEffect`** — SSR에는 localStorage가 없어 초기값으로 읽으면 하이드레이션 불일치.
+
 #### 2.3.4 목표 파일 포맷
 
 ```csv

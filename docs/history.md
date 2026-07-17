@@ -4,6 +4,39 @@
 
 ---
 
+## 2026-07-17 (51회차) — 리치 에디터 색상 스와치 저장 (고정 ★ / 최근, 글자색·형광 분리)
+
+### 1. 배경
+- 요청: 월 리뷰 종합 코멘트 에디터의 **색 선택창에서 색을 저장**하게 해달라 (스크린샷 첨부).
+- **첫 결론이 "불가능"**: 스크린샷의 색 선택창은 `<input type="color">`가 띄운 **OS/브라우저 기본 피커**라 그 안에 저장 슬롯을 넣을 방법이 없다. 요청대로 만들 수 없다는 것을 먼저 알리고, **툴바에 자체 스와치 줄**을 두는 대안으로 합의.
+
+### 2. 확정 (사용자 선택)
+- 저장 방식: **둘 다** — 자동 누적 '최근' + ★로 수동 고정. (수동만/자동만 선택지 대비)
+- 목록 분리: **글자색·형광 별도 관리** — 진한 색 vs 밝은 색이라 섞이면 못 씀.
+
+### 3. 구현 (프론트 단독)
+- 신규 `colorSwatchStorage.ts` — 키 `avk_monthly_review_color_swatches`, `{fore|hilite: {pinned[], recent[]}}`. pinned/recent 각 최대 8, `#rrggbb` 검증 + 소문자 정규화(저장소 오염 방어), 기본 고정색 3개씩.
+- `RichTextEditor.tsx` — 툴바 2행에 `글자색 [★+] ■■■ │ 최근 ■■■` / `형광 [★+] …`. 클릭=적용, 우클릭=고정 해제·고정 승격. 색 input을 `defaultValue`→`value` 제어 컴포넌트로 전환(★+가 현재 색을 알아야 해서).
+- **드래그 오염 방지**: 피커 `change`가 연속 발생하므로 적용은 실시간, `recent` 기록은 `pickerDirty` ref로 판정해 **blur(피커 닫힘) 때 최종색 1건만**. 스와치 클릭은 즉시 기록.
+- 스와치 복원은 마운트 후 `useEffect`(SSR 하이드레이션 불일치 회피 — `page.tsx`의 기존 localStorage 복원과 동일 패턴).
+
+### 4. 검증 (브라우저 실제 구동)
+- 로컬 백엔드(8000) 미기동이라 `.env.local`을 **운영 백엔드로 임시 전환 → 검증 후 원복**. 260715.csv + 편집모드로 실제 에디터 구동.
+- 스와치 클릭 → `color: rgb(192,0,0)` 적용 + `recent` 기록 / 피커 #123456 → 닫을 때 `recent: ["#123456","#c00000"]` **1건만** / ★+ 고정·우클릭 해제 / **새로고침 후 고정·최근 그대로 복원** / 콘솔 에러 0.
+- tsc·eslint 기존 수준 유지(신규 `set-state-in-effect` 1건은 page.tsx의 localStorage 복원과 동일 패턴, SSR상 불가피).
+
+### 5. 부수 발견 (`error.md §72`)
+- **React `onBlur`는 `blur`가 아니라 위임된 `focusout`으로 받는다** → 합성 `FocusEvent('blur')` 검증이 무반응이라 코드 버그로 오판할 뻔. 실제 `focus()`/`blur()`로 재현해 정상 확인.
+- **커밋 전 상태를 명시하지 않고 "확인해 보시라"** 안내 → 사용자가 운영 화면을 열어 "아직 적용 안 됐다" 혼선. 로컬/배포 여부는 항상 명시할 것.
+
+### 6. 변경 파일
+- 신규: `frontend/src/components/monthly-review/colorSwatchStorage.ts`
+- 수정: `frontend/src/components/monthly-review/RichTextEditor.tsx`
+- 문서: `docs/{design_document(§2.3.3.30), project_plan(§4.11), error(§72), history}.md`
+- 배포: **프론트 단독 → Vercel 자동 배포**(백엔드 재시작 불필요).
+
+---
+
 ## 2026-07-17 (50회차) — 일 리뷰 AI 분석 (하드룰 14개 + 신호 없으면 LLM 미호출)
 
 ### 1. 배경

@@ -803,6 +803,21 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 - **AI 되묻기(방식 C — 추가 호출 없음)**: `[확인이 필요한 사항 — 되묻기 규칙]` 상시 주입. 배경으로 설명되지 않는 이상 신호(급감·0·급증, 채널·브랜드·상품 비정상 변동)가 있으면 결과 끝에 `❓ 확인이 필요한 사항`으로 질문 ≤3개, 없거나 배경으로 설명되면 생략. 담당자가 그 답을 현황 배경칸에 적고 다시 `분석하기`. (질문 먼저 받고 답하는 2-pass 루프는 Gemini 2회 호출·UI 추가라 이번 범위에서 제외.)
 - `AIAnalysisRequest`에 `user_context: Optional[str] = ""` 추가. 가드(잘못된 파트/키 미설정/프롬프트 미작성 400)는 기존 유지.
 
+#### 2.3.3.32 PDF 형광펜(하이라이트) 정렬 보정 (2026-07-18 53회차)
+
+리치 에디터 형광펜(`hiliteColor` → 인라인 `background-color` span)이 **PDF에서 글자 아래를 안 덮어** 삐져나와 보이던 문제 해소. **프론트만 변경**(Vercel 자동배포).
+
+**원인 (동일 폰트 Pretendard·동일 `html2canvas@1.4.1`로 격리 재현·픽셀 측정)**
+- `html2canvas`는 인라인 배경을 실제 브라우저보다 **위로 ~1px 올려** 그린다. 결과적으로 형광 박스가 글자 하단(괄호·숫자·`_` 등)을 덮지 못함(측정: 형광 하단 여백 **0px**, 브라우저는 ~0.4px 덮음).
+- 브라우저 기준값(canvas 2D 텍스트 엔진): 형광 박스 15px, 글자 위 1.74 / 아래 0.41. RAW(현재 PDF): 박스 15.5, 위 2.5 / **아래 0**.
+
+**해결 (캡처 시점만 보정 — 화면·줄간격 불변)**
+- `handlePdfDownload`의 `html2canvas` 옵션에 `onclone(_doc, el)` 추가 → 캡처용 클론의 형광 span(`span[style*="background-color"]`)에만:
+  - `box-decoration-break: clone` + `-webkit-box-decoration-break: clone` (줄바꿈되는 형광도 각 줄 배경 유지)
+  - `padding-bottom: 1.5px` (상단 불변, 하단만 덮음)
+- 측정 개선: 하단 여백 **0 → 1.5px**, 상단 불변, 2줄 형광 정상. `line-height` 변경안(줄간격 변형)·`inline-block`안(줄바꿈 형광 깨짐)은 부작용으로 탈락.
+- **주의**: `1.5px`는 폰트 메트릭에 맞춘 값. 폰트/크기 변경 시 재측정 필요. `onclone` 2번째 인자 = 캡처 대상 클론(`html2canvas@1.4.1` 소스 `onclone(documentClone, referenceElement)` 확인).
+
 #### 2.3.4 목표 파일 포맷
 
 ```csv
@@ -826,6 +841,7 @@ PPT slide 3 "매출 리뷰 - 주요채널 이슈"를 채널 그룹 단위 동적
 | 캡처 대상 | 차트 그리드 영역 (컨트롤 영역 제외) |
 | 출력 포맷 | A4 가로, PNG 이미지 임베드 |
 | 파일명 | `monthly-review-{YYYY-MM}-{part}.pdf` |
+| 형광펜 보정 | `onclone`에서 형광 span에 `box-decoration-break:clone` + `padding-bottom:1.5px`(캡처 전용, 하단 클리핑 방지) — 상세 §2.3.3.32 |
 
 #### 2.3.6 빈 상태 / 에러 상태
 - 매출 파일 미선택: "매출 파일을 선택해주세요" — `#5d5d5d` 텍스트, 차트 자리 비움

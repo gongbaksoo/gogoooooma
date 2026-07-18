@@ -254,6 +254,7 @@ sales-analysis-site/
   - **단위 주의**: 활동 카드 기재매출(백만원)은 채널 총매출과 **다른 값**(상시 제외·중복노출 시 중복). 합산·동일시 금지(`error.md §59`).
 - **리치 텍스트 에디터**: 월 리뷰 종합 코멘트 편집 UI를 contentEditable 리치 에디터로(서식·색·목록·정렬·크기). 상세 `design_document.md §2.3.3.29`.
   - **색상 스와치 저장 (51회차)**: 자주 쓰는 글자색·형광색을 툴바에 ★로 고정하고 최근 사용색은 자동 누적(브라우저 기본 피커에는 저장 슬롯을 넣을 수 없어 자체 UI로 구현). 상세 `design_document.md §2.3.3.30`.
+  - **PDF 형광펜 정렬 보정 (53회차)**: `html2canvas`가 인라인 형광 배경을 위로 ~1px 올려 그려 글자 하단이 형광 밖으로 삐져나오던 문제를, 캡처용 `onclone`에서 형광 span에 `box-decoration-break:clone`+`padding-bottom:1.5px`을 줘 보정(화면·줄간격 불변, 프론트 전용). 상세 `design_document.md §2.3.3.32`.
 - **인사이트 스킬**: `.claude/skills/monthly-review-insight`(데이터 자동취합 + 사용자 문답 → 인사이트 리뷰). 고정 컨텍스트 `company-context.md`(일부 `[확인 요망]` 잔존).
 - 데이터 취합 제약: 노션 데이터소스 SQL/뷰 쿼리는 Enterprise 전용 → `query_database_view`로 우회(`error.md §58`). 담당 user 실명은 API 식별 불가 → `담당1~6` 코드+발자국.
 

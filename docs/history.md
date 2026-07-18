@@ -4,6 +4,35 @@
 
 ---
 
+## 2026-07-18 (53회차) — PDF 형광펜 정렬 보정 (html2canvas 하단 클리핑)
+
+### 1. 배경
+- 요청: 월 리뷰 **PDF 다운로드**에서 리치 에디터 형광펜이 **"위치가 좀 안 맞아"** 보임(사용자 PDF 캡처 첨부). 원하는 작업 = 정렬 자체를 코드로 교정.
+
+### 2. 확정 (사용자 선택)
+- **A안** — 화면·저장은 그대로 두고 **캡처 시점(`onclone`)만 보정**. (B: 형광 렌더 자체 교체 / C: 네이티브 인쇄 전환은 제외.)
+
+### 3. 원인 규명 (추정 금지 → 격리 재현·측정)
+- 동일 폰트(**Pretendard Variable**)·동일 **`html2canvas@1.4.1`**을 스크래치에 받아 재현, **캔버스 픽셀 스캔**(형광 밴드 vs 검은 글자 상하 여백)으로 수치화.
+- 결론: `html2canvas`가 인라인 `background-color`를 브라우저보다 **위로 ~1px 올려** 그림 → **형광이 글자 하단(괄호·숫자·`_`)을 안 덮음**(RAW 하단 여백 **0px**, 브라우저 기준 ~0.4px). 어긋남은 실재하나 크기는 ~1px.
+
+### 4. 구현 (프론트 전용)
+- `frontend/src/app/monthly-review/page.tsx` `handlePdfDownload` → `html2canvas` 옵션에 `onclone(_doc, el)` 추가. 캡처 클론의 형광 span(`span[style*="background-color"]`)에만 `box-decoration-break:clone`(+`-webkit-`) + `padding-bottom:1.5px`.
+- 측정 개선: 하단 여백 **0 → 1.5px**, 상단 불변, **2줄(줄바꿈) 형광 정상**. 화면 표시·줄간격 불변.
+
+### 5. 검증
+- 후보 비교표로 탈락 근거 확보: `line-height`안=PDF 줄간격 변형 / `inline-block`안=줄바꿈 형광 깨짐 / clone 단독=무효.
+- `tsc` 새 에러 0(남은 건 recharts 타입, 미변경 파일). eslint HEAD 대비 개수 동일(8=8) → 새 에러 0.
+- `onclone` 2번째 인자=캡처 클론임을 라이브러리 소스로 확인.
+- **미검증**: 실제 사용자 데이터로 뽑은 PDF의 최종 육안 확인(값 `1.5px`는 폰트 종속이라 필요 시 조정).
+
+### 6. 변경 파일
+- `frontend/src/app/monthly-review/page.tsx`
+- 문서: `design_document.md §2.3.3.32·§2.3.5`, `project_plan.md §4.11`, `error.md §74`, `history.md`
+- **배포**: 프론트만 → **Vercel 자동배포**(백엔드 무관).
+
+---
+
 ## 2026-07-18 (52회차) — AI 매출 분석: 현황 배경(파트별 저장) + AI 되묻기(방식 C)
 
 ### 1. 배경

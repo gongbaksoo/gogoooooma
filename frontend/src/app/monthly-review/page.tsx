@@ -489,6 +489,18 @@ export default function MonthlyReviewPage() {
       const canvas = await html2canvas(chartGridRef.current, {
         backgroundColor: "#ffffff",
         scale: 2,
+        // html2canvas는 인라인 배경(형광펜 hiliteColor)을 실제 브라우저보다 위로 ~1px 올려 그려
+        // 글자 하단(괄호·숫자·'_' 등)이 형광 밖으로 삐져나온다. 캡처본에서만 형광 span에
+        // box-decoration-break:clone(줄바꿈 형광 안전) + 아래쪽 여백 1.5px을 줘 하단까지 덮는다.
+        // 화면 표시·줄간격은 그대로. (측정: RAW 하단여백 0 → 1.5px, 상단 불변)
+        onclone: (_doc, el) => {
+          el.querySelectorAll('span[style*="background-color"]').forEach((node) => {
+            const s = (node as HTMLElement).style;
+            s.setProperty("box-decoration-break", "clone");
+            s.setProperty("-webkit-box-decoration-break", "clone");
+            s.setProperty("padding-bottom", "1.5px");
+          });
+        },
       });
       const img = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });

@@ -722,16 +722,19 @@ def get_summary(
 # ===================================================================
 
 ANALYSIS_PROMPTS_FILE = os.path.join(BASE_DIR, "analysis_prompts.json")
+# 파트별 '현황 배경 설명' — 데이터에 안 나타나는 지속 맥락(예: 쿠팡 사입 거래 종료)을 저장.
+# 프롬프트(분석 지침)와 역할이 달라 별도 파일로 분리한다.
+ANALYSIS_CONTEXTS_FILE = os.path.join(BASE_DIR, "analysis_contexts.json")
 SECURITY_CONFIG_FILE = os.path.join(BASE_DIR, "security_config.json")
 _VALID_PARTS = {"all", "ecommerce", "offline"}
 PART_LABELS_KR = {"all": "전체", "ecommerce": "이커머스", "offline": "오프라인"}
 
 
-def _load_analysis_prompts() -> dict:
-    """파트별 분석 프롬프트 로드. { "all": "...", "ecommerce": "...", "offline": "..." }"""
-    if os.path.exists(ANALYSIS_PROMPTS_FILE):
+def _load_json_map(path: str) -> dict:
+    """{part: str} 형태 JSON 파일 로드. 없거나 손상 시 빈 dict."""
+    if os.path.exists(path):
         try:
-            with open(ANALYSIS_PROMPTS_FILE, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, dict):
                     return data
@@ -740,9 +743,24 @@ def _load_analysis_prompts() -> dict:
     return {}
 
 
+def _load_analysis_prompts() -> dict:
+    """파트별 분석 프롬프트 로드. { "all": "...", "ecommerce": "...", "offline": "..." }"""
+    return _load_json_map(ANALYSIS_PROMPTS_FILE)
+
+
 def _save_analysis_prompts(prompts: dict) -> None:
     with open(ANALYSIS_PROMPTS_FILE, "w", encoding="utf-8") as f:
         json.dump(prompts, f, ensure_ascii=False, indent=2)
+
+
+def _load_analysis_contexts() -> dict:
+    """파트별 현황 배경 설명 로드."""
+    return _load_json_map(ANALYSIS_CONTEXTS_FILE)
+
+
+def _save_analysis_contexts(contexts: dict) -> None:
+    with open(ANALYSIS_CONTEXTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(contexts, f, ensure_ascii=False, indent=2)
 
 
 def _resolve_api_key(provided: Optional[str]) -> Optional[str]:
@@ -930,11 +948,18 @@ class AnalysisPromptRequest(BaseModel):
     prompt: str
 
 
+class AnalysisContextRequest(BaseModel):
+    part: str
+    context: str
+
+
 class AIAnalysisRequest(BaseModel):
     month: str
     part: str = "all"
     summary: dict
     api_key: Optional[str] = None
+    # 담당자가 이번 분석에 붙이는 현황 배경(선택). 비면 기존과 동일하게 동작.
+    user_context: Optional[str] = ""
 
 
 @router.get("/analysis-prompt/")
@@ -958,6 +983,27 @@ def set_analysis_prompt(req: AnalysisPromptRequest):
     return {"part": req.part, "prompt": req.prompt}
 
 
+@router.get("/analysis-context/")
+def get_analysis_context(part: str = Query("all")):
+    if part not in _VALID_PARTS:
+        raise HTTPException(status_code=400, detail="잘못된 파트입니다.")
+    contexts = _load_analysis_contexts()
+    return {"part": part, "context": contexts.get(part, "")}
+
+
+@router.post("/analysis-context/")
+def set_analysis_context(req: AnalysisContextRequest):
+    if req.part not in _VALID_PARTS:
+        raise HTTPException(status_code=400, detail="잘못된 파트입니다.")
+    contexts = _load_analysis_contexts()
+    contexts[req.part] = req.context
+    try:
+        _save_analysis_contexts(contexts)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"현황 배경 저장 실패: {e}")
+    return {"part": req.part, "context": req.context}
+
+
 @router.post("/ai-analysis/")
 def run_ai_analysis(req: AIAnalysisRequest):
     if req.part not in _VALID_PARTS:
@@ -975,12 +1021,37 @@ def run_ai_analysis(req: AIAnalysisRequest):
         )
 
     context = _build_analysis_context(req.summary, req.month, req.part)
+    user_context = (req.user_context or "").strip()
+
+    # 사용자 제공 배경(선택): 데이터에 안 나타나는 신뢰할 맥락. 비면 블록 자체를 넣지 않아 기존과 동일.
+    context_block = ""
+    if user_context:
+        context_block = (
+            "\n[사용자 제공 배경]\n"
+            "아래는 담당자가 직접 제공한 배경 설명입니다. 데이터에는 드러나지 않지만 신뢰할 수 있는 "
+            "맥락이므로 해석에 반드시 반영하세요(예: 특정 채널 거래 종료로 매출이 0인 것은 정상). "
+            "단, 이 배경을 근거로 데이터에 없는 수치를 지어내지는 마세요.\n"
+            f"{user_context}\n"
+        )
+
+    # 방식 C: 배경으로 설명되지 않는 이상 신호는 결과 끝에 되묻기 항목으로 남긴다(추가 호출 없음).
+    followup_block = (
+        "\n[확인이 필요한 사항 — 되묻기 규칙]\n"
+        "데이터에서 배경 없이는 해석하기 어려운 이상 신호(매출 급감·0·급증, 특정 채널·브랜드·상품의 "
+        "비정상적 변동 등)를 발견했는데 위 [사용자 제공 배경]으로 설명되지 않는다면, 분석 결과 맨 끝에 "
+        "\"❓ 확인이 필요한 사항\" 항목을 만들어 담당자에게 물어볼 질문을 3개 이내로 적으세요. "
+        "이상 신호가 없거나 모두 배경으로 설명되면 이 항목은 생략하세요. 질문은 짐작이 아니라 "
+        "데이터에서 실제로 관찰된 이상 신호에 근거해야 합니다.\n"
+    )
+
     full_prompt = (
         "당신은 매출 데이터 분석 전문가입니다.\n"
         f"아래 [데이터]는 {req.month} 대상 월의 매출 집계입니다.\n"
         "[분석 지침]에 따라 한국어로 분석 결과를 작성하세요. "
         "수치는 데이터에 있는 값만 사용하고, 추측하지 마세요.\n\n"
-        f"[분석 지침]\n{user_prompt}\n\n"
+        f"[분석 지침]\n{user_prompt}\n"
+        f"{context_block}"
+        f"{followup_block}\n"
         f"[데이터]\n{context}\n"
     )
 

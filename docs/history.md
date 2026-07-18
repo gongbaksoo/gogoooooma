@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-07-18 (52회차) — AI 매출 분석: 현황 배경(파트별 저장) + AI 되묻기(방식 C)
+
+### 1. 배경
+- 요청: AI 매출 분석에서 **기존 저장 프롬프트를 1차 지침**으로 두고, 담당자가 **현황에 대한 간략한 설명**을 넣으면 함께 분석. 비우면 지금처럼 동작.
+- 예: **쿠팡 사입 거래 종료** → 데이터만 보면 매출 급감/0인데, 배경을 모르는 AI가 오독한다. 이럴 때 배경을 사람이 넣어주면 정확해진다.
+- 추가 요청: **AI가 사용자에게 되묻게** 할 수 있는지 검토.
+
+### 2. 확정 (사용자 선택)
+- 현황 배경 입력칸: **파트별로 저장**(1회성 대비) — 쿠팡 종료처럼 몇 달 지속되는 배경은 저장이 편함.
+- 되묻기: **방식 C** — 분석 1회 안에서 결과 끝에 질문 첨부(질문 먼저 받고 답하는 2-pass 루프는 제외).
+
+### 3. 구현 (프론트 + 백엔드)
+- **백엔드 `api/monthly_review.py`**: 파트별 배경 저장소 `analysis_contexts.json` + 공용 로더 `_load_json_map`. 신규 엔드포인트 `GET/POST /monthly-review/analysis-context/`. `AIAnalysisRequest`에 `user_context`(선택) 추가.
+  - 프롬프트 조립: 배경 있으면 `[사용자 제공 배경]` 블록 주입("신뢰할 맥락으로 반영, 단 숫자는 지어내지 말 것"). **되묻기 규칙** 상시 주입 → 배경으로 설명 안 되는 이상 신호에 `❓ 확인이 필요한 사항` ≤3개, 없으면 생략. 배경 비면 블록 자체 생략 → 기존과 동일.
+- **프론트 `AIAnalysisModal.tsx`**: `분석하기` 위에 **"현황 배경 (선택)"** textarea(편집 모드 무관, 모두 입력). 모달 열 때 파트별 저장값 프리필, `배경 저장` 버튼(변경 시 활성). 저장 안 해도 현재 입력값을 `user_context`로 전송.
+
+### 4. 검증
+- 백엔드: AST 문법 OK, **`api/.venv`로 임포트** OK — 라우트(GET+POST) 등록·모델 필드(`user_context`, `AnalysisContextRequest`) 확인. `set/get_analysis_context` **저장·로드 왕복 + 파트 격리** 통과(테스트 파일 원복).
+- 프론트: `tsc --noEmit` 에러 0. eslint `set-state-in-effect` 1건은 `git stash` 대조로 **기존 코드**(HEAD와 동일) 확인.
+- **미검증**: 실제 Gemini 호출로 `❓ 확인이 필요한 사항` 산출까지의 라이브 e2e — API 키+실 summary+백엔드 배포 필요.
+
+### 5. 부수 발견
+- 시스템 파이썬엔 fastapi 없음 → 백엔드 검증은 `api/.venv/bin/python` 기준. (`error.md §73`)
+
+### 6. 변경 파일
+- `api/monthly_review.py`, `frontend/src/components/monthly-review/AIAnalysisModal.tsx`
+- 문서: `design_document.md §2.3.3.31`, `project_plan.md §4.11·API 표`, `error.md §73`, `history.md`
+- **배포**: 백엔드 변경 포함 → **Mac Mini pull + 재시작 필요**(프론트 Vercel 자동배포만으론 미완).
+
+---
+
 ## 2026-07-17 (51회차) — 리치 에디터 색상 스와치 저장 (고정 ★ / 최근, 글자색·형광 분리)
 
 ### 1. 배경

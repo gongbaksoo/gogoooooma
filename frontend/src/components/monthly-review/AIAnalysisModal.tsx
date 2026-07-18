@@ -34,12 +34,15 @@ export default function AIAnalysisModal({
   const [prompt, setPrompt] = useState(""); // 백엔드에 저장된 프롬프트
   const [draft, setDraft] = useState(""); // 편집 중 임시값
   const [savingPrompt, setSavingPrompt] = useState(false);
+  const [context, setContext] = useState(""); // 백엔드에 저장된 현황 배경(파트별)
+  const [contextDraft, setContextDraft] = useState(""); // 입력 중인 현황 배경
+  const [savingContext, setSavingContext] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // 모달 열림 / 파트 변경 시 해당 파트 프롬프트 로드 + 결과 초기화
+  // 모달 열림 / 파트 변경 시 해당 파트 프롬프트 + 현황 배경 로드, 결과 초기화
   useEffect(() => {
     if (!open) return;
     setError(null);
@@ -56,11 +59,23 @@ export default function AIAnalysisModal({
         setPrompt("");
         setDraft("");
       });
+    axios
+      .get(`${API_BASE_URL}/api/monthly-review/analysis-context/`, { params: { part } })
+      .then((res) => {
+        const c: string = res.data?.context ?? "";
+        setContext(c);
+        setContextDraft(c);
+      })
+      .catch(() => {
+        setContext("");
+        setContextDraft("");
+      });
   }, [open, part]);
 
   if (!open) return null;
 
   const dirty = draft !== prompt;
+  const contextDirty = contextDraft !== context;
 
   const savePrompt = async () => {
     setSavingPrompt(true);
@@ -75,6 +90,22 @@ export default function AIAnalysisModal({
       setError("프롬프트 저장에 실패했습니다.");
     } finally {
       setSavingPrompt(false);
+    }
+  };
+
+  const saveContext = async () => {
+    setSavingContext(true);
+    setError(null);
+    try {
+      await axios.post(`${API_BASE_URL}/api/monthly-review/analysis-context/`, {
+        part,
+        context: contextDraft,
+      });
+      setContext(contextDraft);
+    } catch {
+      setError("현황 배경 저장에 실패했습니다.");
+    } finally {
+      setSavingContext(false);
     }
   };
 
@@ -112,6 +143,7 @@ export default function AIAnalysisModal({
         part,
         summary,
         api_key: "server_managed",
+        user_context: contextDraft,
       });
       setResult(res.data?.analysis ?? "");
     } catch (e) {
@@ -187,6 +219,32 @@ export default function AIAnalysisModal({
               아직 분석 가이드가 작성되지 않았습니다. 편집 모드에서 프롬프트를 먼저 작성해 주세요.
             </p>
           )}
+
+          {/* 현황 배경 (선택) — 모든 사용자 입력 가능, 파트별 저장 */}
+          <div>
+            <label className="block text-[12px] font-bold text-[#555] mb-1">
+              현황 배경 (선택) — {PART_LABEL[part]}
+            </label>
+            <textarea
+              value={contextDraft}
+              onChange={(e) => setContextDraft(e.target.value)}
+              rows={3}
+              placeholder="데이터만으로는 알기 어려운 배경을 적어주세요. 예: 쿠팡 사입은 이번 달부터 거래 종료 → 매출 0은 정상."
+              className="w-full border border-[#c4c4c4] rounded px-2 py-1.5 text-[13px] focus:outline-none focus:border-black resize-y"
+            />
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[11px] text-[#999]">
+                비워두면 지금처럼 분석합니다. 저장하면 이 파트에서 다음에도 자동으로 불러옵니다.
+              </span>
+              <button
+                onClick={saveContext}
+                disabled={!contextDirty || savingContext}
+                className="text-[11px] border border-[#c4c4c4] px-3 py-0.5 rounded hover:border-black disabled:opacity-40 disabled:hover:border-[#c4c4c4]"
+              >
+                {savingContext ? "저장 중…" : "배경 저장"}
+              </button>
+            </div>
+          </div>
 
           {/* 분석 실행 */}
           <div className="flex items-center gap-2">

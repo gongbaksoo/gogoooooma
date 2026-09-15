@@ -224,6 +224,9 @@ async def upload_target_file(file: UploadFile = File(...)):
         except HTTPException as e:
             os.remove(dst)
             raise e
+        # 보관 정책 적용: 목표 파일도 최신 5개만 유지
+        from retention import enforce_target_retention
+        enforce_target_retention()
         return {"filename": file.filename, "size": os.path.getsize(dst)}
     except HTTPException:
         raise

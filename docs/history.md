@@ -4,6 +4,54 @@
 
 ---
 
+## 2026-09-16 (54회차) — 업로드 파일 보관 정책 신설 (최신 5개 유지) + 누적 고아 파일 회수
+
+### 1. 배경
+- 제보: **"맥미니에 파일이 계속 쌓인다."** 요청 = 날짜와 무관하게 업로드 파일을 **5개만 유지**하고, 초과 시 가장 오래된 것부터 삭제.
+
+### 2. 점검 결과 (코드 수정 전 실측)
+- 저장 구조는 **2중**: DB(`api/metadata.db` BLOB, 주 저장소) + 디스크(`api/uploads/`, 조회 시 `ensure_file_on_disk()`가 재생성) + `uploads/cache/*.parquet`.
+- 실측: DB **2건(169.6MB)** vs 디스크 **9건(313MB)**. 디스크 9건 중 **7건이 DB에 없는 고아**.
+- 원인 4가지 규명:
+  1. **정리 함수는 있었으나 호출되지 않았다** — `cleanup_old_files()`가 DB 저장 **실패 시 fallback 분기에만** 걸려 있어, 정상 경로에서 디스크는 아무 상한도 받지 못했다. (핵심 원인)
+  2. `DELETE /files/{filename}`이 메모리 캐시만 비우고 **parquet을 남겼다**(파일당 ~6MB 영구 잔존).
+  3. `cleanup_old_files()`가 `.gitkeep`까지 세어 상한 5가 실질 4로 동작 + `.gitkeep` 삭제 위험.
+  4. DB 정리 정렬 키가 `uploaded_at`이라 **재업로드한 파일이 방치된 파일보다 먼저 삭제**될 수 있었다.
+- SQLite 단편화는 없음(freelist 0) → `VACUUM` 불필요로 판단.
+
+### 3. 확정 (사용자 승인)
+- 누적된 고아 파일 **삭제 진행**.
+- 목표 파일(`uploads/targets/`)도 **동일하게 5개 상한 적용**.
+
+### 4. 구현
+- **신규 `api/retention.py`** — 흩어져 있던 정리 로직을 한 곳으로 통합.
+  - `enforce_retention(max_files=5)`: DB를 기준 원장으로 최신 5건 유지 → **디스크를 DB에 미러링** → 살아남은 해시가 아닌 parquet 회수 → 삭제분 `clear_df_cache()`.
+  - `enforce_target_retention(max_files=5)`: `uploads/targets/`를 mtime 최신 5개로 정리.
+  - 대상은 `.csv`/`.xlsx`만 — `.gitkeep`·하위 디렉토리·기타 확장자 불가침.
+- **호출부 연결**: 업로드(`index.py:upload_file`, DB/fallback 공통) / 삭제(`delete_file`) / 기동(`startup_event`) / 목표 업로드(`monthly_review.py:upload_target_file`).
+- **`database.py` 정렬 키 교정**: `list_files_in_db()`·`cleanup_old_files_in_db()` 모두 `uploaded_at` → **`updated_at`**.
+- **죽어 있던 `cleanup_old_files()` 제거** — 경쟁하는 두 구현을 남기지 않음.
+- **안전장치**: DB 목록이 비었거나 연결 불가면 미러링을 중단하고 디스크 mtime 기준으로만 자름(`mode: "disk"`). 빈 DB로 기동된 서버가 운영 파일을 전량 삭제하는 사고(§44와 동형) 차단.
+
+### 5. 검증
+- 임시 DB·임시 디렉토리로 기능 테스트 **16개 항목 전부 통과** — 5개 상한, 디스크 미러링, 고아 parquet 삭제, `.gitkeep`/비데이터 파일 보존, 재업로드 시 정렬 순서(`updated_at`), DB 공백 시 안전장치, 목표 파일 상한.
+- `api/.venv/bin/python`으로 `index.py` 임포트 확인(라우트 101개). (시스템 파이썬 금지 — §73 교훈 적용.)
+- 삭제 전 dry-run으로 대상·용량 출력, 최신 고아 `260615.csv`는 프로젝트 루트 사본과 **SHA256 동일** 대조 후 삭제(재업로드로 복구 가능).
+
+### 6. 결과
+| 항목 | 이전 | 이후 |
+|------|------|------|
+| `api/uploads/` 용량 | 313 MB | **168 MB** (145.7MB 회수) |
+| 데이터 파일 | 9건 | **2건** (= DB 보관분과 일치) |
+| parquet 캐시 | 2건 | 1건 |
+
+### 7. 문서
+- `project_plan.md` §3(디렉토리)·§4.1(저장 구조)·§5.4(캐시 정리)에 반영, **§5.5 「업로드 파일 보관 정책」 신설**.
+- `error.md` **§75** 신설(정리 함수가 있었지만 호출되지 않은 건) + 향후 권장 53번.
+- `design_document.md`는 UI/디자인 변경이 없어 수정 없음.
+
+---
+
 ## 2026-07-18 (53회차) — PDF 형광펜 정렬 보정 (html2canvas 하단 클리핑)
 
 ### 1. 배경

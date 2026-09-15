@@ -18,6 +18,7 @@ from database import (
     cleanup_old_files_in_db, get_file_count,
     get_hash_by_filename,
 )
+from retention import enforce_retention
 
 app = FastAPI(title="Sales Analysis API")
 
@@ -57,6 +58,8 @@ async def startup_event():
     """Initialize database on startup"""
     init_db()
     logging.info("Application started, database initialized")
+    # 기동 시 한 번 정리 — 이전 버전에서 누적된 디스크/parquet 고아 파일 회수
+    enforce_retention()
 
 def ensure_file_on_disk(filename: str):
     """Ensure that the file exists on the local disk (fetching from DB if needed)"""
@@ -240,26 +243,6 @@ def chat_endpoint(request: ChatRequest):
         print(error_msg)
         raise HTTPException(status_code=500, detail=f"AI 응답 생성 실패: {str(e)}")
 
-def cleanup_old_files(max_files: int = 5):
-    """Remove oldest files if count exceeds max_files"""
-    files = []
-    for filename in os.listdir(UPLOAD_DIR):
-        filepath = os.path.join(UPLOAD_DIR, filename)
-        if os.path.isfile(filepath):
-            files.append((filepath, os.path.getmtime(filepath)))
-    
-    # Sort by modification time (oldest first)
-    files.sort(key=lambda x: x[1])
-    
-    # Remove oldest files if exceeding limit
-    while len(files) > max_files:
-        oldest_file = files.pop(0)[0]
-        try:
-            os.remove(oldest_file)
-            print(f"Removed old file: {oldest_file}")
-        except Exception as e:
-            print(f"Failed to remove {oldest_file}: {e}")
-
 @router.get("/files/")
 def list_files(t: str = None):
     """게시된 파일 목록 가져오기 (Database with disk fallback)"""
@@ -314,8 +297,10 @@ def delete_file(filename: str):
             logging.warning(f"File {filename} not found in DB or on disk")
             raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
         
+        enforce_retention()
         return {"message": f"{filename} 삭제 완료 (Local only)"}
-    
+
+    enforce_retention()
     return {"message": f"{filename} 삭제 완료"}
 
 @router.post("/upload/")
@@ -341,14 +326,12 @@ def upload_file(file: UploadFile = File(...)):
 
         if db_success:
             logging.info("File saved to database")
-            cleanup_old_files_in_db(max_files=5)
         else:
             # Fallback to disk storage if database unavailable
             logging.warning("Database unavailable, falling back to disk storage")
             file_path = os.path.join(UPLOAD_DIR, file.filename)
             with open(file_path, "wb") as f:
                 f.write(file_data)
-            cleanup_old_files()
 
         # Clear memory cache (also drops the filename->hash mapping)
         from dashboard import clear_df_cache
@@ -365,7 +348,10 @@ def upload_file(file: UploadFile = File(...)):
                     logging.info(f"Removed stale parquet for old hash {old_hash[:12]}")
         except Exception as e:
             logging.error(f"Failed to clean stale parquet on upload: {e}")
-        
+
+        # 보관 정책 적용: DB·디스크·parquet을 한 번에 최신 5개로 정리
+        enforce_retention()
+
         # Write to temp file for analysis. Use a UUID-based name to avoid
         # collisions/escaping issues with non-ASCII or whitespace filenames.
         ext = os.path.splitext(file.filename)[1].lower()

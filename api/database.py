@@ -149,7 +149,8 @@ def list_files_in_db():
         return []
     
     try:
-        files = db.query(UploadedFile).order_by(UploadedFile.uploaded_at.desc()).all()
+        # 재업로드는 uploaded_at을 갱신하지 않으므로 updated_at 기준으로 정렬한다.
+        files = db.query(UploadedFile).order_by(UploadedFile.updated_at.desc()).all()
         return [{
             "filename": f.filename,
             "size": f.file_size,
@@ -188,8 +189,8 @@ def cleanup_old_files_in_db(max_files: int = 5) -> int:
         return 0
     
     try:
-        # Get all files ordered by upload time (newest first)
-        all_files = db.query(UploadedFile).order_by(UploadedFile.uploaded_at.desc()).all()
+        # 최신순 정렬. 재업로드된 파일이 먼저 지워지지 않도록 updated_at을 쓴다.
+        all_files = db.query(UploadedFile).order_by(UploadedFile.updated_at.desc()).all()
         
         if len(all_files) <= max_files:
             return 0

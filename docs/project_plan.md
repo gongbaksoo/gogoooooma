@@ -34,8 +34,9 @@ sales-analysis-site/
 │   ├── index.py                  # API 라우터 (엔드포인트 정의)
 │   ├── dashboard.py              # 핵심 비즈니스 로직 (매출 계산)
 │   ├── monthly_review.py         # 월 리뷰 집계 로직 ⭐ NEW
+│   ├── retention.py              # 업로드 파일 보관 정책(최신 5개 유지) ⭐ NEW (54회차)
 │   ├── metadata.db               # SQLite — 업로드 파일 BLOB 저장 ⚠️ git 추적 금지(운영 런타임 데이터)
-│   ├── uploads/                  # 업로드 파일 디스크 fallback ⚠️ git 추적 금지(.gitkeep만 추적)
+│   ├── uploads/                  # 업로드 파일 디스크 사본(DB 미러) ⚠️ git 추적 금지(.gitkeep만 추적)
 │   │   ├── cache/                # Parquet 캐시 파일
 │   │   └── targets/              # 월 리뷰용 목표 파일 ⭐ NEW
 │   └── verify_daily_api.py       # API 검증 스크립트
@@ -72,7 +73,9 @@ sales-analysis-site/
 - 업로드된 파일 목록 조회
 - 파일 선택 시 대시보드 자동 로드
 - ⚠️ **업로드 시각 표시는 한국시(KST) 고정 (2026-06-15 39회차)**: `FileSelector`의 "저장된 파일" 목록 시각은 `toLocaleString("ko-KR", { timeZone: "Asia/Seoul", ... })`로 렌더 환경과 무관하게 KST로 고정한다. `timeZone` 옵션 누락 시 Vercel(UTC) 등에서 렌더되면 UTC가 그대로 출력돼 한국시와 9시간(하루) 어긋난다(실제 발생, `docs/error.md §54`).
-- **저장 구조**: 업로드 파일은 SQLite `api/metadata.db`의 `uploaded_files` 테이블에 **BLOB으로 저장**(DB 불가 시 `api/uploads/` 디스크 fallback). 목록은 `list_files_in_db()`(최신순), 최대 5건 유지(`cleanup_old_files_in_db`).
+- **저장 구조**: 업로드 파일은 SQLite `api/metadata.db`의 `uploaded_files` 테이블에 **BLOB으로 저장**(DB 불가 시 `api/uploads/` 디스크 fallback). 목록은 `list_files_in_db()`(`updated_at` 최신순).
+- ⭐ **보관 정책 — 날짜 무관, 최신 5개 유지 (2026-09-16 54회차)**: `api/retention.py`가 DB·디스크·parquet 정리를 **한 곳에서** 담당한다. 상세는 §5.5.
+- ⚠️ **디스크 사본은 업로드가 아니라 "조회"가 만든다 (2026-09-16 54회차)**: 업로드는 DB에만 저장하지만, 조회 시점에 `ensure_file_on_disk()`가 DB BLOB을 `api/uploads/`로 다시 써낸다(같은 로직이 `index.py`·`monthly_review.py` 두 곳에 복제). 그래서 업로드 엔드포인트만 보면 디스크에 안 쓰는 것처럼 보이지만 사본이 계속 쌓인다 — 디스크 정리는 업로드 경로가 아니라 **보관 정책**이 책임진다(`docs/error.md §75`).
 - ⚠️ **운영 데이터 git 추적 금지 (2026-05-23 29회차)**: `metadata.db`·`api/uploads/` 데이터 파일은 **소스가 아니라 운영 런타임 데이터**다. git에 추적되면 배포(`git pull`) 때 저장소의 빈/구버전 DB로 **덮어써져 업로드가 전부 유실**된다(실제 발생, `docs/error.md §44`). `.gitignore`에 등록되어 있어야 하며, `.gitkeep`만 추적한다.
 - ⚠️ **소스 CSV 인코딩 규약 — EUC-KR(cp949) (2026-05-30 36회차)**: 업로드되는 매출 원본 CSV는 **EUC-KR(cp949)** 인코딩이다(UTF-8 아님, 첫 바이트 `0xC0`). 모든 운영 CSV 리더는 인코딩 폴백을 갖춰야 한다 — `index.py`(업로드)·`dashboard.py`·`monthly_review.py`는 `['utf-8','utf-8-sig','cp949','euc-kr']` 순차 시도, `chat.py`(AI 채팅)는 `UnicodeDecodeError` 시 cp949 폴백. 폴백 누락 시 `'utf-8' codec can't decode byte 0xc0` 에러로 기능 전체가 죽는다. 신규 `read_csv` 추가 시 동일 폴백 적용 + `grep -rn read_csv`로 누락 점검. 상세: `docs/error.md §51`.
 
@@ -405,9 +408,48 @@ sales-analysis-site/
 
 #### 업로드 시 정리
 - 옛 hash의 parquet 파일이 있으면 새 hash로 바뀐 직후 `index.py:upload_file()`이 옛 parquet을 자동 삭제 → disk 누수 방지.
+- 그 직후 `enforce_retention()`이 한 번 더 돌아 **보관 대상 5개의 해시에 속하지 않는 parquet을 전부** 회수한다(§5.5).
 
 > [!NOTE]
-> 백엔드는 Mac Mini 로컬에서 실행되므로 `uploads/cache/*.parquet`은 영구 보존된다. 재시작 후에도 캐시가 유지되어 응답 지연이 없다.
+> 백엔드는 Mac Mini 로컬에서 실행되므로 `uploads/cache/*.parquet`은 재시작 후에도 유지된다(응답 지연 없음). 단 **영구 보존은 아니다** — 보관 대상에서 밀려난 파일의 parquet은 보관 정책이 함께 삭제한다(§5.5).
+
+---
+
+### 5.5 업로드 파일 보관 정책 (최신 5개 유지) ⭐ NEW (54회차)
+
+> 모듈: `api/retention.py` — 이전에는 정리 로직이 DB·디스크에 따로 있었고 **디스크 쪽은 사실상 호출되지 않아** 파일이 무한 누적됐다(`docs/error.md §75`).
+
+#### 원칙
+- **기준은 개수, 날짜가 아니다.** 최신 5개(`MAX_FILES = 5`)를 남기고 오래된 것부터 지운다.
+- **DB가 기준 원장, 디스크는 그 미러.** 디스크를 따로 세지 않고 DB 보관 목록과 일치시킨다 — 두 저장소가 각자 5개를 세면 어긋난다.
+
+#### 동작 (`enforce_retention(max_files=5)`)
+
+| 대상 | 정리 규칙 |
+|------|-----------|
+| DB `uploaded_files` | `updated_at` 최신 5건만 유지 (`cleanup_old_files_in_db`) |
+| 디스크 `uploads/*.csv·xlsx` | DB에 살아남은 **파일명만** 유지, 나머지 삭제 |
+| `uploads/cache/*.parquet` | 살아남은 파일의 해시(+구버전 파일명 기반)가 아니면 삭제 |
+| 인메모리 `df_cache` | 디스크에서 지운 파일은 `clear_df_cache()`로 함께 비움 |
+
+- 대상은 **데이터 파일(`.csv`/`.xlsx`)만.** 숨김파일(`.gitkeep`)·하위 디렉토리·기타 확장자는 건드리지 않는다.
+- `uploads/targets/`(월 리뷰 목표 파일)는 성격이 달라 별도 함수 `enforce_target_retention()`이 **mtime 최신 5개** 기준으로 정리한다.
+
+#### 호출 지점
+
+| 위치 | 시점 |
+|------|------|
+| `index.py:upload_file()` | 업로드 성공 후 (DB/디스크 fallback **양쪽 경로 공통**) |
+| `index.py:delete_file()` | 파일 삭제 후 — 남은 parquet 회수 |
+| `index.py:startup_event()` | 서버 기동 시 1회 — 누적된 고아 파일 자동 회수 |
+| `monthly_review.py:upload_target_file()` | 목표 파일 업로드 후 (`enforce_target_retention`) |
+
+#### ⚠️ 안전장치 — DB가 비면 미러링하지 않는다
+- DB 목록이 **비었거나 연결 불가**면 미러링을 중단하고, 디스크 **mtime 기준 최신 5개**로만 자른다(`mode: "disk"`).
+- 이유: 빈 DB로 기동된 서버(§4.1 `metadata.db` 경로 사고, `error.md §44`)가 디스크 운영 데이터를 **전량 삭제**하는 것을 막기 위함. 미러링은 "DB가 진실을 알고 있을 때"만 유효하다.
+
+#### 정렬 키가 `updated_at`인 이유
+- 같은 파일명 재업로드는 `uploaded_at`을 갱신하지 않는다. `uploaded_at` 기준으로 자르면 **자주 갱신하는 파일이 오래된 파일보다 먼저 삭제**된다. `list_files_in_db()`·`cleanup_old_files_in_db()` 모두 `updated_at` 기준으로 통일.
 
 ---
 

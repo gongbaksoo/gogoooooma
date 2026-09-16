@@ -448,6 +448,11 @@ sales-analysis-site/
 - DB 목록이 **비었거나 연결 불가**면 미러링을 중단하고, 디스크 **mtime 기준 최신 5개**로만 자른다(`mode: "disk"`).
 - 이유: 빈 DB로 기동된 서버(§4.1 `metadata.db` 경로 사고, `error.md §44`)가 디스크 운영 데이터를 **전량 삭제**하는 것을 막기 위함. 미러링은 "DB가 진실을 알고 있을 때"만 유효하다.
 
+#### 운영 적용 결과 (2026-09-16 55회차, 맥미니)
+- 적용 전 `api/uploads/` **6.7GB / 데이터 81건 / parquet 44건** — DB는 5건으로 잘 유지되고 있었으나 **디스크 정리만 한 번도 실행되지 않은 상태**였다(일 1회 약 89MB CSV 업로드 → 월 약 2.7GB 누적).
+- 재시작 시 `enforce_retention()` 1회 실행 → 로그 `[retention] mode=db DB 0건 / 디스크 76건 / parquet 39건 삭제`.
+- 적용 후 **455MB / 데이터 5건 / parquet 5건**, 디스크 여유 22GB → 28GB (**약 6.5GB 회수**). 대시보드·일 리뷰·월 리뷰 응답 정상(1초 내), `Traceback` 0건.
+
 #### 정렬 키가 `updated_at`인 이유
 - 같은 파일명 재업로드는 `uploaded_at`을 갱신하지 않는다. `uploaded_at` 기준으로 자르면 **자주 갱신하는 파일이 오래된 파일보다 먼저 삭제**된다. `list_files_in_db()`·`cleanup_old_files_in_db()` 모두 `updated_at` 기준으로 통일.
 
@@ -498,19 +503,57 @@ git push
 # - Vercel: GitHub push 시 자동 빌드/배포 (프론트엔드)
 # - 배포 완료까지 약 1-2분 소요
 
-# 4. 백엔드 (Mac Mini 로컬)
+# 4. 백엔드 (Mac Mini) — push만으로는 반영 안 됨. 아래 "백엔드 배포 SOP" 수행
 # - Mac Mini에서 launchd로 자동 실행 (com.avk.backend)
 # - Cloudflare Tunnel을 통해 https://api.gongbaksoo.com 으로 노출
-# - 백엔드 변경 시: Mac Mini에서 직접 코드 수정 후 uvicorn 재시작
 # - 상태 확인: curl https://api.gongbaksoo.com/api/health
 ```
+
+### ⚠️ 작업 머신 ≠ 운영 머신 (2026-09-16 55회차 재확인)
+
+| 구분 | 머신 | 저장소 경로 |
+|------|------|------------|
+| **작업(개발)** | MacBook Pro M5 (`J-MacBook-Pro-M5`) | `~/Desktop/Vibe Coding/AVK_Sales` |
+| **운영(백엔드)** | Mac Mini (`J-Mac-mini`) | `/Users/j_mac_mini/Projects/AVK_Sales` |
+
+- **두 저장소는 완전히 별개 클론이다.** 노트북에서 `api/uploads/`를 정리하거나 `metadata.db`를 손대도 **운영에는 아무 영향이 없다.** 실제로 54회차에서 노트북 작업본을 정리해 놓고 "서버 정리 완료"로 오인 보고한 사고가 있었다(`docs/error.md §77`).
+- 운영 데이터(업로드 파일·DB) 상태를 말할 때는 **반드시 맥미니에서 실측**할 것. `hostname`으로 어느 머신인지 먼저 확인한다.
+- **프론트 단독 변경은 push만으로 Vercel 자동 배포** — 맥미니 무관.
+
+### 백엔드 배포 SOP (ssh, 2026-09-16 55회차 실행·검증)
+
+> 노트북 → 맥미니 ssh 키 인증 사용 가능(`Host macmini-codex`, Tailscale `100.119.186.23`, user `j_mac_mini`).
+
+```bash
+# 0) 사전 점검 — 들어갈 커밋이 맥미니 로컬 수정 파일을 건드리는지 확인
+#    (api/security_config.json은 맥미니에서 로컬 수정 상태로 유지 중 = API 키)
+git log --oneline <맥미니HEAD>..origin/main -- api/security_config.json   # 비어 있어야 안전
+
+# 1) 백업
+ssh macmini-codex 'cd ~/Projects/AVK_Sales && cp api/metadata.db ~/avk_metadata_backup_$(date +%Y%m%d).db'
+
+# 2) 코드 반영 — ff-only. 실패 시 중단하고 원인 확인 (force/reset/stash 금지)
+ssh macmini-codex 'cd ~/Projects/AVK_Sales && git pull --ff-only'
+
+# 3) 재시작 (KeepAlive=true, uid 501)
+ssh macmini-codex 'launchctl kickstart -k gui/501/com.avk.backend'
+
+# 4) 검증
+ssh macmini-codex 'curl -s http://127.0.0.1:8000/api/health && curl -s http://127.0.0.1:8000/api/files/'
+curl -s https://api.gongbaksoo.com/api/health                    # Cloudflare Tunnel 경로
+ssh macmini-codex 'cd ~/Projects/AVK_Sales && grep "\[retention\]" api/uvicorn.log | tail -3'
+```
+
+- `requirements.txt`가 바뀐 커밋이 포함되면 3번 앞에 `./.venv/bin/pip install -r requirements.txt` 추가.
+- 파괴적 변경(보관 정책 등)이 포함되면 **재시작 전에 dry-run으로 삭제 대상·용량을 산출해 사용자 승인**을 받는다.
 
 ### 백엔드 인프라 (Mac Mini)
 
 | 항목 | 내용 |
 |------|------|
-| **실행 방식** | launchd (`com.avk.backend`) — 부팅 시 자동시작 |
-| **프로세스** | uvicorn `index:app --host 127.0.0.1 --port 8000` |
+| **실행 방식** | launchd (`com.avk.backend`) — `RunAtLoad`+`KeepAlive` true, 부팅 시 자동시작 |
+| **프로세스** | uvicorn `index:app --host 127.0.0.1 --port 8000` (venv: `api/.venv`) |
+| **WorkingDirectory** | `api/` — `sqlite:///./metadata.db`가 `api/metadata.db`로 해석되는 근거 |
 | **공개 URL** | Cloudflare Tunnel → `https://api.gongbaksoo.com` |
-| **데이터 저장** | SQLite (`api/metadata.db`) + 로컬 파일시스템 (영구 보존) |
-| **로그** | `api/uvicorn.log`, `api/uvicorn.error.log` |
+| **데이터 저장** | SQLite (`api/metadata.db`) + 로컬 파일시스템 (보관 정책 §5.5 적용) |
+| **로그** | `api/uvicorn.log`, `api/uvicorn.error.log` — ⚠️ 로테이션 없음(에러 로그 152MB, 2026-09-16) |

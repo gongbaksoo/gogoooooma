@@ -1609,5 +1609,27 @@ export function getDataTypeSeriesStyle(i: number, key: 'profitRate' | 'growth'):
 #### 관련 항목
 - `docs/error.md §55` (근본원인·재현·수정 상세)
 
+---
 
+### 8.16 페이지 최대 폭 규약 — 데이터 화면 1152px(`max-w-6xl`) 통일 (2026-10-08 56회차)
+
+> 배경: 사용자 피드백 "대시보드가 화면을 너무 꽉 채운다(좌우로 너무 넓다)". 페이지마다 최대 폭이 768~1280px로 제각각이었다.
+
+**규약**: 데이터 화면(표·차트가 있는 페이지)의 최상위 컨테이너는 **`max-w-6xl`(1152px)** 로 통일한다. 새 페이지도 이 값을 따른다.
+
+| 페이지 | 컨테이너 | 폭 |
+|---|---|---|
+| 커스텀 대시보드 `app/custom-dashboard/page.tsx` | `container mx-auto px-5 md:px-12 py-10 max-w-6xl` | 1152px (이전 1280px) |
+| 대시보드 상세 `app/custom-dashboard/details/page.tsx` | `max-w-6xl mx-auto space-y-12` | 1152px (이전 1280px) |
+| 쿠팡 주문 `app/coupang-orders/page.tsx` (헤더·본문 2곳) | `container mx-auto px-4 ... max-w-6xl` | 1152px (이전 1280px) |
+| 월 리뷰 `app/monthly-review/page.tsx` (본문 + sticky 바) | `max-w-6xl mx-auto` | 1152px (기존 유지) |
+| 일 리뷰 `app/daily-review/page.tsx` | `max-w-4xl` | 896px (예외 — 읽기형 점검표) |
+| 메인 `app/page.tsx` | `max-w-3xl` | 768px (예외 — 포털 카드) |
+
+- **하한 근거 — 1024px(`max-w-5xl`)는 기각**: 1024px에서 `SalesSummary` 표 머리글이 붙거나("당월 누적"·"당일매출" 간격 소실) 두 줄로 꺾이고("전년 동월 (누적/일평균)"), 차트 섹션 헤더(제목 + 기간·필터 버튼)가 두 줄로 밀렸다. 1152px에서는 표 머리글이 한 줄로 들어간다(1600px 뷰포트 실측).
+- **더 줄이려면** 폭만 바꾸지 말고 `SalesSummary` 열 구성(§3.1)과 차트 헤더 배치를 함께 조정해야 한다.
+- 월 리뷰 PDF 내보내기(html2canvas)는 화면 폭 그대로 캡처하므로, 월 리뷰 폭을 바꾸면 PDF 레이아웃도 바뀐다 — 변경 시 PDF 재확인 필수.
+
+#### 알려진 한계
+- `ChannelSalesChartNew`("채널별 매출 상세 분석") 헤더는 버튼이 많아 1152px에서도 제목이 두 줄로 꺾인다(1280px에서도 빠듯했던 기존 문제). 별도 개선 대상.
 

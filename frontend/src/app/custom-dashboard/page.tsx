@@ -152,7 +152,7 @@ export default function CustomDashboard() {
 
     return (
         <div className="min-h-screen bg-white">
-            <div className="container mx-auto px-5 md:px-12 py-10 max-w-7xl">
+            <div className="container mx-auto px-5 md:px-12 py-10 max-w-6xl">
                 <div className="mb-10 md:mb-16">
                     <Link
                         href="/"

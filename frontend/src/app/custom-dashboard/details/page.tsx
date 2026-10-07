@@ -300,7 +300,7 @@ function DetailsContent() {
 
     return (
         <div className="min-h-screen bg-white p-8 pb-32">
-            <div className="max-w-7xl mx-auto space-y-12">
+            <div className="max-w-6xl mx-auto space-y-12">
                 <header className="flex justify-between items-center">
                     <div>
                         <h1 className="text-[30px] leading-[1.13] font-bold text-black tracking-normal">{typeLabel} 및 채널별 상세 분석 리포트</h1>

@@ -52,7 +52,7 @@ export default function CoupangOrdersPage() {
         <div className="min-h-screen bg-slate-50">
             {/* Header */}
             <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
-                <div className="container mx-auto px-4 max-w-7xl">
+                <div className="container mx-auto px-4 max-w-6xl">
                     <div className="h-16 flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <Link
@@ -90,7 +90,7 @@ export default function CoupangOrdersPage() {
             </div>
 
             {/* Content Portal */}
-            <div className="container mx-auto px-4 py-8 max-w-7xl">
+            <div className="container mx-auto px-4 py-8 max-w-6xl">
 
                 {error && (
                     <div className="mb-6 bg-red-50 text-red-600 p-4 rounded-xl flex items-center gap-3 border border-red-100">

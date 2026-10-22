@@ -42,7 +42,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Use absolute path for Railway Volume or Vercel /tmp
+# Use absolute path for the backend server or Vercel /tmp
 if os.environ.get('VERCEL'):
     UPLOAD_DIR = "/tmp/uploads"
     CHAT_HISTORY_DIR = "/tmp/chat_history"
@@ -178,7 +178,7 @@ def save_dashboard_dates(dates_data: dict):
         raise HTTPException(status_code=500, detail=f"대시보드 날짜 저장 실패: {str(e)}")
 
 def load_server_api_key():
-    # First, try to load from environment variable (for Railway deployment)
+    # First, try to load from environment variable (server deployment)
     env_key = os.getenv("GOOGLE_API_KEY")
     if env_key:
         return env_key

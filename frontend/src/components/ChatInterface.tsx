@@ -59,10 +59,10 @@ export default function ChatInterface({ filename }: ChatInterfaceProps) {
         }
     };
 
-    // API key is set in Railway environment variables
+    // API key is set in the backend server environment variables
     // No need to check status on frontend
 
-    // Admin key management removed - API key is set in Railway environment
+    // Admin key management removed - API key is set in the backend server environment
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

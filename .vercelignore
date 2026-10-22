@@ -1,10 +1,7 @@
-# Backend files (deployed to Railway)
+# Backend files (served from the Mac Mini, not Vercel)
 api/
 requirements.txt
 runtime.txt
-Procfile
-railway.toml
-.railwayignore
 
 # Python
 *.py

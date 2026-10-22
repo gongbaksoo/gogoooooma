@@ -19,7 +19,7 @@ else:
     else:
         DATABASE_URL = "sqlite:///./metadata.db"
 
-# Fix for Railway PostgreSQL URL (postgres:// -> postgresql://)
+# Normalize PostgreSQL URL scheme (postgres:// -> postgresql://)
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 

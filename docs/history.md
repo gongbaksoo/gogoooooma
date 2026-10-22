@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-10-22 (57회차) — Railway 잔여 설정·주석 정리
+
+### 1. 배경
+- 사용자 문의: "프로그램에 Railway가 사용되고 있나?" → 조사 결과 **미사용**. 백엔드는 2026-05-15(`a73fb33`)에 Railway → Mac Mini(`api.gongbaksoo.com`)로 이전 완료.
+- 프론트 API 주소(`frontend/src/config/api.ts`)는 운영 기본값 `https://api.gongbaksoo.com`, 저장소·`.env.local`에 `railway.app` 주소 0건.
+- 다만 Railway 전용 설정 파일과 주석이 남아 있어 현행 구조를 오해할 소지가 있었음.
+
+### 2. 정리 내용 (커밋 `cd3f46d`, 동작 변경 없음)
+- 삭제: `Procfile`, `api/railway.toml`, `.railwayignore`
+- `.vercelignore`: Railway 파일 항목 3줄 제거, 첫 줄 설명을 "Mac Mini에서 서비스"로 수정 (백엔드 파일 제외 규칙은 유지)
+- 주석 수정: `frontend/src/config/api.ts`, `frontend/src/components/ChatInterface.tsx`(2곳), `api/index.py`(2곳), `api/database.py` — "Railway" → 백엔드 서버 기준 표현
+- 유지: `runtime.txt`(로컬 venv 버전 기준, `docs/error.md §66`), `postgres://`→`postgresql://` 변환 코드(일반 처리, 주석만 수정), `docs/`의 과거 이력 기록
+
+### 3. 검증
+- docs·감사 기록 제외 저장소 grep에서 "railway" 0건.
+- 수정한 Python 2개 `py_compile` 통과. 프론트는 주석만 변경이라 빌드 생략.
+
+### 4. 문서
+- `docs/project_plan.md §7 백엔드 인프라`에 Railway 미사용·정리 내역 추가.
+- `docs/error_troubleshooting.md`의 "Railway 컨테이너 디스크 휘발성" 항목을 폐기 정보로 표시.
+
+### 5. 배포 · 미확인
+- 프론트는 주석만 변경 → Vercel 자동 배포돼도 동작 영향 없음. 맥미니 백엔드는 재배포 불필요(다음 `git pull` 때 삭제 파일이 함께 반영됨).
+- 미확인: Vercel 대시보드의 운영 `NEXT_PUBLIC_API_URL` 실제 값(5/15 수정 기록만 확인), Railway 계정에 옛 프로젝트가 남아 과금 중인지 여부.
+
+---
+
 ## 2026-10-08 (56회차) — 대시보드 최대 폭 축소 (1280 → 1152px 통일)
 
 ### 1. 배경

@@ -61,8 +61,10 @@
 
 ---
 
-### 🚨 참고: Railway 컨테이너의 디스크는 휘발성
-- **현황**: 백엔드는 Railway에서 실행되며 컨테이너 디스크는 재배포/재시작 시 초기화됨. 권위 있는(authoritative) 저장소는 PostgreSQL의 `uploaded_files` 테이블(BLOB)이며, `uploads/`와 `uploads/cache/*.parquet`은 모두 캐시 성격이라 매 배포마다 사라질 수 있음.
+### 🚨 참고: Railway 컨테이너의 디스크는 휘발성 — ⛔ 폐기된 정보 (2026-10-22)
+> 백엔드는 2026-05-15에 Railway → Mac Mini로 이전됐고(SQLite + 로컬 파일시스템, 디스크 영구), Railway 설정 파일도 57회차에 삭제됐다. 아래는 이전 당시 기록으로만 보존한다. 현행 인프라는 `docs/project_plan.md §7 백엔드 인프라` 참조.
+
+- **현황(당시)**: 백엔드는 Railway에서 실행되며 컨테이너 디스크는 재배포/재시작 시 초기화됨. 권위 있는(authoritative) 저장소는 PostgreSQL의 `uploaded_files` 테이블(BLOB)이며, `uploads/`와 `uploads/cache/*.parquet`은 모두 캐시 성격이라 매 배포마다 사라질 수 있음.
 - **영향**: 데이터 무결성에는 문제 없음(`ensure_file_on_disk`가 DB → 디스크 동기화). 다만 parquet 캐시가 매 배포마다 0에서 시작하므로 첫 요청에서 원본 파일을 다시 파싱함 → 일시적 응답 지연.
 - **권장**: 반복 재배포 시 첫 요청 지연이 문제면 Railway 영구 볼륨 활성화 또는 워밍업 엔드포인트 추가 검토.
 

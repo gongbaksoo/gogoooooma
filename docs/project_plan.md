@@ -557,3 +557,5 @@ ssh macmini-codex 'cd ~/Projects/AVK_Sales && grep "\[retention\]" api/uvicorn.l
 | **공개 URL** | Cloudflare Tunnel → `https://api.gongbaksoo.com` |
 | **데이터 저장** | SQLite (`api/metadata.db`) + 로컬 파일시스템 (보관 정책 §5.5 적용) |
 | **로그** | `api/uvicorn.log`, `api/uvicorn.error.log` — ⚠️ 로테이션 없음(에러 로그 152MB, 2026-09-16) |
+
+- **Railway 미사용 (2026-10-22 57회차 정리)**: 백엔드는 2026-05-15에 Railway → Mac Mini로 이전 완료. 잔여 설정 `Procfile`·`api/railway.toml`·`.railwayignore`는 삭제했고, 코드 주석의 Railway 표현도 백엔드 서버 기준으로 수정. `runtime.txt`(python-3.11)는 **로컬 검증 venv 버전 기준**(`docs/error.md §66`)이라 유지.
